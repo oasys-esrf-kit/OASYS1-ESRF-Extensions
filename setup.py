@@ -44,10 +44,10 @@ INSTALL_REQUIRES = (
 PACKAGES = find_packages(exclude=('*.tests', '*.tests.*', 'tests.*', 'tests'))
 
 PACKAGE_DATA = {
-    "orangecontrib.esrf.wofry.widgets.extension":["icons/*.png", "icons/*.jpg", "misc/*.png"],
-    "orangecontrib.esrf.syned.widgets.extension":["icons/*.png", "icons/*.jpg", "misc/*.png"],
-    "orangecontrib.esrf.shadow.widgets.extension":["icons/*.png", "icons/*.jpg", "misc/*.png"],
-    "orangecontrib.esrf.srw.widgets.extension":["icons/*.png", "icons/*.jpg", "misc/*.png"],
+    "orangecontrib.esrf.wofry.widgets.extension":["icons/*.png", "icons/*.jpg"],
+    "orangecontrib.esrf.syned.widgets.extension":["icons/*.png", "icons/*.jpg"],
+    "orangecontrib.esrf.shadow.widgets.extension":["icons/*.png", "icons/*.jpg", "miscellanea/*.txt"],
+    "orangecontrib.esrf.srw.widgets.extension":["icons/*.png", "icons/*.jpg"],
 }
 
 NAMESPACE_PACAKGES = ["orangecontrib",

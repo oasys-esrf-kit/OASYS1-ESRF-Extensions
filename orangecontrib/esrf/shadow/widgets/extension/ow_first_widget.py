@@ -5,6 +5,8 @@ from orangewidget.settings import Setting
 from oasys.widgets import gui as oasysgui
 from oasys.widgets import congruence
 
+import orangecanvas.resources as resources
+import os
 import numpy
 
 class OWbm(ESRFWidget):
@@ -21,6 +23,8 @@ class OWbm(ESRFWidget):
     input_field = Setting(1.0)
     input_field_2 = Setting("Ciao Ciao")
     combo_input = Setting(1)
+
+    file_path = os.path.join(resources.package_dirname("orangecontrib.esrf.shadow.widgets.extension"), "miscellanea", "test_first_widget.txt")
 
     def build_gui(self):
         general_box = oasysgui.widgetBox(self.controlArea, "General Settings", addSpace=False, orientation="vertical", height=250, width=390)
@@ -41,7 +45,7 @@ class OWbm(ESRFWidget):
         congruence.checkStrictlyPositiveNumber(self.input_field, "Input Field")
 
     def do_calculation(self):
-        return numpy.loadtxt("test_first_widget.txt")
+        return numpy.loadtxt(self.file_path)
 
 
     def getDefaultPlotTabIndex(self):
