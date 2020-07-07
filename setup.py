@@ -45,6 +45,7 @@ PACKAGES = find_packages(exclude=('*.tests', '*.tests.*', 'tests.*', 'tests'))
 
 PACKAGE_DATA = {
     "orangecontrib.esrf.wofry.widgets.extension":["icons/*.png", "icons/*.jpg"],
+    "orangecontrib.esrf.xoppy.widgets.extension": ["icons/*.png", "icons/*.jpg"],
     "orangecontrib.esrf.syned.widgets.extension":["icons/*.png", "icons/*.jpg"],
     "orangecontrib.esrf.shadow.widgets.extension":["icons/*.png", "icons/*.jpg", "miscellanea/*.txt"],
     "orangecontrib.esrf.srw.widgets.extension":["icons/*.png", "icons/*.jpg"],
@@ -53,10 +54,12 @@ PACKAGE_DATA = {
 NAMESPACE_PACAKGES = ["orangecontrib",
                       "orangecontrib.esrf",
                       "orangecontrib.esrf.wofry",
+                      "orangecontrib.esrf.xoppy",
                       "orangecontrib.esrf.syned",
                       "orangecontrib.esrf.shadow",
                       "orangecontrib.esrf.srw",
                       "orangecontrib.esrf.wofry.widgets",
+                      "orangecontrib.esrf.xoppy.widgets",
                       "orangecontrib.esrf.syned.widgets",
                       "orangecontrib.esrf.shadow.widgets",
                       "orangecontrib.esrf.srw.widgets",
@@ -64,12 +67,14 @@ NAMESPACE_PACAKGES = ["orangecontrib",
 
 ENTRY_POINTS = {
     'oasys.addons' : ("WOFRY ESRF Extension = orangecontrib.esrf.wofry",
+                      "XOPPY ESRF Extension = orangecontrib.esrf.xoppy",
                       "SYNED ESRF Extension = orangecontrib.esrf.syned",
                       "Shadow ESRF Extension = orangecontrib.esrf.shadow",
                       "SRW ESRF Extension = orangecontrib.esrf.srw",
                       ),
     'oasys.widgets' : (
         "WOFRY ESRF Extension = orangecontrib.esrf.wofry.widgets.extension",
+        "XOPPY ESRF Extension = orangecontrib.esrf.xoppy.widgets.extension",
         "SYNED ESRF Extension = orangecontrib.esrf.syned.widgets.extension",
         "Shadow ESRF Extension = orangecontrib.esrf.shadow.widgets.extension",
         "SRW ESRF Extension = orangecontrib.esrf.srw.widgets.extension",
