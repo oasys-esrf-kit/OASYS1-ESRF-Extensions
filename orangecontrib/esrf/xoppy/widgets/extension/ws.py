@@ -181,7 +181,7 @@ class OWwsID19(XoppyWidget,WidgetDecorator):
 
     def unitLabels(self):
          # return ['Beam energy (GeV)','Beam current (mA)','Period (cm)','Number of periods','Kx','Ky','Min energy (eV)','Max energy (eV)','Number of energy steps','Distance (m)','X-pos. (mm)','Y-pos. (mm)','X slit [mm or mrad]','Y slit [mm or mrad]','Integration points X','Integration points Y']
-         return ['Beam energy (GeV)','Beam current (mA)','Period (cm)','Number of periods','Ky [TO BE CHANGED BY GAP]','Min energy (eV)','Max energy (eV)','Number of energy steps','Distance (m)','X-pos. (mm)','Y-pos. (mm)','X slit [mm or mrad]','Y slit [mm or mrad]','Integration points X','Integration points Y']
+         return ['Beam energy (GeV)','Beam current (mA)','Period (cm)','Number of periods','Ky [Edit]','Min energy (eV)','Max energy (eV)','Number of energy steps','Distance (m)','X-pos. (mm)','Y-pos. (mm)','X slit [mm or mrad]','Y slit [mm or mrad]','Integration points X','Integration points Y']
 
     def unitFlags(self):
          return ['True','True','True','True','True','True','True','True','True','True','True','True','True','True','True']
