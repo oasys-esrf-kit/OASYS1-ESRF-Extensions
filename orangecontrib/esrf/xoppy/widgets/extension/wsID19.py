@@ -97,7 +97,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         self.id_GAP = oasysgui.lineEdit(box1, self, "GAP",
                      label=self.unitLabels()[idx], addSpace=False,
                     valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
-        self.show_at(self.unitFlags()[idx], box1) 
+        self.show_at(self.unitFlags()[idx], box1)
         
         #widget index 7 
         idx += 1 
@@ -179,8 +179,8 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
                     valueType=int, validator=QIntValidator(), orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-        #KY calculation depending on GAP and PERIOD
-        self.KY=(93.4*0.01*self.PERIOD*(2.3333*numpy.exp(-0.02473*self.GAP)+1.189*numpy.exp(-0.059691*self.GAP)))
+
+
 
 
     def unitLabels(self):
@@ -194,13 +194,21 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         return 'ws'
 
     def check_fields(self):
+
+
         self.ENERGY = congruence.checkStrictlyPositiveNumber(self.ENERGY, "Beam Energy")
         self.CUR = congruence.checkStrictlyPositiveNumber(self.CUR, "Beam Current")
         self.PERIOD = congruence.checkStrictlyPositiveNumber(self.PERIOD, "Period")
         self.N = congruence.checkStrictlyPositiveNumber(self.N, "Number of Periods")
         self.KX = congruence.checkNumber(self.KX, "Kx")
-        self.KY = congruence.checkNumber(self.KY, "Ky")
         self.GAP = congruence.checkPositiveNumber(self.GAP, "Gap")
+
+        
+        #KY calculation depending on GAP and PERIOD
+        self.KY=(93.4*0.01*self.PERIOD*(2.3333*numpy.exp(-0.02473*self.GAP)+1.189*numpy.exp(-0.059691*self.GAP)))
+
+
+        self.KY = congruence.checkNumber(self.KY, "Ky")
         self.EMIN = congruence.checkPositiveNumber(self.EMIN, "Min Energy")
         self.EMAX = congruence.checkStrictlyPositiveNumber(self.EMAX, "Max Energy")
         congruence.checkLessThan(self.EMIN, self.EMAX, "Min Energy", "Max Energy")
@@ -212,6 +220,8 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         self.YPS = congruence.checkNumber(self.YPS, "Y Slit")
         self.NXP = congruence.checkStrictlyPositiveNumber(self.NXP, "Integration points X")
         self.NYP = congruence.checkStrictlyPositiveNumber(self.NYP, "Integration points Y")
+
+
 
     def do_xoppy_calculation(self):
         return xoppy_calc_ws(ENERGY=self.ENERGY,CUR=self.CUR,PERIOD=self.PERIOD,N=self.N,KX=self.KX,KY=self.KY,EMIN=self.EMIN,EMAX=self.EMAX,NEE=self.NEE,D=self.D,XPC=self.XPC,YPC=self.YPC,XPS=self.XPS,YPS=self.YPS,NXP=self.NXP,NYP=self.NYP)
