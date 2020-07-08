@@ -15,8 +15,8 @@ from syned.widget.widget_decorator import WidgetDecorator
 import syned.beamline.beamline as synedb
 import syned.storage_ring.magnetic_structures.insertion_device as synedid
 
-class OWwsID19(XoppyWidget,WidgetDecorator):
-    name = "ID19 WS"
+class OWID19ws(XoppyWidget,WidgetDecorator):
+    name = "ID19WS"
     id = "orange.widgets.dataws"
     description = "Wiggler Spectrum on a Screen"
     icon = "icons/xoppy_ws.png"
@@ -24,12 +24,12 @@ class OWwsID19(XoppyWidget,WidgetDecorator):
     category = ""
     keywords = ["xoppy", "ws"]
 
-    ENERGY = Setting(7.0)
-    CUR = Setting(100.0)
-    PERIOD = Setting(8.5)
+    ENERGY = Setting(6.0)
+    CUR = Setting(200.0)
+    PERIOD = Setting(15.0)
     N = Setting(28)
     KX = Setting(0.0)
-    KY = Setting(8.74)
+    GAP = Setting(30)
     EMIN = Setting(1000.0)
     EMAX = Setting(200000.0)
     NEE = Setting(500)
@@ -94,7 +94,7 @@ class OWwsID19(XoppyWidget,WidgetDecorator):
         #widget index 6 
         idx += 1 
         box1 = gui.widgetBox(box) 
-        self.id_KY = oasysgui.lineEdit(box1, self, "KY",
+        self.id_GAP = oasysgui.lineEdit(box1, self, "GAP",
                      label=self.unitLabels()[idx], addSpace=False,
                     valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
@@ -177,11 +177,15 @@ class OWwsID19(XoppyWidget,WidgetDecorator):
         oasysgui.lineEdit(box1, self, "NYP",
                      label=self.unitLabels()[idx], addSpace=False,
                     valueType=int, validator=QIntValidator(), orientation="horizontal", labelWidth=250)
-        self.show_at(self.unitFlags()[idx], box1) 
+        self.show_at(self.unitFlags()[idx], box1)
+
+        #KY calculation depending on GAP and PERIOD
+        self.KY=(93.4*0.01*self.PERIOD*(2.3333*numpy.exp(-0.02473*self.GAP)+1.189*numpy.exp(-0.059691*self.GAP)))
+
 
     def unitLabels(self):
-         # return ['Beam energy (GeV)','Beam current (mA)','Period (cm)','Number of periods','Kx','Ky','Min energy (eV)','Max energy (eV)','Number of energy steps','Distance (m)','X-pos. (mm)','Y-pos. (mm)','X slit [mm or mrad]','Y slit [mm or mrad]','Integration points X','Integration points Y']
-         return ['Beam energy (GeV)','Beam current (mA)','Period (cm)','Number of periods','Ky [Edit]','Min energy (eV)','Max energy (eV)','Number of energy steps','Distance (m)','X-pos. (mm)','Y-pos. (mm)','X slit [mm or mrad]','Y slit [mm or mrad]','Integration points X','Integration points Y']
+         # return ['Beam energy (GeV)','Beam current (mA)','Period (cm)','Number of periods','Kx','GAP (mm)','Min energy (eV)','Max energy (eV)','Number of energy steps','Distance (m)','X-pos. (mm)','Y-pos. (mm)','X slit [mm or mrad]','Y slit [mm or mrad]','Integration points X','Integration points Y']
+         return ['Beam energy (GeV)','Beam current (mA)','Period (cm)','Number of periods','GAP (mm)','Min energy (eV)','Max energy (eV)','Number of energy steps','Distance (m)','X-pos. (mm)','Y-pos. (mm)','X slit [mm or mrad]','Y slit [mm or mrad]','Integration points X','Integration points Y']
 
     def unitFlags(self):
          return ['True','True','True','True','True','True','True','True','True','True','True','True','True','True','True']
@@ -196,6 +200,7 @@ class OWwsID19(XoppyWidget,WidgetDecorator):
         self.N = congruence.checkStrictlyPositiveNumber(self.N, "Number of Periods")
         self.KX = congruence.checkNumber(self.KX, "Kx")
         self.KY = congruence.checkNumber(self.KY, "Ky")
+        self.GAP = congruence.checkPositiveNumber(self.GAP, "Gap")
         self.EMIN = congruence.checkPositiveNumber(self.EMIN, "Min Energy")
         self.EMAX = congruence.checkStrictlyPositiveNumber(self.EMAX, "Max Energy")
         congruence.checkLessThan(self.EMIN, self.EMAX, "Min Energy", "Max Energy")
@@ -254,19 +259,19 @@ class OWwsID19(XoppyWidget,WidgetDecorator):
                 self.id_ENERGY.setEnabled(True)
                 self.id_CUR.setEnabled(True)
                 self.id_PERIOD.setEnabled(True)
-                self.id_KY.setEnabled(True)
+                self.id_GAP.setEnabled(True)
         else:
                 self.id_N.setEnabled(False)
                 self.id_ENERGY.setEnabled(False)
                 self.id_CUR.setEnabled(False)
                 self.id_PERIOD.setEnabled(False)
-                self.id_KY.setEnabled(False)
+                self.id_GAP.setEnabled(False)
 
 # --------------------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------------------
 
 
-def xoppy_calc_ws(ENERGY=7.0,CUR=100.0,PERIOD=8.5,N=28.0,KX=0.0,KY=8.739999771118164,\
+def xoppy_calc_ws(ENERGY=6.0,CUR=200.0,PERIOD=15.0,N=28.0,KX=0.0,KY=18.34,\
                   EMIN=1000.0,EMAX=100000.0,NEE=2000,D=30.0,XPC=0.0,YPC=0.0,XPS=2.0,YPS=2.0,NXP=10,NYP=10):
     print("Inside xoppy_calc_ws. ")
 
@@ -326,7 +331,7 @@ if __name__ == "__main__":
     import os
     os.environ['LD_LIBRARY_PATH'] = ''
     app = QApplication(sys.argv)
-    w = OWwsID19()
+    w = OWID19ws()
     w.show()
     app.exec()
     w.saveSettings()
