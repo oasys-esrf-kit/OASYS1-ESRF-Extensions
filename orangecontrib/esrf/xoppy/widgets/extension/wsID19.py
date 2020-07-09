@@ -29,6 +29,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
     PERIOD = Setting(15.0)
     N = Setting(28)
     KX = Setting(0.0)
+    KY = Setting(0.0)
     GAP = Setting(30)
     EMIN = Setting(1000.0)
     EMAX = Setting(200000.0)
@@ -94,12 +95,18 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         #widget index 6 
         idx += 1 
         box1 = gui.widgetBox(box) 
-        self.id_GAP = oasysgui.lineEdit(box1, self, "GAP",
-                     label=self.unitLabels()[idx], addSpace=False,
-                    valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+        self.id_KY = oasysgui.lineEdit(box1, self, "KY",
+                     valueType=float, validator=QDoubleValidator(), label=self.unitLabels()[idx], addSpace=False, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
-        
-        #widget index 7 
+
+        #widget index 7
+        idx += 1
+        box1 = gui.widgetBox(box)
+        self.id_GAP = oasysgui.lineEdit(box1, self, "GAP",
+                     valueType=float, validator=QDoubleValidator(), label=self.unitLabels()[idx], addSpace=False, orientation="horizontal", labelWidth=250)
+        self.show_at(self.unitFlags()[idx], box1)
+
+        #widget index 8
         idx += 1 
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "EMIN",
@@ -107,7 +114,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
                     valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
-        #widget index 8 
+        #widget index 9
         idx += 1 
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "EMAX",
@@ -115,7 +122,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
                     valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
-        #widget index 9 
+        #widget index 10
         idx += 1 
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "NEE",
@@ -123,7 +130,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
                     valueType=int, validator=QIntValidator(), orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
-        #widget index 10 
+        #widget index 11
         idx += 1 
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "D",
@@ -131,7 +138,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
                     valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
-        #widget index 11 
+        #widget index 12
         idx += 1 
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "XPC",
@@ -139,7 +146,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
                     valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
-        #widget index 12 
+        #widget index 13
         idx += 1 
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "YPC",
@@ -147,7 +154,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
                     valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
-        #widget index 13 
+        #widget index 14
         idx += 1 
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "XPS",
@@ -155,7 +162,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
                     valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
-        #widget index 14 
+        #widget index 15
         idx += 1 
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "YPS",
@@ -163,7 +170,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
                     valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
-        #widget index 15 
+        #widget index 16
         idx += 1 
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "NXP",
@@ -171,7 +178,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
                     valueType=int, validator=QIntValidator(), orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
-        #widget index 16 
+        #widget index 17
         idx += 1 
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "NYP",
@@ -184,11 +191,11 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
 
 
     def unitLabels(self):
-         # return ['Beam energy (GeV)','Beam current (mA)','Period (cm)','Number of periods','Kx','GAP (mm)','Min energy (eV)','Max energy (eV)','Number of energy steps','Distance (m)','X-pos. (mm)','Y-pos. (mm)','X slit [mm or mrad]','Y slit [mm or mrad]','Integration points X','Integration points Y']
-         return ['Beam energy (GeV)','Beam current (mA)','Period (cm)','Number of periods','GAP (mm)','Min energy (eV)','Max energy (eV)','Number of energy steps','Distance (m)','X-pos. (mm)','Y-pos. (mm)','X slit [mm or mrad]','Y slit [mm or mrad]','Integration points X','Integration points Y']
+         # return ['Beam energy (GeV)','Beam current (mA)','Period (cm)','Number of periods','Kx','Ky','GAP (mm)','Min energy (eV)','Max energy (eV)','Number of energy steps','Distance (m)','X-pos. (mm)','Y-pos. (mm)','X slit [mm or mrad]','Y slit [mm or mrad]','Integration points X','Integration points Y']
+         return ['Beam energy (GeV)','Beam current (mA)','Period (cm)','Number of periods','Ky, if not choose 0','GAP (mm), if not choose 0','Min energy (eV)','Max energy (eV)','Number of energy steps','Distance (m)','X-pos. (mm)','Y-pos. (mm)','X slit [mm or mrad]','Y slit [mm or mrad]','Integration points X','Integration points Y']
 
     def unitFlags(self):
-         return ['True','True','True','True','True','True','True','True','True','True','True','True','True','True','True']
+         return ['True','True','True','True','True','True','True','True','True','True','True','True','True','True','True','True']
 
     def get_help_name(self):
         return 'ID19ws'
@@ -201,11 +208,21 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         self.PERIOD = congruence.checkStrictlyPositiveNumber(self.PERIOD, "Period")
         self.N = congruence.checkStrictlyPositiveNumber(self.N, "Number of Periods")
         self.KX = congruence.checkNumber(self.KX, "Kx")
-        self.GAP = congruence.checkPositiveNumber(self.GAP, "Gap")
 
-        #KY calculation depending on GAP and PERIOD
-        self.KY=(93.4*0.01*self.PERIOD*(2.3333*numpy.exp(-0.02473*self.GAP)+1.189*numpy.exp(-0.059691*self.GAP)))
-        self.KY = congruence.checkNumber(self.KY, "Ky")
+        #special check
+        if self.GAP==0.0 :
+            if not self.KY==0.0:
+                self.GAP=(-1 / 0.02677) * numpy.log(self.KY / (93.4 * 2.89408 * self.PERIOD * 0.01))
+            else :
+                raise Exception("choose the GAP or the Ky")
+        elif self.KY==0.0 :
+            self.KY=(93.4 * 0.01 * self.PERIOD * (2.3333 * numpy.exp(-0.02473 * self.GAP) + 1.189 * numpy.exp(-0.059691 * self.GAP)))
+        elif almostequal(self.KY,self.GAP,10):
+            None
+        else :
+            raise Exception("choose the GAP or the Ky")
+
+
         self.EMIN = congruence.checkPositiveNumber(self.EMIN, "Min Energy")
         self.EMAX = congruence.checkStrictlyPositiveNumber(self.EMAX, "Max Energy")
         congruence.checkLessThan(self.EMIN, self.EMAX, "Min Energy", "Max Energy")
@@ -264,17 +281,25 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
                 self.id_ENERGY.setEnabled(True)
                 self.id_CUR.setEnabled(True)
                 self.id_PERIOD.setEnabled(True)
+                self.id_KY.setEnabled(True)
                 self.id_GAP.setEnabled(True)
         else:
                 self.id_N.setEnabled(False)
                 self.id_ENERGY.setEnabled(False)
                 self.id_CUR.setEnabled(False)
                 self.id_PERIOD.setEnabled(False)
+                self.id_KY.setEnabled(False)
                 self.id_GAP.setEnabled(False)
 
+
 # --------------------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------------------
 
+def almostequal(Number1,Number2,error):
+    if (Number1-Number2)<10**error:
+        return (True)
+    else :
+        return(False)
 
 def xoppy_calc_ws(ENERGY=6.0,CUR=200.0,PERIOD=15.0,N=28.0,KX=0.0,KY=18.34,\
                   EMIN=1000.0,EMAX=100000.0,NEE=2000,D=30.0,XPC=0.0,YPC=0.0,XPS=2.0,YPS=2.0,NXP=10,NYP=10):
