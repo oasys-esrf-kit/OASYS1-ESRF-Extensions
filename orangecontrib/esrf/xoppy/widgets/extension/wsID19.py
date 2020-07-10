@@ -217,7 +217,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
                 raise Exception("choose the GAP or the Ky")
         elif self.KY==0.0 :
             self.KY=(93.4 * 0.01 * self.PERIOD * (2.3333 * numpy.exp(-0.02473 * self.GAP) + 1.189 * numpy.exp(-0.059691 * self.GAP)))
-        elif almostequal(self.KY,self.GAP,10):
+        elif almostequal(self.KY,(93.4 * 0.01 * self.PERIOD * (2.3333 * numpy.exp(-0.02473 * self.GAP) + 1.189 * numpy.exp(-0.059691 * self.GAP))),10):
             None
         else :
             raise Exception("choose the GAP or the Ky")
@@ -296,7 +296,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
 # --------------------------------------------------------------------------------------------
 
 def almostequal(Number1,Number2,error):
-    if (Number1-Number2)<10**error:
+    if (Number1-Number2)<10**-error:
         return (True)
     else :
         return(False)
