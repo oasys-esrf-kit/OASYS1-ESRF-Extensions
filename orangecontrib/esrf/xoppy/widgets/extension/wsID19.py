@@ -222,7 +222,8 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         else :
             raise Exception("choose the GAP or the Ky")
 
-
+        self.KY = congruence.checkPositiveNumber(self.KY, "Ky")
+        self.GAP = congruence.checkPositiveNumber(self.GAP, "Gap")
         self.EMIN = congruence.checkPositiveNumber(self.EMIN, "Min Energy")
         self.EMAX = congruence.checkStrictlyPositiveNumber(self.EMAX, "Max Energy")
         congruence.checkLessThan(self.EMIN, self.EMAX, "Min Energy", "Max Energy")
