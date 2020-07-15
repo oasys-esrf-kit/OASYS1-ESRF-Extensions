@@ -26,6 +26,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
 
     inputs = [("ExchangeData", DataExchangeObject, "acceptExchangeData")]
 
+    FLAG = Setting(0)
     SOURCE = Setting(2)
     ENER_MIN = Setting(1000.0)
     ENER_MAX = Setting(50000.0)
@@ -41,6 +42,12 @@ class OWID19AttenuatorsBox(XoppyWidget):
     ATT23 = Setting(3)
     ATT24 = Setting(3)
     ATT25 = Setting(3)
+    C = Setting(1.4)
+    Al = Setting(1.4)
+    Cu = Setting(0.0)
+    Mo = Setting(0.0)
+    W = Setting(0.0)
+    Au = Setting(0.14)
     PLOT_SETS = Setting(2)
     FILE_DUMP = 0
 
@@ -53,7 +60,18 @@ class OWID19AttenuatorsBox(XoppyWidget):
 
         box = oasysgui.widgetBox(self.controlArea, self.name + " Input Parameters", orientation="vertical", width=self.CONTROL_AREA_WIDTH-10)
 
-        idx = -1 
+        idx = -1
+
+
+        # widget index 1
+        idx += 1
+        box1 = gui.widgetBox(box)
+        self.box_source = gui.comboBox(box1, self, "FLAG",
+                                       label=self.unitLabels()[idx], addSpace=False,
+                                       items=['Attenuators Box', 'Attenuators list'],
+                                       valueType=int, orientation="horizontal", labelWidth=150)
+        self.show_at(self.unitFlags()[idx], box1)
+
 
         #widget index 2 
         idx += 1 
@@ -99,9 +117,9 @@ class OWID19AttenuatorsBox(XoppyWidget):
         self.show_at(self.unitFlags()[idx], box1)
 
 
-        #widget index 11
-        idx += 1 
-        box1 = gui.widgetBox(box) 
+        #widget index 10
+        idx += 1
+        box1 = gui.widgetBox(box)
         gui.comboBox(box1, self, "ATT11",
                      label=self.unitLabels()[idx], addSpace=False,
                     items=['101 : None', '102 : Diam, 1.4mm','103 : Diam, 2.8mm', '104 : Diam, 1mm'],
@@ -110,7 +128,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
 
 
 
-        #widget index 12
+        #widget index 11
         idx += 1
         box1 = gui.widgetBox(box)
         gui.comboBox(box1, self, "ATT12",
@@ -119,7 +137,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
                     valueType=str, orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
         self.show_at(self.unitFlags()[idx], box1)
 
-        #widget index 13
+        #widget index 12
         idx += 1
         box1 = gui.widgetBox(box)
         gui.comboBox(box1, self, "ATT13",
@@ -128,7 +146,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
                     valueType=str, orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
         self.show_at(self.unitFlags()[idx], box1)
 
-        #widget index 14
+        #widget index 13
         idx += 1
         box1 = gui.widgetBox(box)
         gui.comboBox(box1, self, "ATT14",
@@ -137,7 +155,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
                     valueType=str, orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
         self.show_at(self.unitFlags()[idx], box1)
 
-        #widget index 15
+        #widget index 14
         idx += 1
         box1 = gui.widgetBox(box)
         gui.comboBox(box1, self, "ATT15",
@@ -146,7 +164,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
                     valueType=str, orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
         self.show_at(self.unitFlags()[idx], box1)
 
-        #widget index 16
+        #widget index 15
         idx += 1
         box1 = gui.widgetBox(box)
         gui.comboBox(box1, self, "ATT21",
@@ -155,7 +173,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
                     valueType=str, orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
         self.show_at(self.unitFlags()[idx], box1)
 
-        #widget index 17
+        #widget index 16
         idx += 1
         box1 = gui.widgetBox(box)
         gui.comboBox(box1, self, "ATT22",
@@ -164,7 +182,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
                     valueType=str, orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
         self.show_at(self.unitFlags()[idx], box1)
 
-        #widget index 18
+        #widget index 17
         idx += 1
         box1 = gui.widgetBox(box)
         gui.comboBox(box1, self, "ATT23",
@@ -173,7 +191,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
                     valueType=str, orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
         self.show_at(self.unitFlags()[idx], box1)
 
-        #widget index 19
+        #widget index 18
         idx += 1
         box1 = gui.widgetBox(box)
         gui.comboBox(box1, self, "ATT24",
@@ -182,7 +200,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
                     valueType=str, orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
         self.show_at(self.unitFlags()[idx], box1)
 
-        #widget index 20
+        #widget index 19
         idx += 1
         box1 = gui.widgetBox(box)
         gui.comboBox(box1, self, "ATT25",
@@ -191,6 +209,53 @@ class OWID19AttenuatorsBox(XoppyWidget):
                     valueType=str, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
+        # widget index 20
+        idx += 1
+        box1 = gui.widgetBox(box)
+        oasysgui.lineEdit(box1, self, "C",
+                          label=self.unitLabels()[idx], addSpace=False,
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+        self.show_at(self.unitFlags()[idx], box1)
+
+        # widget index 21
+        idx += 1
+        box1 = gui.widgetBox(box)
+        oasysgui.lineEdit(box1, self, "Al",
+                          label=self.unitLabels()[idx], addSpace=False,
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+        self.show_at(self.unitFlags()[idx], box1)
+
+        # widget index 22
+        idx += 1
+        box1 = gui.widgetBox(box)
+        oasysgui.lineEdit(box1, self, "Cu",
+                          label=self.unitLabels()[idx], addSpace=False,
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+        self.show_at(self.unitFlags()[idx], box1)
+
+        # widget index 23
+        idx += 1
+        box1 = gui.widgetBox(box)
+        oasysgui.lineEdit(box1, self, "Mo",
+                          label=self.unitLabels()[idx], addSpace=False,
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+        self.show_at(self.unitFlags()[idx], box1)
+
+        # widget index 24
+        idx += 1
+        box1 = gui.widgetBox(box)
+        oasysgui.lineEdit(box1, self, "W",
+                          label=self.unitLabels()[idx], addSpace=False,
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+        self.show_at(self.unitFlags()[idx], box1)
+
+        # widget index 25
+        idx += 1
+        box1 = gui.widgetBox(box)
+        oasysgui.lineEdit(box1, self, "Au",
+                          label=self.unitLabels()[idx], addSpace=False,
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+        self.show_at(self.unitFlags()[idx], box1)
 
         #widget index 41
         idx += 1
@@ -231,22 +296,26 @@ class OWID19AttenuatorsBox(XoppyWidget):
         self.initializeTabs()
 
     def unitLabels(self):
-         return ['Input beam:',
+         return ['Box or List','Input beam:',
                  'From energy [eV]:      ',
                  'To energy [eV]:',
                  'Energy points:  ',
                  'File with input beam spectral power:',
                  'Att11','Att12','Att13','Att14','Att15','Att21','Att22','Att23','Att24','Att25',
+                 'thickness of the C attenuator (mm)', 'thickness of the Al attenuator (mm)',
+                 'thickness of the Cu attenuator (mm)', 'thickness of the Mo attenuator (mm)',
+                 'thickness of the W attenuator (mm)', 'thickness of the Au attenuator (mm)',
                  'Plot','Dump file']
 
 
     def unitFlags(self):
-         return ['True',
+         return ['True','True',
                  'self.SOURCE  ==  1',
                  'self.SOURCE  ==  1',
                  'self.SOURCE  ==  1',
                  'self.SOURCE  ==  2',
-                 'True','True','True','True','True','True','True','True','True','True',
+                 'self.FLAG  ==  0','self.FLAG  ==  0','self.FLAG  ==  0','self.FLAG  ==  0','self.FLAG  ==  0','self.FLAG  ==  0','self.FLAG  ==  0','self.FLAG  ==  0','self.FLAG  ==  0','self.FLAG  ==  0',
+                 'self.FLAG  ==  1','self.FLAG  ==  1','self.FLAG  ==  1','self.FLAG  ==  1','self.FLAG  ==  1','self.FLAG  ==  1',
                  'True','True']
 
     def get_help_name(self):
@@ -356,6 +425,13 @@ class OWID19AttenuatorsBox(XoppyWidget):
             self.NPOINTS = congruence.checkStrictlyPositiveNumber(self.ENER_N, "Energy Points")
         elif self.SOURCE == 2:
             congruence.checkFile(self.SOURCE_FILE)
+        if self.FLAG == 1:
+            self.C=congruence.checkPositiveNumber(self.C,'thickness of the C attenuator (mm)')
+            self.Al = congruence.checkPositiveNumber(self.Al, 'thickness of the Al attenuator (mm)')
+            self.Cu = congruence.checkPositiveNumber(self.Cu, 'thickness of the Cu attenuator (mm)')
+            self.Mo = congruence.checkPositiveNumber(self.Mo, 'thickness of the Mo attenuator (mm)')
+            self.W = congruence.checkPositiveNumber(self.W, 'thickness of the W attenuator (mm)')
+            self.Au = congruence.checkPositiveNumber(self.Au, 'thickness of the Au attenuator (mm)')
 
 
     def do_xoppy_calculation(self):
@@ -385,8 +461,8 @@ class OWID19AttenuatorsBox(XoppyWidget):
         titles = []
 
         if self.do_plot_intensity(): titles.append("Input beam")
-        if self.do_plot_local(): titles.append("Total CS")
-        if self.do_plot_local(): titles.append("Mu")
+        if self.do_plot_local(): titles.append("Total CS")                        #is this useful ?
+        if self.do_plot_local(): titles.append("Mu")                        #is this useful ?
         if self.do_plot_local(): titles.append("Transmitivity")
         if self.do_plot_local(): titles.append("Absorption")
         if self.do_plot_intensity(): titles.append("Intensity")
@@ -418,7 +494,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
     def getVariablesToPlot(self):
         variables = []
 
-        if self.do_plot_intensity(): variables.append((0, 1)) # start plotting the source
+        if self.do_plot_intensity(): variables.append((0, 1))  # start plotting the source
         if self.do_plot_local(): variables.append((0, 2))
         if self.do_plot_local(): variables.append((0, 3))
         if self.do_plot_local(): variables.append((0, 4))
@@ -441,49 +517,52 @@ class OWID19AttenuatorsBox(XoppyWidget):
 
 
 
+
     def Attenuators_Thickness(self):
         thick=[]
-        
-        if self.ATT11== 0: thick.append(0.0)
-        if self.ATT11== 1: thick.append(1.4)
-        if self.ATT11== 2: thick.append(2.8)
-        if self.ATT11== 3: thick.append(1.0)
-        if self.ATT12== 0: thick.append(0.7)
-        if self.ATT12== 1: thick.append(1.4)
-        if self.ATT12== 2: thick.append(2.8)
-        if self.ATT12== 3: thick.append(0.0)
-        if self.ATT13== 0: thick.append(4.0)
-        if self.ATT13== 1: thick.append(6.0)
-        if self.ATT13== 2: thick.append(8.0)
-        if self.ATT13== 3: thick.append(0.0)
-        if self.ATT14== 0: thick.append(0.7)
-        if self.ATT14== 1: thick.append(1.4)
-        if self.ATT14== 2: thick.append(2.8)
-        if self.ATT14== 3: thick.append(0.0)
-        if self.ATT15== 0: thick.append(0.14)
-        if self.ATT15== 1: thick.append(0.35)
-        if self.ATT15== 2: thick.append(1.4)
-        if self.ATT15== 3: thick.append(0.0)
-        if self.ATT21== 0: thick.append(0.7)
-        if self.ATT21== 1: thick.append(1.4)
-        if self.ATT21== 2: thick.append(2.8)
-        if self.ATT21== 3: thick.append(0.0)
-        if self.ATT22== 0: thick.append(0.14)
-        if self.ATT22== 1: thick.append(0.35)
-        if self.ATT22== 2: thick.append(0.7)
-        if self.ATT22== 3: thick.append(0.0)
-        if self.ATT23== 0: thick.append(0.3)
-        if self.ATT23== 1: thick.append(0.5)
-        if self.ATT23== 2: thick.append(1.0)
-        if self.ATT23== 3: thick.append(0.0)
-        if self.ATT24== 0: thick.append(0.07)
-        if self.ATT24== 1: thick.append(0.14)
-        if self.ATT24== 2: thick.append(0.28)
-        if self.ATT24== 3: thick.append(0.0)
-        if self.ATT25== 0: thick.append(0.07)
-        if self.ATT25== 1: thick.append(0.14)
-        if self.ATT25== 2: thick.append(0.28)
-        if self.ATT25== 3: thick.append(0.0)
+        if self.FLAG == 0 :
+            if self.ATT11== 0: thick.append(0.0)
+            if self.ATT11== 1: thick.append(1.4)
+            if self.ATT11== 2: thick.append(2.8)
+            if self.ATT11== 3: thick.append(1.0)
+            if self.ATT12== 0: thick.append(0.7)
+            if self.ATT12== 1: thick.append(1.4)
+            if self.ATT12== 2: thick.append(2.8)
+            if self.ATT12== 3: thick.append(0.0)
+            if self.ATT13== 0: thick.append(4.0)
+            if self.ATT13== 1: thick.append(6.0)
+            if self.ATT13== 2: thick.append(8.0)
+            if self.ATT13== 3: thick.append(0.0)
+            if self.ATT14== 0: thick.append(0.7)
+            if self.ATT14== 1: thick.append(1.4)
+            if self.ATT14== 2: thick.append(2.8)
+            if self.ATT14== 3: thick.append(0.0)
+            if self.ATT15== 0: thick.append(0.14)
+            if self.ATT15== 1: thick.append(0.35)
+            if self.ATT15== 2: thick.append(1.4)
+            if self.ATT15== 3: thick.append(0.0)
+            if self.ATT21== 0: thick.append(0.7)
+            if self.ATT21== 1: thick.append(1.4)
+            if self.ATT21== 2: thick.append(2.8)
+            if self.ATT21== 3: thick.append(0.0)
+            if self.ATT22== 0: thick.append(0.14)
+            if self.ATT22== 1: thick.append(0.35)
+            if self.ATT22== 2: thick.append(0.7)
+            if self.ATT22== 3: thick.append(0.0)
+            if self.ATT23== 0: thick.append(0.3)
+            if self.ATT23== 1: thick.append(0.5)
+            if self.ATT23== 2: thick.append(1.0)
+            if self.ATT23== 3: thick.append(0.0)
+            if self.ATT24== 0: thick.append(0.07)
+            if self.ATT24== 1: thick.append(0.14)
+            if self.ATT24== 2: thick.append(0.28)
+            if self.ATT24== 3: thick.append(0.0)
+            if self.ATT25== 0: thick.append(0.07)
+            if self.ATT25== 1: thick.append(0.14)
+            if self.ATT25== 2: thick.append(0.28)
+            if self.ATT25== 3: thick.append(0.0)
+        if self.FLAG == 1:
+            thick=[self.C,self.Al,self.Cu,self.Mo,self.W,self.Au]
 
         return(thick)
 
@@ -495,11 +574,16 @@ class OWID19AttenuatorsBox(XoppyWidget):
         # prepare input for xpower_calc
         # Note that the input for xpower_calc accepts any number of elements.
         #
-
-        substance = ['C','Al','Cu','Al','Cu','Cu','Mo','W','W','Au']
-        thick     = self.Attenuators_Thickness()
-        dens      = [3.508,2.7,8.96,2.7,8.96,8.96,10.20,19.3,19.3,19.3]
-        flags     =  [0,0,0,0,0,0,0,0,0,0]
+        if self.FLAG == 0:
+            substance = ['C','Al','Cu','Al','Cu','Cu','Mo','W','W','Au']
+            thick     = self.Attenuators_Thickness()
+            dens      = [3.508,2.7,8.96,2.7,8.96,8.96,10.20,19.3,19.3,19.3]
+            flags     =  [0,0,0,0,0,0,0,0,0,0]
+        if self.FLAG == 1:
+            substance = ['C', 'Al', 'Cu','Mo', 'W','Au']
+            thick = self.Attenuators_Thickness()
+            dens = [3.508, 2.7, 8.96, 10.20, 19.3, 19.3]
+            flags = [0, 0, 0, 0, 0, 0]
 
         cumulated_data = {}
         Result=[]
@@ -542,15 +626,22 @@ class OWID19AttenuatorsBox(XoppyWidget):
         #calculate attenuators total
         Result.append((out_dictionary['data'][0]).tolist())
         Result.append((out_dictionary['data'][1]).tolist())
-        Result.append(List_Product([out_dictionary['data'][2],out_dictionary['data'][7],out_dictionary['data'][12],out_dictionary['data'][17],out_dictionary['data'][22],out_dictionary['data'][27],out_dictionary['data'][32],out_dictionary['data'][37],out_dictionary['data'][42],out_dictionary['data'][47]]))
-        Result.append(List_Product([out_dictionary['data'][3], out_dictionary['data'][8], out_dictionary['data'][13],out_dictionary['data'][18], out_dictionary['data'][23], out_dictionary['data'][28],out_dictionary['data'][33], out_dictionary['data'][38],out_dictionary['data'][43], out_dictionary['data'][48]]))
-        Result.append(List_Product([out_dictionary['data'][4], out_dictionary['data'][9], out_dictionary['data'][14],out_dictionary['data'][19], out_dictionary['data'][24], out_dictionary['data'][29],out_dictionary['data'][34], out_dictionary['data'][39], out_dictionary['data'][44],out_dictionary['data'][49]]))
+        list2=[]
+        list3=[]
+        list4=[]
+        for k in range(len(substance)):
+            list2.append(out_dictionary['data'][2 + 5*k])
+            list3.append(out_dictionary['data'][3 + 5*k])
+            list4.append(out_dictionary['data'][4 + 5*k])
+        Result.append(List_Product(list2))
+        Result.append(List_Product(list3))
+        Result.append(List_Product(list4))
 
         for k in range(len(Result[0])):
             Result_Absorption.append(1-Result[-1][k])
         Result.append(Result_Absorption)
 
-        Result.append((out_dictionary['data'][51]).tolist())
+        Result.append((out_dictionary['data'][5*len(substance)+1]).tolist())
         cumulated_data['data']=numpy.array(Result)
 
         #send exchange
