@@ -69,7 +69,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
         self.box_source = gui.comboBox(box1, self, "FLAG",
                                        label=self.unitLabels()[idx], addSpace=False,
                                        items=['Attenuators Box', 'Attenuators list'],
-                                       valueType=int, orientation="horizontal", labelWidth=150)
+                                       valueType=int, orientation="horizontal", labelWidth=150, callback=self.set_EL_FLAG)
         self.show_at(self.unitFlags()[idx], box1)
 
 
@@ -206,7 +206,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
         gui.comboBox(box1, self, "ATT25",
                      label=self.unitLabels()[idx], addSpace=False,
                     items=['1001 : Au, 0.07mm', '1002 : Au, 0.14mm','1003 : Au, 0.28mm', '1004 : None'],
-                    valueType=str, orientation="horizontal", labelWidth=250)
+                    valueType=str, orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
         self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 20
@@ -214,7 +214,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "C",
                           label=self.unitLabels()[idx], addSpace=False,
-                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
         self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 21
@@ -222,7 +222,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "Al",
                           label=self.unitLabels()[idx], addSpace=False,
-                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
         self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 22
@@ -230,7 +230,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "Cu",
                           label=self.unitLabels()[idx], addSpace=False,
-                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
         self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 23
@@ -238,7 +238,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "Mo",
                           label=self.unitLabels()[idx], addSpace=False,
-                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
         self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 24
@@ -246,7 +246,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "W",
                           label=self.unitLabels()[idx], addSpace=False,
-                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
         self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 25
@@ -254,7 +254,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "Au",
                           label=self.unitLabels()[idx], addSpace=False,
-                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
         self.show_at(self.unitFlags()[idx], box1)
 
         #widget index 41
