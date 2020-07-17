@@ -254,7 +254,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "Au",
                           label=self.unitLabels()[idx], addSpace=False,
-                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG )
         self.show_at(self.unitFlags()[idx], box1)
 
         #widget index 41
@@ -461,8 +461,8 @@ class OWID19AttenuatorsBox(XoppyWidget):
         titles = []
 
         if self.do_plot_intensity(): titles.append("Input beam")
-        if self.do_plot_local(): titles.append("Total CS")                        #is this useful ?
-        if self.do_plot_local(): titles.append("Mu")                        #is this useful ?
+        #if self.do_plot_local(): titles.append("Total CS")
+        #if self.do_plot_local(): titles.append("Mu")
         if self.do_plot_local(): titles.append("Transmitivity")
         if self.do_plot_local(): titles.append("Absorption")
         if self.do_plot_intensity(): titles.append("Intensity")
@@ -473,8 +473,8 @@ class OWID19AttenuatorsBox(XoppyWidget):
         xtitles = []
 
         if self.do_plot_intensity(): xtitles.append("Photon Energy [eV]")
-        if self.do_plot_local(): xtitles.append("Photon Energy [eV]")
-        if self.do_plot_local(): xtitles.append("Photon Energy [eV]")
+        #if self.do_plot_local(): xtitles.append("Photon Energy [eV]")
+        #if self.do_plot_local(): xtitles.append("Photon Energy [eV]")
         if self.do_plot_local(): xtitles.append("Photon Energy [eV]")
         if self.do_plot_local(): xtitles.append("Photon Energy [eV]")
         if self.do_plot_intensity(): xtitles.append("Photon Energy [eV]")
@@ -483,8 +483,8 @@ class OWID19AttenuatorsBox(XoppyWidget):
     def getYTitles(self):
         ytitles = []
         if self.do_plot_intensity(): ytitles.append("Source")
-        if self.do_plot_local(): ytitles.append(" Total CS cm2/g")
-        if self.do_plot_local(): ytitles.append(" Mu cm^-1")
+        #if self.do_plot_local(): ytitles.append(" Total CS cm2/g")
+        #if self.do_plot_local(): ytitles.append(" Mu cm^-1")
         if self.do_plot_local(): ytitles.append(" Transmitivity")
         if self.do_plot_local(): ytitles.append(" Absorption")
         if self.do_plot_intensity(): ytitles.append("Intensity")
@@ -495,11 +495,11 @@ class OWID19AttenuatorsBox(XoppyWidget):
         variables = []
 
         if self.do_plot_intensity(): variables.append((0, 1))  # start plotting the source
+        #if self.do_plot_local(): variables.append((0, 2))
+        #if self.do_plot_local(): variables.append((0, 3))
         if self.do_plot_local(): variables.append((0, 2))
         if self.do_plot_local(): variables.append((0, 3))
-        if self.do_plot_local(): variables.append((0, 4))
-        if self.do_plot_local(): variables.append((0, 5))
-        if self.do_plot_intensity(): variables.append((0, 6))
+        if self.do_plot_intensity(): variables.append((0, 4))
 
         return variables
 
@@ -507,8 +507,8 @@ class OWID19AttenuatorsBox(XoppyWidget):
         logplot = []
 
         if self.do_plot_intensity(): logplot.append((False,False))
-        if self.do_plot_local(): logplot.append((False, True))
-        if self.do_plot_local(): logplot.append((False, True))
+        #if self.do_plot_local(): logplot.append((False, True))
+        #if self.do_plot_local(): logplot.append((False, True))
         if self.do_plot_local(): logplot.append((False, False))
         if self.do_plot_local(): logplot.append((False, False))
         if self.do_plot_intensity(): logplot.append((False, False))
@@ -626,15 +626,15 @@ class OWID19AttenuatorsBox(XoppyWidget):
         #calculate attenuators total
         Result.append((out_dictionary['data'][0]).tolist())
         Result.append((out_dictionary['data'][1]).tolist())
-        list2=[]
-        list3=[]
+        #list2=[]
+        #list3=[]
         list4=[]
         for k in range(len(substance)):
-            list2.append(out_dictionary['data'][2 + 5*k])
-            list3.append(out_dictionary['data'][3 + 5*k])
+            #list2.append(out_dictionary['data'][2 + 5*k])
+            #list3.append(out_dictionary['data'][3 + 5*k])
             list4.append(out_dictionary['data'][4 + 5*k])
-        Result.append(List_Product(list2))
-        Result.append(List_Product(list3))
+        #Result.append(List_Product(list2))
+        #Result.append(List_Product(list3))
         Result.append(List_Product(list4))
 
         for k in range(len(Result[0])):
