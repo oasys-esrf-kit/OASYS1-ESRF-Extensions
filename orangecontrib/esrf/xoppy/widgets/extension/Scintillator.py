@@ -346,7 +346,6 @@ class Scintillator(XoppyWidget):
         else :
             for k in range(len(E)):
                 L.append(E[k]/1000 *self.CORRECTION_FACTOR*F[k])
-                print(F[k])
             return(L)
 
 
