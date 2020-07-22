@@ -28,11 +28,11 @@ class Scintillator(XoppyWidget):
 
     SOURCE = Setting(2)
     SCINTILLATOR = Setting(2)
-    THICK = Setting(5.0)
+    THICK = Setting(500.0)
     #DENS = Setting('?')
-    ENER_MIN = Setting(1000.0)
-    ENER_MAX = Setting(50000.0)
-    ENER_N = Setting(100)
+    ENER_MIN = Setting(10000.0)
+    ENER_MAX = Setting(200000.0)
+    ENER_N = Setting(2000)
     SOURCE_FILE = Setting("?")
     CORRECTION_FACTOR = Setting(0.1)
     FILE_DUMP = 0
@@ -289,7 +289,7 @@ class Scintillator(XoppyWidget):
 
 
     def getTitles(self):
-        return ['Input Beam','Total CS','Mu','Transmitivity','Absorption','Intensity','Intensity after correction']
+        return ['Input Beam','Total CS','Mu','Transmitivity','Absorption after correction','Intensity','Intensity after correction']
 
     def getXTitles(self):
         return ["Energy [eV]","Energy [eV]","Energy [eV]","Energy [eV]","Energy [eV]","Energy [eV]", 'Energy [eV]']
@@ -346,6 +346,7 @@ class Scintillator(XoppyWidget):
         else :
             for k in range(len(E)):
                 L.append(E[k]/1000 *self.CORRECTION_FACTOR*F[k])
+                print(F[k])
             return(L)
 
 
@@ -391,9 +392,11 @@ class Scintillator(XoppyWidget):
                                      output_file=output_file)
 
         L=[]
-        for k in range (7):
+        for k in range (5):
             L.append((out_dictionary['data'][k]).tolist())
-        L.append(self.correction(L[0],L[6]))
+        L.append(self.correction(L[0],(out_dictionary['data'][5]).tolist()))
+        L.append((out_dictionary['data'][6]).tolist())
+        L.append(List_Product([L[5],L[1]]))
         out_dictionary['data']=numpy.array(L)
 
         try:
@@ -421,7 +424,15 @@ class Scintillator(XoppyWidget):
         return calculated_data
 
 
-
+def List_Product(list):
+    L = []
+    l = 1
+    for k in range(len(list[0])):
+        for i in range(len(list)):
+            l = l * list[i][k]
+        L.append(l)
+        l = 1
+    return (L)
 
 
 if __name__ == "__main__":
