@@ -326,7 +326,7 @@ class Scintillator(XoppyWidget):
         if self.SCINTILLATOR == 0:
             D=3.508
         if self.SCINTILLATOR == 1:
-            D=7.32
+            D=7.32/2 #50% powder
         if self.SCINTILLATOR == 2:
             D=6.76
         if self.SCINTILLATOR == 3:
@@ -399,7 +399,7 @@ class Scintillator(XoppyWidget):
         out_dictionary['data']=numpy.array(L)
 
         try:
-            print(out_dictionary["info"])
+             (out_dictionary["info"])
         except:
             pass
         # send exchange
