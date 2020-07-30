@@ -401,9 +401,12 @@ class Monochromator(XoppyWidget):
         try :
             print("Energy bandwith %f"%ener[1] )
             print ("Harmonic Energy bandwith %f"%harmo[1] )
-            print ("harmonic contribution %f"%(ener[1]/harmo[1]) )
+            print ("harmonic contribution %f"%(harmo[1]/ener[1]) )
         except :
             pass
+
+        Output.append(energies.tolist())
+        Output.append(source.tolist())
 
         if self.TYPE==0:
             for k in range(len(energies)):
@@ -411,15 +414,13 @@ class Monochromator(XoppyWidget):
         else:
             for k in range(len(energies)):
                 Mono_Effect.append(ener[0][k]+harmo[0][k])
-
+        print(Mono_Effect)
         if self.TYPE==2:
-            out_dictionary=xpower_calc(energies=energies, source=source, substance=['Al'],flags=[0], dens=[2.7], thick=[self.THICK], angle=[], roughness=[], output_file=output_file)
+            out_dictionary=xpower_calc(energies=energies, source=source, substance=['Al'],flags=[0], dens=[2.7], thick=[2*self.THICK], angle=[], roughness=[], output_file=output_file)
             Final_Spectrum=List_Product([out_dictionary["data"][6],Mono_Effect])
         else :
             Final_Spectrum=List_Product([source,Mono_Effect])
 
-        Output.append(energies.tolist())
-        Output.append(source.tolist())
         Output.append(Final_Spectrum)
         Output=numpy.array(Output)
 
