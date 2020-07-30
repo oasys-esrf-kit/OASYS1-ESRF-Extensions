@@ -414,7 +414,6 @@ class Monochromator(XoppyWidget):
         else:
             for k in range(len(energies)):
                 Mono_Effect.append(ener[0][k]+harmo[0][k])
-        print(Mono_Effect)
         if self.TYPE==2:
             out_dictionary=xpower_calc(energies=energies, source=source, substance=['Al'],flags=[0], dens=[2.7], thick=[2*self.THICK], angle=[], roughness=[], output_file=output_file)
             Final_Spectrum=List_Product([out_dictionary["data"][6],Mono_Effect])
