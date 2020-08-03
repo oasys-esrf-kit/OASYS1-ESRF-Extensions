@@ -20,7 +20,7 @@ class Scintillator(XoppyWidget):
     id = "orange.widgets.dataxpower"
     description = "Power Absorbed and Transmitted by Optical Elements"
     icon = "icons/xoppy_xpower.png"
-    priority = 2
+    priority = 4
     category = ""
     keywords = ["xoppy", "power", "scintillator"]
 

@@ -20,7 +20,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
     id = "orange.widgets.dataws"
     description = "Wiggler Spectrum on a Screen"
     icon = "icons/xoppy_ws.png"
-    priority = 11
+    priority = 1
     category = ""
     keywords = ["xoppy", "ws"]
 
