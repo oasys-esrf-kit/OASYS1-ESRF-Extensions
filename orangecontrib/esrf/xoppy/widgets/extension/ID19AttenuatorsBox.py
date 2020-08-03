@@ -214,7 +214,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "C",
                           label=self.unitLabels()[idx], addSpace=False,
-                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 21
@@ -222,7 +222,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "Al",
                           label=self.unitLabels()[idx], addSpace=False,
-                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 22
@@ -230,7 +230,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "Cu",
                           label=self.unitLabels()[idx], addSpace=False,
-                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 23
@@ -238,7 +238,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "Mo",
                           label=self.unitLabels()[idx], addSpace=False,
-                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 24
@@ -246,7 +246,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "W",
                           label=self.unitLabels()[idx], addSpace=False,
-                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 25
@@ -254,7 +254,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "Au",
                           label=self.unitLabels()[idx], addSpace=False,
-                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG )
+                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
         #widget index 41
@@ -302,7 +302,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
                  'Energy points:  ',
                  'File with input beam spectral power:',
                  'Att11','Att12','Att13','Att14','Att15','Att21','Att22','Att23','Att24','Att25',
-                 'thickness of the C attenuator (mm)', 'thickness of the Al attenuator (mm)',
+                 'thickness of the C attenuator (mm) [diamond]', 'thickness of the Al attenuator (mm)',
                  'thickness of the Cu attenuator (mm)', 'thickness of the Mo attenuator (mm)',
                  'thickness of the W attenuator (mm)', 'thickness of the Au attenuator (mm)',
                  'Plot','Dump file']
