@@ -44,6 +44,7 @@ INSTALL_REQUIRES = (
 PACKAGES = find_packages(exclude=('*.tests', '*.tests.*', 'tests.*', 'tests'))
 
 PACKAGE_DATA = {
+    "orangecontrib.esrf.oasys.widgets.extension":["icons/*.png", "icons/*.jpg"],
     "orangecontrib.esrf.wofry.widgets.extension":["icons/*.png", "icons/*.jpg"],
     "orangecontrib.esrf.xoppy.widgets.extension": ["icons/*.png", "icons/*.jpg"],
     "orangecontrib.esrf.syned.widgets.extension":["icons/*.png", "icons/*.jpg"],
@@ -53,11 +54,13 @@ PACKAGE_DATA = {
 
 NAMESPACE_PACAKGES = ["orangecontrib",
                       "orangecontrib.esrf",
+                      "orangecontrib.esrf.oasys",
                       "orangecontrib.esrf.wofry",
                       "orangecontrib.esrf.xoppy",
                       "orangecontrib.esrf.syned",
                       "orangecontrib.esrf.shadow",
                       "orangecontrib.esrf.srw",
+                      "orangecontrib.esrf.oasys.widgets",
                       "orangecontrib.esrf.wofry.widgets",
                       "orangecontrib.esrf.xoppy.widgets",
                       "orangecontrib.esrf.syned.widgets",
@@ -66,13 +69,15 @@ NAMESPACE_PACAKGES = ["orangecontrib",
                       ]
 
 ENTRY_POINTS = {
-    'oasys.addons' : ("WOFRY ESRF Extension = orangecontrib.esrf.wofry",
+    'oasys.addons' : ("Oasys ESRF Extension = orangecontrib.esrf.oasys",
+                      "WOFRY ESRF Extension = orangecontrib.esrf.wofry",
                       "XOPPY ESRF Extension = orangecontrib.esrf.xoppy",
                       "SYNED ESRF Extension = orangecontrib.esrf.syned",
                       "Shadow ESRF Extension = orangecontrib.esrf.shadow",
                       "SRW ESRF Extension = orangecontrib.esrf.srw",
                       ),
     'oasys.widgets' : (
+        "Oasys ESRF Extension = orangecontrib.esrf.oasys.widgets.extension",
         "WOFRY ESRF Extension = orangecontrib.esrf.wofry.widgets.extension",
         "XOPPY ESRF Extension = orangecontrib.esrf.xoppy.widgets.extension",
         "SYNED ESRF Extension = orangecontrib.esrf.syned.widgets.extension",
