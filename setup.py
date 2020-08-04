@@ -70,9 +70,9 @@ NAMESPACE_PACAKGES = ["orangecontrib",
 
 ENTRY_POINTS = {
     'oasys.addons' : ("Oasys ESRF Extension = orangecontrib.esrf.oasys",
-                      "WOFRY ESRF Extension = orangecontrib.esrf.wofry",
+                      "Wofry ESRF Extension = orangecontrib.esrf.wofry",
                       "XOPPY ESRF Extension = orangecontrib.esrf.xoppy",
-                      "SYNED ESRF Extension = orangecontrib.esrf.syned",
+                      "Syned ESRF Extension = orangecontrib.esrf.syned",
                       "Shadow ESRF Extension = orangecontrib.esrf.shadow",
                       "SRW ESRF Extension = orangecontrib.esrf.srw",
                       ),
