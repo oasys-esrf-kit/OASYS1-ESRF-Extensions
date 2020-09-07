@@ -26,7 +26,9 @@ class Transfocator(XoppyWidget):
 
     inputs = [("ExchangeData", DataExchangeObject, "acceptExchangeData")]
 
+
     SOURCE = Setting(2)
+    PINHOLE_APERTURE = Setting(1e-4)
     NUMBER_LENS = Setting(26)
     SUBSTANCE = Setting('Be')
     THICK = Setting(0.05)
@@ -55,6 +57,14 @@ class Transfocator(XoppyWidget):
                                        items=['From Oasys wire', 'Normalized to 1',
                                               'From external file.                '],
                                        valueType=int, orientation="horizontal", labelWidth=150)
+        self.show_at(self.unitFlags()[idx], box1)
+
+
+        #widget index 1.5
+        idx += 1
+        box1 = gui.widgetBox(box)
+        oasysgui.lineEdit(box1, self, "PINHOLE_APERTURE",
+                          label=self.unitLabels()[idx], addSpace=False, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 2
@@ -146,7 +156,7 @@ class Transfocator(XoppyWidget):
 
 
     def unitLabels(self):
-         return ['Input beam:', 'Number of Lens','Element','Thickness [mm]',
+         return ['Input beam:','Pinhole aperture [m]', 'Number of Lens','Element','Thickness [mm]',
                  'Density g/cm^3',
                  'From energy [eV]:      ',
                  'To energy [eV]:',
@@ -155,7 +165,7 @@ class Transfocator(XoppyWidget):
 
 
     def unitFlags(self):
-         return ['True','True','True','True',
+         return ['True','True','True','True','True',
                  'True',
                  'self.SOURCE  ==  1',
                  'self.SOURCE  ==  1',
@@ -301,7 +311,8 @@ class Transfocator(XoppyWidget):
         return [(False,False),(False, False),(False, False),(False,False) ]
 
 
-
+    def Transmitivity(self):
+        return E,T
 
     def xoppy_calc_xpower(self):
 
@@ -309,18 +320,6 @@ class Transfocator(XoppyWidget):
         Result_Absorption = []
         list=[]
         cumulated_data = {}
-
-        substance = []
-        thick = []
-        dens = []
-        flags = []
-
-        for k in range (self.NUMBER_LENS) :
-            substance.append(self.SUBSTANCE)
-            thick.append(self.THICK)
-            dens.append(self.DENS)
-            flags.append(0)
-
 
 
         if self.SOURCE == 0:
@@ -350,9 +349,7 @@ class Transfocator(XoppyWidget):
         else:
             output_file = "Transfo.spec"
 
-        out_dictionary = xpower_calc(energies=energies, source=source, substance=substance,
-                                     flags=flags, dens=dens, thick=thick, angle=[], roughness=[],
-                                     output_file=output_file)
+
 
         try:
             print(out_dictionary["info"])
