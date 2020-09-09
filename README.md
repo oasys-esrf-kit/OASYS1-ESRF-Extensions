@@ -33,4 +33,15 @@ python -m pip install -e . --no-deps --no-binary :all:
 When restarting Oasys, you will see the ESRF addons there.
 
 
+## Upload new version to the pypi server
+
++ Create a new version using your developper installation. Do not forget to increment the version number in setup.py
++ Then run 
+```
+python setup.py sdist
+python -m twine upload dist/OASYS1-ESRF-Extensions-X.X.X.tar.gz
+```
+
+You need an account in pypi.org and be authorized in https://pypi.org/project/OASYS1-ESRF-Extensions/
+
 
