@@ -19,7 +19,7 @@ class Transfocator(XoppyWidget):
     name = "Transfocator"
     id = "orange.widgets.dataxpower"
     description = "Power Absorbed and Transmitted by Optical Elements"
-    icon = "icons/xoppy_xpower.png"
+    icon = "icons/id19_trasnfocator.png"
     priority = 10
     category = ""
     keywords = ["xoppy", "power", "Transfocator"]

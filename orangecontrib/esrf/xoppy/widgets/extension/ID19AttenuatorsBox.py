@@ -19,7 +19,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
     name = "ID19AttenuatorsBox"
     id = "orange.widgets.dataxpower"
     description = "Power Absorbed and Transmitted by Optical Elements"
-    icon = "icons/xoppy_xpower.png"
+    icon = "icons/id19_attenuator.png"
     priority = 2
     category = ""
     keywords = ["xoppy", "power"]
