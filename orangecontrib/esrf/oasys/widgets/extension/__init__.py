@@ -5,7 +5,7 @@ NAME = "Oasys ESRF Extension"
 
 DESCRIPTION = "Widgets for Oasys"
 
-BACKGROUND = "#FAAC58"
+BACKGROUND = "#fa982f"
 
 ICON = "icons/esrf2.png"
 

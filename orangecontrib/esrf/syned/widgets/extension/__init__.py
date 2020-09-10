@@ -5,7 +5,7 @@ NAME = "Syned ESRF Extension"
 
 DESCRIPTION = "Widgets for Syned ESRF Extension"
 
-BACKGROUND = "#dec0a0"
+BACKGROUND = "#deb589"
 
 ICON = "icons/esrf2.png"
 
