@@ -52,6 +52,7 @@ class ShadowPythonScript(widget.OWWidget):
     script_file_name = Setting("tmp.py")
     source_flag = Setting(0)
     source_file_name = Setting("begin.dat")
+    do_run = Setting(1)
     iwrite = Setting(1)
 
     #
@@ -129,20 +130,6 @@ class ShadowPythonScript(widget.OWWidget):
 
         gen_box = oasysgui.widgetBox(self.controlArea, "Script Generation", addSpace=False, orientation="vertical", height=530, width=self.CONTROL_AREA_WIDTH-5)
 
-        # oasysgui.lineEdit(gen_box, self, "sampFactNxNyForProp", "Sampling factor for adjusting nx, ny\n(effective if > 0)", labelWidth=260, valueType=float, orientation="horizontal")
-        # oasysgui.lineEdit(gen_box, self, "nMacroElec", "Total Nr. of Electrons (Wavefronts)", labelWidth=260, valueType=int, orientation="horizontal")
-        # oasysgui.lineEdit(gen_box, self, "nMacroElecAvgOneProc", "Nr. of Electrons (Wavefronts) to average on each node\n(for MPI calculations)", labelWidth=260, valueType=int, orientation="horizontal")
-        # oasysgui.lineEdit(gen_box, self, "nMacroElecSavePer", "Saving periodicity (in terms of Electrons)\nfor the Resulting Intensity", labelWidth=260, valueType=int, orientation="horizontal")
-        # oasysgui.lineEdit(gen_box, self, "srCalcMeth", "SR calculation method (1 - undulator)", labelWidth=260, valueType=int, orientation="horizontal")
-        # oasysgui.lineEdit(gen_box, self, "srCalcPrec", "SR calculation relative accuracy", labelWidth=260, valueType=float, orientation="horizontal")
-        # oasysgui.lineEdit(gen_box, self, "strIntPropME_OutFileName", "Output File Name", labelWidth=150, valueType=str, orientation="horizontal")
-
-        # script_file_flag = Setting(0)
-        # script_file_name = Setting("tmp.py")
-        # source_flag = Setting(0)
-        # source_file_name = Setting("begin.dat")
-
-
         gui.comboBox(gen_box, self, "script_file_flag", label="write file with script",
                      items=["No", "Yes"], labelWidth=300,
                      sendSelectedValue=False, orientation="horizontal")
@@ -162,7 +149,11 @@ class ShadowPythonScript(widget.OWWidget):
                           orientation="horizontal")
         self.show_at("self.source_flag == 1", box1)
 
-        gui.comboBox(gen_box, self, "iwrite", label="write shadow files",
+        gui.comboBox(gen_box, self, "do_run", label="run shadow3 (in script)",
+                     items=["No (only definitions)", "Yes (define and run)"], labelWidth=300,
+                     sendSelectedValue=False, orientation="horizontal")
+
+        gui.comboBox(gen_box, self, "iwrite", label="when running, write shadow files",
                      items=["No", "Yes"], labelWidth=300,
                      sendSelectedValue=False, orientation="horizontal")
 
@@ -207,13 +198,6 @@ class ShadowPythonScript(widget.OWWidget):
         pass
 
     def execute_script(self):
-        # if showConfirmMessage(message = "Do you confirm launching a ME propagation?",
-        #                       informative_text="This is a very long and resource-consuming process: launching it within the OASYS environment is highly discouraged." + \
-        #                                        "The suggested solution is to save the script into a file and to launch it in a different environment."):
-        #     self._script = str(self.pythonScript.toPlainText())
-        #     self.console.write("\nRunning script:\n")
-        #     self.console.push("exec(_script)")
-        #     self.console.new_prompt(sys.ps1)
 
         self._script = str(self.pythonScript.toPlainText())
         self.console.write("\nRunning script:\n")
@@ -230,30 +214,6 @@ class ShadowPythonScript(widget.OWWidget):
                 file.write(str(self.pythonScript.toPlainText()))
                 file.close()
 
-                # QtWidgets.QMessageBox.information(self, "QMessageBox.information()",
-                #                               "File " + file_name + " written to disk",
-                #                               QtWidgets.QMessageBox.Ok)
-
-    # def set_input(self, srw_data):
-    #     if not srw_data is None:
-    #         self.input_srw_data = srw_data
-    #
-    #         if self.is_automatic_run:
-    #             self.refresh_script()
-    #     else:
-    #         QtWidgets.QMessageBox.critical(self, "Error", "Input Wavefront is None", QtWidgets.QMessageBox.Ok)
-
-    # def setBeam(self, beam):
-    #     if ShadowCongruence.checkEmptyBeam(beam):
-    #         if ShadowCongruence.checkGoodBeam(beam):
-    #             self.input_beam = beam
-    #
-    #             if self.is_automatic_run:
-    #                 self.calculate()
-    #         else:
-    #             QtWidgets.QMessageBox.critical(self, "Error",
-    #                                        "Data not displayable: No good rays or bad content",
-    #                                        QtWidgets.QMessageBox.Ok)
 
     def setBeam(self, beam):
         if ShadowCongruence.checkEmptyBeam(beam):
@@ -265,32 +225,6 @@ class ShadowPythonScript(widget.OWWidget):
                 if self.is_automatic_run:
                     self.refresh_script()
 
-
-                # optical_element_list_start = []
-                # optical_element_list_end = []
-                #
-                # # self.sysInfo.setText("")
-                # # self.mirInfo.setText("")
-                # # self.sourceInfo.setText("")
-                # # self.distancesSummary.setText("")
-                # self.pythonScript.setText("")
-                #
-                # for history_element in self.input_beam.getOEHistory():
-                #     if not history_element._shadow_source_start is None:
-                #         optical_element_list_start.append(history_element._shadow_source_start.src)
-                #     elif not history_element._shadow_oe_start is None:
-                #         optical_element_list_start.append(history_element._shadow_oe_start._oe)
-                #
-                #     if not history_element._shadow_source_end is None:
-                #         optical_element_list_end.append(history_element._shadow_source_end.src)
-                #     elif not history_element._shadow_oe_end is None:
-                #         optical_element_list_end.append(history_element._shadow_oe_end._oe)
-                #
-                #
-                # try:
-                #     self.pythonScript.setText(make_python_script_from_list(optical_element_list_start))
-                # except:
-                #     self.pythonScript.setText("Problem in writing python script:\n" + str(sys.exc_info()[0]) + ": " + str(sys.exc_info()[1]))
             else:
                 QtWidgets.QMessageBox.critical(self, "Error",
                                            "Data not displayable: No good rays or bad content",
@@ -323,6 +257,7 @@ class ShadowPythonScript(widget.OWWidget):
                                                                    script_file=script_file,
                                                                    source_flag=self.source_flag,
                                                                    source_file_name=self.source_file_name,
+                                                                   do_run=self.do_run,
                                                                    iwrite=self.iwrite) )
         except:
             self.pythonScript.setText(
@@ -363,7 +298,8 @@ class ShadowPythonScript(widget.OWWidget):
 # automatic creation of python scripts
 #
 
-def make_python_script_from_list(list_optical_elements1, script_file="", source_flag=0, source_file_name="", iwrite=0):
+def make_python_script_from_list(list_optical_elements1, script_file="", source_flag=0, source_file_name="",
+                                 iwrite=0, do_run=1):
     """
     program to build automatically a python script to run shadow3
 
@@ -404,7 +340,7 @@ def make_python_script_from_list(list_optical_elements1, script_file="", source_
                 newlist.append(i)
         list_optical_elements = newlist
 
-    template = """#
+    template_import = """#
 # Python script to run shadow3. Created automatically with make_python_script_from_list().
 #
 import Shadow
@@ -417,81 +353,86 @@ import numpy
     # source
     #
 
-    if source_flag == 0:
-        template += """
-def run_source(iwrite=0):
-    # write (1) or not (0) SHADOW files start.xx end.xx star.xx
 
+    template_define_source = """
+def define_source():
     #
     # initialize shadow3 source (oe0) and beam
     #
     oe0 = Shadow.Source()
-    beam = Shadow.Beam()
 
     # Define variables. See https://raw.githubusercontent.com/oasys-kit/shadow3/master/docs/source.nml
 """
 
-        isource = -1
-        for i, element in enumerate(list_optical_elements):
-            if isinstance(element, Shadow.Source):
-                isource = i
+    isource = -1
+    for i, element in enumerate(list_optical_elements):
+        if isinstance(element, Shadow.Source):
+            isource = i
 
-        if isource == -1:
-            raise Exception("Source not found")
+    if isource == -1:
+        raise Exception("Source not found")
 
-        ioe = isource
-        oe1B = list_optical_elements[isource]
-        template += "\n"
-        if isinstance(oe1B, Shadow.Source):
-            oe1 = Shadow.Source()
+    ioe = isource
+    oe1B = list_optical_elements[isource]
+    template_define_source += "\n"
+    if isinstance(oe1B, Shadow.Source):
+        oe1 = Shadow.Source()
 
-        if True:
-            memB = inspect.getmembers(oe1B)
-            mem = inspect.getmembers(oe1)
-            for i, var in enumerate(memB):
-                ivar = mem[i]
-                ivarB = memB[i]
-                if ivar[0].isupper():
-                    if isinstance(ivar[1], numpy.ndarray):
 
-                        if not ((ivar[1] == ivarB[1]).all()):
-                            line = "    oe" + str(ioe) + "." + ivar[0] + " = numpy.array(" + str(ivarB[1].tolist()) + ")\n"
-                            template += line
+    memB = inspect.getmembers(oe1B)
+    mem = inspect.getmembers(oe1)
+    for i, var in enumerate(memB):
+        ivar = mem[i]
+        ivarB = memB[i]
+        if ivar[0].isupper():
+            if isinstance(ivar[1], numpy.ndarray):
 
+                if not ((ivar[1] == ivarB[1]).all()):
+                    line = "    oe" + str(ioe) + "." + ivar[0] + " = numpy.array(" + str(ivarB[1].tolist()) + ")\n"
+                    template_define_source += line
+
+            else:
+                if ivar[1] != ivarB[1]:
+                    if isinstance(ivar[1], (str, bytes)):
+                        line = "    oe" + str(ioe) + "." + ivar[0] + " = " + str(ivarB[1]).strip() + "\n"
+                        if "SPECIFIED" in line:
+                            pass
+                        else:
+                            template_define_source += line
                     else:
-                        if ivar[1] != ivarB[1]:
-                            if isinstance(ivar[1], (str, bytes)):
-                                line = "    oe" + str(ioe) + "." + ivar[0] + " = " + str(ivarB[1]).strip() + "\n"
-                                if "SPECIFIED" in line:
-                                    pass
-                                else:
-                                    template += line
-                            else:
-                                line = "    oe" + str(ioe) + "." + ivar[0] + " = " + str(ivarB[1]) + "\n"
-                                template += line
+                        line = "    oe" + str(ioe) + "." + ivar[0] + " = " + str(ivarB[1]) + "\n"
+                        template_define_source += line
 
-        template += """\n\n
+    template_define_source += """
+    return oe0
+    """
+
+    template_run_source = """
+def run_source(oe0, iwrite=False):
+    # iwrite (1) or not (0) SHADOW files start.xx end.xx star.xx
+
     #Run SHADOW to create the source
 
     if iwrite:
         oe0.write("start.00")
 
+    beam = Shadow.Beam()
     beam.genSource(oe0)
 
     if iwrite:
         oe0.write("end.00")
         beam.write("begin.dat")
 
-    return beam, oe0
-    """
+    return beam
+"""
 
     #
     # trace
     #
 
-    template += """
+    template_define_beamline = """
 
-def run_trace(beam, iwrite=0):
+def define_beamline():
     # initialize elements
     oe_list = []
 
@@ -502,20 +443,20 @@ def run_trace(beam, iwrite=0):
             template_i = """
     oe{} = Shadow.OE()
     oe_list.append(oe{})"""
-            template += template_i.format("%d" % (i), "%d" % (i))
+            template_define_beamline += template_i.format("%d" % (i), "%d" % (i))
         elif isinstance(element, Shadow.IdealLensOE):
             template_i = """
     oe{} = Shadow.IdealLensOE()
     oe_list.append(oe{})"""
-            template += template_i.format("%d" % (i), "%d" % (i))
+            template_define_beamline += template_i.format("%d" % (i), "%d" % (i))
 
-    template += """
+    template_define_beamline += """
 
     # Define variables. See https://raw.githubusercontent.com/oasys-kit/shadow3/master/docs/oe.nml
 """
 
     for ioe, oe1B in enumerate(list_optical_elements):
-        template += "\n"
+        template_define_beamline += "\n"
         if isinstance(oe1B, Shadow.Source):
             oe1 = Shadow.Source()
         elif isinstance(element, Shadow.OE):
@@ -526,10 +467,10 @@ def run_trace(beam, iwrite=0):
         if ioe != 0:
 
             if isinstance(oe1B, Shadow.IdealLensOE):
-                template += "   oe" + str(ioe) + ".T_SOURCE = " + str(oe1B.T_SOURCE).strip() + "\n"
-                template += "   oe" + str(ioe) + ".T_IMAGE = " + str(oe1B.T_IMAGE).strip() + "\n"
-                template += "   oe" + str(ioe) + ".focal_x = " + str(oe1B.focal_x).strip() + "\n"
-                template += "   oe" + str(ioe) + ".focal_z = " + str(oe1B.focal_z).strip() + "\n"
+                template_define_beamline += "   oe" + str(ioe) + ".T_SOURCE = " + str(oe1B.T_SOURCE).strip() + "\n"
+                template_define_beamline += "   oe" + str(ioe) + ".T_IMAGE = " + str(oe1B.T_IMAGE).strip() + "\n"
+                template_define_beamline += "   oe" + str(ioe) + ".focal_x = " + str(oe1B.focal_x).strip() + "\n"
+                template_define_beamline += "   oe" + str(ioe) + ".focal_z = " + str(oe1B.focal_z).strip() + "\n"
             else:
                 memB = inspect.getmembers(oe1B)
                 mem = inspect.getmembers(oe1)
@@ -545,7 +486,7 @@ def run_trace(beam, iwrite=0):
                             if not ((ivar[1] == ivarB[1]).all()):
                                 line = "    oe" + str(ioe) + "." + ivar[0] + " = numpy.array(" + str(
                                     ivarB[1].tolist()) + ")\n"
-                                template += line
+                                template_define_beamline += line
 
                             # if (ivar[1] != ivarB[1]).all():
                             #     line = "oe"+str(ioe)+"."+ivar[0]+" = "+str(ivarB[1])+"\n"
@@ -561,65 +502,117 @@ def run_trace(beam, iwrite=0):
                                     if "SPECIFIED" in line:
                                         pass
                                     else:
-                                        template += line
+                                        template_define_beamline += line
                                 else:
                                     line = "    oe" + str(ioe) + "." + ivar[0] + " = " + str(ivarB[1]) + "\n"
-                                    template += line
+                                    template_define_beamline += line
 
-    template_oeA = """\n
+
+
+    template_define_beamline += """\n
+
+    return oe_list
+
+    """
+
+    ###########################
+
+    template_run_beamline = """
+def run_beamline(beam_in, oe_list, iwrite=0):
+    beam = beam_in.duplicate()
+        """
+
+    template_oeA = """
     #
     #run optical element {0}
     #
     print("    Running optical element: %d"%({0}))
+    oe{0} = oe_list[{0}-1]
     if iwrite:
         oe{0}.write("start.{1}")
-"""
+    """
 
-    template_oeB = """\n
+    template_oeB = """
+    oe{0} = oe_list[{0}-1]
     if iwrite:
         oe{0}.write("end.{1}")
         beam.write("star.{1}")
 """
 
     for i in range(1, n_elements):
-        template += template_oeA.format(i, "%02d" % (i))
+        template_run_beamline += template_oeA.format(i, "%02d" % (i))
         if isinstance(list_optical_elements[i], Shadow.OE):
-            template += "\n" + "    beam.traceOE(oe%d,%d)" % (i, i)
+            template_run_beamline += "\n" + "    beam.traceOE(oe%d,%d)" % (i, i)
         elif isinstance(list_optical_elements[i], Shadow.IdealLensOE):
-            template += "\n" + "    beam.traceIdealLensOE(oe%d,%d)" % (i, i)
-        template += template_oeB.format(i, "%02d" % (i))
+            template_run_beamline += "\n" + "    beam.traceIdealLensOE(oe%d,%d)" % (i, i)
+        template_run_beamline += template_oeB.format(i, "%02d" % (i))
 
-    template += """\n
-
-    return beam, oe_list
-
-    """
-    #
-    # display results (using ShadowTools, matplotlib needed)
-    #
-    if source_flag == 0:
-        template_i = """
-
-beam, oe0 = run_source(iwrite={})
-beam, oe_list = run_trace(beam,iwrite={})
-
-Shadow.ShadowTools.plotxy(beam,1,3,nbins=101,nolost=1,title="Real space")
-# Shadow.ShadowTools.plotxy(beam,1,4,nbins=101,nolost=1,title="Phase space X")
-# Shadow.ShadowTools.plotxy(beam,3,6,nbins=101,nolost=1,title="Phase space Z")
+    template_run_beamline += """
+    return beam
 """
-        template += template_i.format("%d" % iwrite, "%d" % iwrite)
-    elif source_flag == 1:
-        template_i = """
+    ###########################
+    #
+    # put together all pieces
+    #
+    template = ""
+    template += template_import
 
+    if source_flag == 0:
+        template += template_define_source
+        if do_run: template += template_run_source
+
+#         template += """
+# oe0 = define_source()
+# """
+
+    if n_elements > 1:
+        template += template_define_beamline
+        if do_run:
+            template += template_run_beamline
+
+    #
+    # run
+    #
+
+    template += """
+#
+# main
+#
+"""
+
+    if source_flag == 0:
+        template += """
+oe0 = define_source()
+"""
+        if do_run:
+            template_i = """
+beam = run_source(oe0, iwrite={})
+    """
+            template += template_i.format("%d" % iwrite)
+    elif source_flag == 1:
+
+        template_i = """
 beam = Shadow.Beam()
 beam.load("{}")
-beam, oe_list = run_trace(beam,iwrite={})
+        """
+        template += template_i.format("%s" % source_file_name)
 
-Shadow.ShadowTools.plotxy(beam,1,3,nbins=101,nolost=1,title="Real space")
+    if n_elements > 1:
+        template += """
+oe_list = define_beamline()
+"""
+        if do_run:
+            template_i = """
+beam = run_beamline(beam, oe_list, iwrite={})
+"""
+            template += template_i.format("%s" % iwrite)
+
+    template += """
+# Shadow.ShadowTools.plotxy(beam,1,3,nbins=101,nolost=1,title="Real space")
 # Shadow.ShadowTools.plotxy(beam,1,4,nbins=101,nolost=1,title="Phase space X")
 # Shadow.ShadowTools.plotxy(beam,3,6,nbins=101,nolost=1,title="Phase space Z")
 """
-        template += template_i.format(source_file_name, "%d" % iwrite,)
+
 
     if script_file != "":
         open(script_file, "wt").write(template)
