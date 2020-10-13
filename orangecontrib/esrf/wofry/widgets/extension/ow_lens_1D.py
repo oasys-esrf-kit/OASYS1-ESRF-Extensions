@@ -4,7 +4,6 @@ from scipy import interpolate
 import os
 import orangecanvas.resources as resources
 
-
 from PyQt5.QtGui import QPalette, QColor, QFont
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5 import QtGui, QtWidgets
@@ -24,7 +23,7 @@ from orangecontrib.xoppy.util.python_script import PythonScript  # TODO: change 
 
 from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
 
-from barc4ro.projected_thickness import *
+from barc4ro.projected_thickness import proj_thick_1D_crl
 import xraylib
 
 class OWLens1D(WofryWidget):
@@ -32,7 +31,7 @@ class OWLens1D(WofryWidget):
     name = "Lens 1D"
     id = "WofryLens1D"
     description = "ESRF Lens 1D"
-    icon = "icons/lens1D.png"
+    icon = "icons/lens.png"
     priority = 3
 
     category = "Wofry Wavefront Propagation"
@@ -514,7 +513,6 @@ class OWLens1D(WofryWidget):
             self.do_plot_wavefront(output_wavefront, abscissas_on_lens, lens_thickness)
 
         beamline = self.input_data.get_beamline().duplicate()
-        # self.send("GenericWavefront1D", output_wavefront)
 
         self.progressBarFinished()
 
@@ -522,13 +520,27 @@ class OWLens1D(WofryWidget):
         self.send("Trigger", TriggerIn(new_object=True))
 
     @classmethod
-    def calculate_output_wavefront_after_lens1D(cls, input_wavefront, shape=1, lens_aperture=0.001, radius=0.0005,
-                                                wall_thickness=0.0002, refraction_index_delta=0.99999947,
-                                                att_coefficient=0.00357382, number_of_refractive_surfaces=2, # nx=1001,
+    def calculate_output_wavefront_after_lens1D(cls,
+                                                input_wavefront,
+                                                shape=1,
+                                                radius=0.0005,
+                                                lens_aperture=0.001,
+                                                wall_thickness=0.0002,
+                                                refraction_index_delta=0.99999947,
+                                                att_coefficient=0.00357382,
+                                                number_of_refractive_surfaces=2,
                                                 error_flag=0,
-                                                error_file="", error_edge_management=0, write_profile="",
-                                                xc=0, ang_rot=0, wt_offset_ffs=0, offset_ffs=0, tilt_ffs=0,
-                                                wt_offset_bfs=0, offset_bfs=0, tilt_bfs=0):
+                                                error_file="",
+                                                error_edge_management=0,
+                                                write_profile="",
+                                                xc=0,
+                                                ang_rot=0,
+                                                wt_offset_ffs=0,
+                                                offset_ffs=0,
+                                                tilt_ffs=0,
+                                                wt_offset_bfs=0,
+                                                offset_bfs=0,
+                                                tilt_bfs=0):
 
         wave_length = input_wavefront.get_wavelength()
         photon_energy = input_wavefront.get_photon_energy()
@@ -592,10 +604,8 @@ class OWLens1D(WofryWidget):
         output_wavefront.add_phase_shifts(phase_shifts)
 
         if error_flag:
-            # profile_limits = a[-1, 0] - a[0, 0]
             profile_limits_projected = a[-1,0] - a[0,0]
             wavefront_dimension = output_wavefront.get_abscissas()[-1] - output_wavefront.get_abscissas()[0]
-            # print("profile deformation dimension: %f m"%(profile_limits))
             print("profile deformation dimension: %f um"%(1e6 * profile_limits_projected))
             print("wavefront window dimension: %f um" % (1e6 * wavefront_dimension))
 
@@ -622,18 +632,30 @@ class OWLens1D(WofryWidget):
     # warning: pay attention to the double backslash in \\n
     def script_template_output_wavefront_from_radius(self):
         return \
-"""
-import numpy
+"""import numpy
 from scipy import interpolate
-from barc4ro.projected_thickness import *
-import xraylib
-def calculate_output_wavefront_after_lens1D(input_wavefront, shape=1, lens_aperture=0.001, radius=0.0005,
-                                            wall_thickness=0.0002, refraction_index_delta=0.99999947,
-                                            att_coefficient=0.00357382, number_of_refractive_surfaces=2, # nx=1001,
+from barc4ro.projected_thickness import proj_thick_1D_crl
+
+def calculate_output_wavefront_after_lens1D(input_wavefront,
+                                            shape=1,
+                                            radius=0.0005,
+                                            lens_aperture=0.001,
+                                            wall_thickness=0.0002,
+                                            refraction_index_delta=0.99999947,
+                                            att_coefficient=0.00357382,
+                                            number_of_refractive_surfaces=2,
                                             error_flag=0,
-                                            error_file="", error_edge_management=0, write_profile="",
-                                            xc=0, ang_rot=0, wt_offset_ffs=0, offset_ffs=0, tilt_ffs=0,
-                                            wt_offset_bfs=0, offset_bfs=0, tilt_bfs=0):
+                                            error_file="",
+                                            error_edge_management=0,
+                                            write_profile="",
+                                            xc=0,
+                                            ang_rot=0,
+                                            wt_offset_ffs=0,
+                                            offset_ffs=0,
+                                            tilt_ffs=0,
+                                            wt_offset_bfs=0,
+                                            offset_bfs=0,
+                                            tilt_bfs=0):
 
 
 
@@ -661,11 +683,21 @@ def calculate_output_wavefront_after_lens1D(input_wavefront, shape=1, lens_apert
 
 
         # Implementation of barc4ro
-        x_2, lens_thickness = proj_thick_1D_crl(shape, lens_aperture, radius, _n=n_ref_lens,
-                                            _wall_thick=wall_thickness, _xc=xc, _nx=100, _ang_rot_ex=ang_rot,
-                                            _offst_ffs_x=offset_ffs, _tilt_ffs_x=tilt_ffs, _wt_offst_ffs=wt_offset_ffs,
-                                            _offst_bfs_x=offset_bfs, _tilt_bfs_x=tilt_bfs, _wt_offst_bfs=wt_offset_bfs,
-                                            isdgr=False, project=True, _axis=abscissas)
+        x_2, lens_thickness = proj_thick_1D_crl(shape, lens_aperture, radius,
+                                            _n=n_ref_lens,
+                                            _wall_thick=wall_thickness,
+                                            _xc=xc,
+                                            _nx=100,
+                                            _ang_rot_ex=ang_rot,
+                                            _offst_ffs_x=offset_ffs,
+                                            _tilt_ffs_x=tilt_ffs,
+                                            _wt_offst_ffs=wt_offset_ffs,
+                                            _offst_bfs_x=offset_bfs,
+                                            _tilt_bfs_x=tilt_bfs,
+                                            _wt_offst_bfs=wt_offset_bfs,
+                                            isdgr=False,
+                                            project=True,
+                                            _axis=abscissas)
 
     elif shape == 2: # Circular
         lens_thickness = n_ref_lens * (numpy.abs(radius) - numpy.sqrt(radius ** 2 - abscissas_on_lens ** 2)) + wall_thickness
@@ -728,8 +760,28 @@ def calculate_output_wavefront_after_lens1D(input_wavefront, shape=1, lens_apert
 #
 from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
 input_wavefront = GenericWavefront1D.load_h5_file("wavefront_input.h5","wfr")
-output_wavefront, abscissas_on_lens, lens_thickness = calculate_output_wavefront_after_lens1D(input_wavefront,shape={shape},radius={radius},wall_thickness={wall_thickness},lens_aperture={lens_aperture},number_of_refractive_surfaces={number_of_refractive_surfaces},error_flag= {error_flag},error_file="{error_file}", error_edge_management={error_edge_management},write_profile={write_profile}, xc={xc}, ang_rot={ang_rot},wt_offset_ffs={wt_offset_ffs}, offset_ffs={offset_ffs},tilt_ffs={tilt_ffs},wt_offset_bfs={wt_offset_bfs}, offset_bfs={offset_bfs},tilt_bfs={tilt_bfs})
+output_wavefront, abscissas_on_lens, lens_thickness = calculate_output_wavefront_after_lens1D(input_wavefront,
+                        shape={shape},
+                        radius={radius},
+                        lens_aperture={lens_aperture},
+                        wall_thickness={wall_thickness},
+                        refraction_index_delta={refraction_index_delta},
+                        att_coefficient={att_coefficient},
+                        number_of_refractive_surfaces={number_of_refractive_surfaces},
+                        error_flag= {error_flag},
+                        error_file="{error_file}",
+                        error_edge_management={error_edge_management},
+                        write_profile={write_profile},
+                        xc={xc},
+                        ang_rot={ang_rot},
+                        wt_offset_ffs={wt_offset_ffs},
+                        offset_ffs={offset_ffs},
+                        tilt_ffs={tilt_ffs},
+                        wt_offset_bfs={wt_offset_bfs},
+                        offset_bfs={offset_bfs},
+                        tilt_bfs={tilt_bfs})
 
+                    
 from srxraylib.plot.gol import plot
 plot(output_wavefront.get_abscissas(),output_wavefront.get_intensity())
 """
