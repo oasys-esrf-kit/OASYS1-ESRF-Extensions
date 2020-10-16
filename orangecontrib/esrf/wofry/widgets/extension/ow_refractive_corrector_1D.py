@@ -18,6 +18,8 @@ from syned.widget.widget_decorator import WidgetDecorator
 
 from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
 
+import xraylib
+
 import os
 import orangecanvas.resources as resources
 from scipy import interpolate
@@ -27,7 +29,7 @@ class OWRefractiveCorrector1D(WofryWidget):
     name = "Corrector (reflector) 1D"
     id = "WofryCorrectorByReflection1D"
     description = "ALS Corrector (reflector) 1D"
-    icon = "icons/eyeglasses.png"
+    icon = "icons/lenscorrector.png"
     priority = 5
 
     category = "Wofry Wavefront Propagation"
@@ -51,8 +53,11 @@ class OWRefractiveCorrector1D(WofryWidget):
               WidgetDecorator.syned_input_data()[0]]
 
     correction_method = Setting(1)
-    grazing_angle = Setting(1.5e-3)
     focus_at = Setting(10.0)
+    material = Setting(0)
+    refraction_index_delta = Setting(5.3e-7)
+    att_coefficient = Setting(0.00357382)
+    wall_thickness = Setting(0.0)
     apodization = Setting(0)
     apodization_ratio = Setting(0.1)
     apply_correction_to_wavefront = Setting(0)
@@ -114,12 +119,32 @@ class OWRefractiveCorrector1D(WofryWidget):
 
         self.box_corrector_1 = oasysgui.widgetBox(box_corrector, "", addSpace=False, orientation="vertical")
 
-        oasysgui.lineEdit(self.box_corrector_1, self, "grazing_angle", "Grazing angle [rad]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
-
         oasysgui.widgetBox(self.box_corrector_1, "", addSpace=False, orientation="horizontal")
         oasysgui.lineEdit(self.box_corrector_1, self, "focus_at", "Distance to waist [m]",
                           labelWidth=300, valueType=float, orientation="horizontal")
+
+
+        gui.comboBox(self.box_corrector_1, self, "material", label="Material",
+                     items=["External", "Be", "Al", "Diamond"],
+                     callback=self.set_visible,
+                     sendSelectedValue=False, orientation="horizontal")
+
+        self.box_refraction_index_id = oasysgui.widgetBox(self.box_corrector_1, "", addSpace=False, orientation="horizontal")
+        tmp = oasysgui.lineEdit(self.box_refraction_index_id, self, "refraction_index_delta", "Refraction index delta",
+                          labelWidth=300, valueType=float, orientation="horizontal")
+        tmp.setToolTip("refraction_index_delta")
+
+        self.box_att_coefficient_id = oasysgui.widgetBox(self.box_corrector_1, "", addSpace=False, orientation="horizontal")
+        tmp = oasysgui.lineEdit(self.box_att_coefficient_id, self, "att_coefficient", "Attenuation coefficient [m-1]",
+                          labelWidth=300, valueType=float, orientation="horizontal")
+        tmp.setToolTip("att_coefficient")
+
+
+        self.box_wall_thickness_id = oasysgui.widgetBox(self.box_corrector_1, "", addSpace=False, orientation="horizontal")
+        tmp = oasysgui.lineEdit(self.box_wall_thickness_id, self, "wall_thickness", "Wall thickness [m]",
+                          labelWidth=300, valueType=float, orientation="horizontal")
+        tmp.setToolTip("wall_thickness")
+
 
         gui.comboBox(self.box_corrector_1, self, "apodization", label="Modify correction profile", labelWidth=350,
                      items=["No","Apodization with intensity","Apodization with Gaussian"],
@@ -156,6 +181,9 @@ class OWRefractiveCorrector1D(WofryWidget):
         self.set_visible()
 
     def set_visible(self):
+        self.box_refraction_index_id.setVisible(self.material in [0])
+        self.box_att_coefficient_id.setVisible(self.material in [0])
+
         if self.correction_method == 0:
             self.box_corrector_1.setVisible(False)
         else:
@@ -187,9 +215,12 @@ class OWRefractiveCorrector1D(WofryWidget):
             tab.setFixedWidth(self.IMAGE_WIDTH)
 
     def check_fields(self):
-        self.grazing_angle = congruence.checkStrictlyPositiveNumber(self.grazing_angle, "Grazing angle")
         self.focus_at = congruence.checkStrictlyPositiveNumber(numpy.abs(self.focus_at), "Distance to waist")
         self.apodization_ratio = congruence.checkStrictlyPositiveNumber(numpy.abs(self.apodization_ratio), "Apodzation radio")
+
+        self.wall_thickness = congruence.checkPositiveNumber(self.wall_thickness, "Wall thickness")
+        self.refraction_index_delta = congruence.checkPositiveNumber(self.refraction_index_delta, "Refraction index delta")
+        self.att_coefficient = congruence.checkPositiveNumber(self.att_coefficient, "Attenuation coefficient")
 
     def receive_syned_data(self):
         raise Exception(NotImplementedError)
@@ -227,13 +258,42 @@ class OWRefractiveCorrector1D(WofryWidget):
             abscissas_on_mirror = target_wavefront.get_abscissas()
             height = numpy.zeros_like(abscissas_on_mirror)
         else:
-            output_wavefront, target_wavefront, abscissas_on_mirror, height = self.calculate_output_wavefront_after_corrector1D(
+            photon_energy = self.input_data.get_wavefront().get_photon_energy()
+            wave_length = self.input_data.get_wavefront().get_wavelength()
+            if self.material == 0:  # external
+                refraction_index_delta = self.refraction_index_delta
+                att_coefficient = self.att_coefficient
+            else:
+                if self.material == 1:  # Be
+                    element = "Be"
+                    density = xraylib.ElementDensity(4)
+                elif self.material == 2:  # Al
+                    element = "Al"
+                    density = xraylib.ElementDensity(13)
+                elif self.material == 3:  # Diamond
+                    element = "C"
+                    density = 3.51
+                print("Element: %s" % element)
+                print("        density = %g " % density)
+                print("        photon energy = %g eV " % photon_energy)
+
+                refraction_index = xraylib.Refractive_Index(element, photon_energy / 1000, density)
+                refraction_index_delta = 1 - refraction_index.real
+                att_coefficient = 4*numpy.pi * (xraylib.Refractive_Index(element, \
+                                photon_energy/1000, density)).imag / wave_length
+
+            print("Refracion index delta = %g " % (refraction_index_delta))
+            print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
+
+            output_wavefront, target_wavefront, abscissas_on_mirror, height = self.calculate_output_wavefront_after_refractive_corrector1D(
                     input_wavefront,
-                    grazing_angle=self.grazing_angle,
                     focus_at=self.focus_at,
                     apodization=self.apodization,
                     apodization_ratio=self.apodization_ratio,
-                    file_correction_profile=file_correction_profile)
+                    file_correction_profile=file_correction_profile,
+                    refraction_index_delta=refraction_index_delta,
+                    att_coefficient=att_coefficient,
+                    wall_thickness=self.wall_thickness)
 
         self.progressBarSet(50)
         if self.view_type > 0:
@@ -246,9 +306,10 @@ class OWRefractiveCorrector1D(WofryWidget):
                                           overwrite=True,verbose=True)
 
         # script
-        dict_parameters = {"grazing_angle": self.grazing_angle,
-                           "focus_at": self.focus_at,
-                           "focus_at":self.focus_at,
+        dict_parameters = {"focus_at": self.focus_at,
+                           "wall_thickness": self.wall_thickness,
+                           "refraction_index_delta": refraction_index_delta,
+                           "att_coefficient": att_coefficient,
                            "apodization": self.apodization,
                            "apodization_ratio":self.apodization_ratio,
                            "file_correction_profile":file_correction_profile}
@@ -279,8 +340,11 @@ class OWRefractiveCorrector1D(WofryWidget):
 
 
     @classmethod
-    def calculate_output_wavefront_after_corrector1D(cls, input_wavefront,grazing_angle=1.5e-3, focus_at=10.0,
-                                                     apodization=0, apodization_ratio=0.1, file_correction_profile=""):
+    def calculate_output_wavefront_after_refractive_corrector1D(cls, input_wavefront, focus_at=10.0,
+                                                     apodization=0, apodization_ratio=0.1, file_correction_profile="",
+                                                     refraction_index_delta=1e-7,
+                                                     att_coefficient=0.0,
+                                                     wall_thickness=0.0):
 
         output_wavefront = input_wavefront.duplicate()
         target_wavefront = input_wavefront.duplicate()
@@ -290,12 +354,13 @@ class OWRefractiveCorrector1D(WofryWidget):
         phase_target = target_wavefront.get_phase(unwrap=True)
         phase_correction = phase_target - phase_input
         abscissas = target_wavefront.get_abscissas()
-        abscissas_on_mirror = abscissas / numpy.sin(grazing_angle)
+        abscissas_on_mirror = abscissas
 
         # output_wavefront.add_phase_shift(phase_correction)
-        height = - phase_correction / (2 * output_wavefront.get_wavenumber() * numpy.sin(grazing_angle))
+        height = - phase_correction / (output_wavefront.get_wavenumber() * refraction_index_delta)
 
         if apodization == 0:
+            # pass
             height -= height[height.size // 2]
         elif apodization == 1:
             apodization = input_wavefront.get_intensity()
@@ -309,9 +374,13 @@ class OWRefractiveCorrector1D(WofryWidget):
             height *= apodization
             height -= height[0]
 
-        # calculate phase shift from new profile
-        phi = -2 * output_wavefront.get_wavenumber() * height * numpy.sin(grazing_angle)
-        output_wavefront.add_phase_shift(phi)
+        height += wall_thickness
+
+        amp_factors = numpy.sqrt(numpy.exp(-1.0 * att_coefficient * height))
+        phase_shifts = -1.0 * output_wavefront.get_wavenumber() * refraction_index_delta * height
+
+        output_wavefront.rescale_amplitudes(amp_factors)
+        output_wavefront.add_phase_shifts(phase_shifts)
 
         # output files
         if file_correction_profile != "":
@@ -329,10 +398,14 @@ class OWRefractiveCorrector1D(WofryWidget):
         return \
 """
 
+import numpy
 
-def calculate_output_wavefront_after_corrector1D(input_wavefront,grazing_angle=1.5e-3, focus_at=10.0, apodization=0, apodization_ratio=0.1, file_correction_profile=""):
-    import numpy
-    from scipy import interpolate
+def calculate_output_wavefront_after_refractive_corrector1D(input_wavefront, focus_at=10.0,
+                                                 apodization=0, apodization_ratio=0.1, file_correction_profile="",
+                                                 refraction_index_delta=1e-7,
+                                                 att_coefficient=0.0,
+                                                 wall_thickness=0.0):
+
     output_wavefront = input_wavefront.duplicate()
     target_wavefront = input_wavefront.duplicate()
     target_wavefront.set_spherical_wave(radius=-focus_at, center=0.0, complex_amplitude=1.0)
@@ -341,10 +414,10 @@ def calculate_output_wavefront_after_corrector1D(input_wavefront,grazing_angle=1
     phase_target = target_wavefront.get_phase(unwrap=True)
     phase_correction = phase_target - phase_input
     abscissas = target_wavefront.get_abscissas()
-    abscissas_on_mirror = abscissas / numpy.sin(grazing_angle)
+    abscissas_on_mirror = abscissas
 
     # output_wavefront.add_phase_shift(phase_correction)
-    height = - phase_correction / (2 * output_wavefront.get_wavenumber() * numpy.sin(grazing_angle))
+    height = - phase_correction / (output_wavefront.get_wavenumber() * refraction_index_delta)
 
     if apodization == 0:
         height -= height[height.size // 2]
@@ -360,9 +433,13 @@ def calculate_output_wavefront_after_corrector1D(input_wavefront,grazing_angle=1
         height *= apodization
         height -= height[0]
 
-    # calculate phase shift from new profile
-    phi = -2 * output_wavefront.get_wavenumber() * height * numpy.sin(grazing_angle)
-    output_wavefront.add_phase_shift(phi)
+    height += wall_thickness
+
+    amp_factors = numpy.sqrt(numpy.exp(-1.0 * att_coefficient * height))
+    phase_shifts = -1.0 * output_wavefront.get_wavenumber() * refraction_index_delta * height
+
+    output_wavefront.rescale_amplitudes(amp_factors)
+    output_wavefront.add_phase_shifts(phase_shifts)
 
     # output files
     if file_correction_profile != "":
@@ -374,12 +451,22 @@ def calculate_output_wavefront_after_corrector1D(input_wavefront,grazing_angle=1
         print("File written to disk: %s " % file_correction_profile)
 
     return output_wavefront, target_wavefront, abscissas_on_mirror, height
+
+
 #
 # main
 #
 from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
 input_wavefront = GenericWavefront1D.load_h5_file("wavefront_input.h5","wfr")
-output_wavefront, target_wavefront, abscissas_on_mirror, height = calculate_output_wavefront_after_corrector1D(input_wavefront,grazing_angle={grazing_angle}, focus_at={focus_at}, apodization={apodization}, apodization_ratio={apodization_ratio}, file_correction_profile="{file_correction_profile}")
+output_wavefront, target_wavefront, abscissas, height = calculate_output_wavefront_after_refractive_corrector1D(input_wavefront,
+        focus_at={focus_at},
+        apodization={apodization},
+        apodization_ratio={apodization_ratio}, 
+        file_correction_profile="{file_correction_profile}",
+        refraction_index_delta={refraction_index_delta},
+        att_coefficient={att_coefficient},
+        wall_thickness={wall_thickness})
+
 
 from srxraylib.plot.gol import plot
 plot(output_wavefront.get_abscissas(),output_wavefront.get_intensity())
