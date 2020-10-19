@@ -1,12 +1,12 @@
 import numpy
-import sys
+import os, sys
 from scipy import interpolate
-import os
+
 import orangecanvas.resources as resources
 
-from PyQt5.QtGui import QPalette, QColor, QFont
-from PyQt5.QtWidgets import QMessageBox
-from PyQt5 import QtGui, QtWidgets
+from PyQt5.QtGui import QPalette, QColor, QFont, QPixmap
+from PyQt5.QtWidgets import QMessageBox, QLabel, QSizePolicy
+from PyQt5.QtCore import Qt
 
 from orangewidget import gui
 from orangewidget.settings import Setting
@@ -69,8 +69,7 @@ class OWLens1D(WofryWidget):
     write_profile = Setting("profile1D.dat")
     write_input_wavefront = Setting(0)
 
-    image1_path = os.path.join(resources.package_dirname("orangecontrib.esrf.wofry.widgets"), "misc",
-                                                         "Refractor_parameters.png")
+    image1_path = os.path.join(resources.package_dirname("orangecontrib.esrf.wofry.widgets.gui"), "misc", "Refractor_parameters.png")
 
     # Lens misaligments for Barc4ro____________________________________________________________________________________#
 
@@ -84,8 +83,7 @@ class OWLens1D(WofryWidget):
     offset_bfs = Setting(0.0)
     tilt_bfs = Setting(0.0)
 
-    image2_path = os.path.join(resources.package_dirname("orangecontrib.esrf.wofry.widgets"), "misc",
-                                                         "Refractor_misalignments.png")
+    image2_path = os.path.join(resources.package_dirname("orangecontrib.esrf.wofry.widgets.gui"), "misc", "Refractor_misalignments.png")
 
     input_data = None
     titles = ["Wavefront 1D Intensity", "Wavefront 1D Phase","Wavefront Real(Amplitude)","Wavefront Imag(Amplitude)","O.E. Profile"]
@@ -189,10 +187,11 @@ class OWLens1D(WofryWidget):
 
         # Help figure
         self.figure_box1 = oasysgui.widgetBox(box_refractor, "Principal parabolic lens parameters", addSpace=False, orientation="horizontal")
-        label = QtWidgets.QLabel("Principal parabolic lens parameters")
-        label.setPixmap(QtGui.QPixmap(self.image1_path))
-
-        self.figure_box1.layout().addWidget(label)
+        label1 = QLabel("")
+        label1.setAlignment(Qt.AlignCenter)
+        label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        label1.setPixmap(QPixmap(self.image1_path))
+        self.figure_box1.layout().addWidget(label1)
 
         # Tab errors: error profile _________________________________________________________________________
 
@@ -265,10 +264,11 @@ class OWLens1D(WofryWidget):
 
         self.figure_box2 = oasysgui.widgetBox(box_misaligments, "Front focusing surface (ffs), back focusing surface (bfs)", addSpace=False, orientation="horizontal")
 
-        label = QtWidgets.QLabel("")
-        label.setPixmap(QtGui.QPixmap(self.image2_path))
-
-        self.figure_box2.layout().addWidget(label)
+        label2 = QLabel("")
+        label2.setAlignment(Qt.AlignCenter)
+        label2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        label2.setPixmap(QPixmap(self.image2_path))
+        self.figure_box2.layout().addWidget(label2)
 
         self.set_visible()
 
