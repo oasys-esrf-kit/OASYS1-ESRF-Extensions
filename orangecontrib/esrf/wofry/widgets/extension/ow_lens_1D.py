@@ -69,7 +69,7 @@ class OWLens1D(WofryWidget):
     write_profile = Setting("profile1D.dat")
     write_input_wavefront = Setting(0)
 
-    image1_path = os.path.join(resources.package_dirname("orangecontrib.esrf.wofry.util"), "figures",
+    image1_path = os.path.join(resources.package_dirname("orangecontrib.esrf.wofry.widgets"), "misc",
                                                          "Refractor_parameters.png")
 
     # Lens misaligments for Barc4ro____________________________________________________________________________________#
@@ -84,7 +84,7 @@ class OWLens1D(WofryWidget):
     offset_bfs = Setting(0.0)
     tilt_bfs = Setting(0.0)
 
-    image2_path = os.path.join(resources.package_dirname("orangecontrib.esrf.wofry.util"), "figures",
+    image2_path = os.path.join(resources.package_dirname("orangecontrib.esrf.wofry.widgets"), "misc",
                                                          "Refractor_misalignments.png")
 
     input_data = None

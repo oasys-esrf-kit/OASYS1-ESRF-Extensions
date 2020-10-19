@@ -26,9 +26,9 @@ from scipy import interpolate
 
 class OWRefractiveCorrector1D(WofryWidget):
 
-    name = "Corrector (reflector) 1D"
-    id = "WofryCorrectorByReflection1D"
-    description = "ALS Corrector (reflector) 1D"
+    name = "Corrector (refractor) 1D"
+    id = "WofryCorrectorByRefraction1D"
+    description = "ESRF Corrector (refractor) 1D"
     icon = "icons/lenscorrector.png"
     priority = 5
 
