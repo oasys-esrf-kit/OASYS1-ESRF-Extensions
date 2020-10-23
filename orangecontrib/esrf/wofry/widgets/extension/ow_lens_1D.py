@@ -59,6 +59,7 @@ class OWLens1D(WofryWidget):
     wall_thickness = Setting(0.00005)
     lens_aperture = Setting(0.001)
     number_of_refractive_surfaces = Setting(1)
+    n_lenses = Setting(1)
     material = Setting(0)
     refraction_index_delta = Setting(5.3e-7)
     att_coefficient = Setting(0.00357382)
@@ -156,6 +157,11 @@ class OWLens1D(WofryWidget):
         gui.comboBox(box_refractor, self, "number_of_refractive_surfaces", label="Number of refractive surfaces", labelWidth=350,
                      items=["1", "2"],
                      sendSelectedValue=False, orientation="horizontal")
+
+        self.box_n_lenses_id = oasysgui.widgetBox(box_refractor, "", addSpace=False, orientation="horizontal")
+        tmp = oasysgui.lineEdit(self.box_n_lenses_id, self, "n_lenses", "Number of lenses",
+                          labelWidth=300, valueType=int, orientation="horizontal")
+        tmp.setToolTip("n_lenses")
 
         gui.comboBox(box_refractor, self, "material", label="Lens material",
                      items=["External", "Be", "Al", "Diamond"],
@@ -317,9 +323,11 @@ class OWLens1D(WofryWidget):
         self.radius = congruence.checkStrictlyPositiveNumber(self.radius, "Radius")
         self.wall_thickness = congruence.checkNumber(self.wall_thickness, "Wall thickness")
         self.lens_aperture = congruence.checkNumber(self.lens_aperture, "Lens aperture")
+        self.n_lenses = congruence.checkStrictlyPositiveNumber(self.n_lenses, "Number of Lenses")
         self.refraction_index_delta = congruence.checkNumber(self.refraction_index_delta, "Refraction index delta")
         self.att_coefficient = congruence.checkNumber(self.att_coefficient, "Attenuation coefficient")
         self.error_file = congruence.checkFileName(self.error_file)
+        self.n_lenses = congruence.checkNumber(self.n_lenses, "Number of lenses")
 
         self.xc = congruence.checkNumber(self.xc, "xc")
         self.ang_rot = congruence.checkNumber(self.ang_rot, "ang_rot")
@@ -466,6 +474,7 @@ class OWLens1D(WofryWidget):
                     refraction_index_delta=refraction_index_delta,
                     att_coefficient=att_coefficient,
                     number_of_refractive_surfaces=self.number_of_refractive_surfaces,
+                    n_lenses=self.n_lenses,
                     error_flag=self.error_flag,
                     error_file=error_file,
                     error_edge_management=self.error_edge_management,
@@ -491,6 +500,7 @@ class OWLens1D(WofryWidget):
                            "wall_thickness": self.wall_thickness,
                            "lens_aperture": self.lens_aperture,
                            "number_of_refractive_surfaces": self.number_of_refractive_surfaces,
+                           "n_lenses": self.n_lenses,
                            "refraction_index_delta": refraction_index_delta,
                            "att_coefficient": att_coefficient,
                            "error_flag": self.error_flag,
@@ -529,6 +539,7 @@ class OWLens1D(WofryWidget):
                                                 refraction_index_delta=0.99999947,
                                                 att_coefficient=0.00357382,
                                                 number_of_refractive_surfaces=2,
+                                                n_lenses=1,
                                                 error_flag=0,
                                                 error_file="",
                                                 error_edge_management=0,
@@ -542,7 +553,6 @@ class OWLens1D(WofryWidget):
                                                 offset_bfs=0,
                                                 tilt_bfs=0):
 
-        wave_length = input_wavefront.get_wavelength()
         photon_energy = input_wavefront.get_photon_energy()
         abscissas = input_wavefront.get_abscissas().copy()
         output_wavefront = input_wavefront.duplicate()
@@ -562,9 +572,9 @@ class OWLens1D(WofryWidget):
 
         elif shape == 1: # Parabolic
 
-            focus_length = radius / (n_ref_lens * refraction_index_delta)
+            focus_length = radius / (n_lenses * n_ref_lens * refraction_index_delta)
 
-            print(f"Ideal focal length of paraboloidal lens: {round(focus_length, 2)} m for {photon_energy} eV photon energy")
+            print(f"Ideal focal length of {n_lenses} paraboloidal lenses: {round(focus_length, 2)} m for {photon_energy} eV photon energy")
 
             # Implementation of barc4ro
             x_2, lens_thickness = proj_thick_1D_crl(shape, lens_aperture, radius, _n=n_ref_lens,
@@ -574,7 +584,7 @@ class OWLens1D(WofryWidget):
                                                 isdgr=False, project=True, _axis=abscissas)
 
         elif shape == 2: # Circular
-            lens_thickness = n_ref_lens * (numpy.abs(radius) - numpy.sqrt(radius ** 2 - abscissas_on_lens ** 2)) + wall_thickness
+            lens_thickness = (numpy.abs(radius) - numpy.sqrt(radius ** 2 - abscissas_on_lens ** 2)) + wall_thickness
             bound = 0.5 * lens_aperture
             if radius < bound: bound = radius
             for i, x in enumerate(abscissas_on_lens):
@@ -597,8 +607,8 @@ class OWLens1D(WofryWidget):
             lens_thickness += thickness_interpolated
 
 
-        amp_factors = numpy.sqrt(numpy.exp(-1.0 * att_coefficient * lens_thickness))
-        phase_shifts = -1.0 * output_wavefront.get_wavenumber() * refraction_index_delta * lens_thickness
+        amp_factors = (numpy.exp(-1.0 * att_coefficient * lens_thickness)) ** n_lenses/2
+        phase_shifts = -1.0 * output_wavefront.get_wavenumber() * refraction_index_delta * lens_thickness * n_lenses
 
         output_wavefront.rescale_amplitudes(amp_factors)
         output_wavefront.add_phase_shifts(phase_shifts)
@@ -644,6 +654,7 @@ def calculate_output_wavefront_after_lens1D(input_wavefront,
                                             refraction_index_delta=0.99999947,
                                             att_coefficient=0.00357382,
                                             number_of_refractive_surfaces=2,
+                                            n_lenses=1,
                                             error_flag=0,
                                             error_file="",
                                             error_edge_management=0,
@@ -658,8 +669,6 @@ def calculate_output_wavefront_after_lens1D(input_wavefront,
                                             tilt_bfs=0):
 
 
-
-    wave_length = input_wavefront.get_wavelength()
     photon_energy = input_wavefront.get_photon_energy()
     abscissas = input_wavefront.get_abscissas().copy()
     output_wavefront = input_wavefront.duplicate()
@@ -679,7 +688,7 @@ def calculate_output_wavefront_after_lens1D(input_wavefront,
 
     elif shape == 1: # Parabolic
 
-        focus_length = radius / (n_ref_lens * refraction_index_delta)
+        focus_length = radius / (n_lenses * n_ref_lens * refraction_index_delta)
 
 
         # Implementation of barc4ro
@@ -698,6 +707,7 @@ def calculate_output_wavefront_after_lens1D(input_wavefront,
                                             isdgr=False,
                                             project=True,
                                             _axis=abscissas)
+        
 
     elif shape == 2: # Circular
         lens_thickness = n_ref_lens * (numpy.abs(radius) - numpy.sqrt(radius ** 2 - abscissas_on_lens ** 2)) + wall_thickness
@@ -723,8 +733,8 @@ def calculate_output_wavefront_after_lens1D(input_wavefront,
         lens_thickness += thickness_interpolated
 
 
-    amp_factors = numpy.sqrt(numpy.exp(-1.0 * att_coefficient * lens_thickness))
-    phase_shifts = -1.0 * output_wavefront.get_wavenumber() * refraction_index_delta * lens_thickness
+    amp_factors = (numpy.exp(-1.0 * att_coefficient * lens_thickness)) ** n_lenses/2
+    phase_shifts = -1.0 * output_wavefront.get_wavenumber() * refraction_index_delta * lens_thickness * n_lenses
 
     output_wavefront.rescale_amplitudes(amp_factors)
     output_wavefront.add_phase_shifts(phase_shifts)
@@ -768,6 +778,7 @@ output_wavefront, abscissas_on_lens, lens_thickness = calculate_output_wavefront
                         refraction_index_delta={refraction_index_delta},
                         att_coefficient={att_coefficient},
                         number_of_refractive_surfaces={number_of_refractive_surfaces},
+                        n_lenses = {n_lenses},
                         error_flag= {error_flag},
                         error_file="{error_file}",
                         error_edge_management={error_edge_management},
