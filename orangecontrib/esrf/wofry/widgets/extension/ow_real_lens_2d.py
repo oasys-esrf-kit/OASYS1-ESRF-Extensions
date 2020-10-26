@@ -27,7 +27,7 @@ class OWWORealLens2D(OWWOOpticalElementWithBoundaryShape):
     surface_shape = Setting(1)
     two_d_lens = Setting(0)
     wall_thickness = Setting(10e-6)
-    radius = Setting(100e-6)
+    lens_radius = Setting(200e-6)
     number_of_refractive_surfaces = Setting(1)
     material = Setting(1)
 
@@ -36,7 +36,8 @@ class OWWORealLens2D(OWWOOpticalElementWithBoundaryShape):
     # width = Setting(1e-3)
     # height = Setting(1e-4)
     shape = Setting(1)
-    lens_radius = 200e-6
+    radius = Setting(100e-6)
+
 
 
     def __init__(self):

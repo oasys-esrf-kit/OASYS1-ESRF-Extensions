@@ -180,7 +180,8 @@ class WOLens(Lens, OpticalElementDecorator):
 
             print(x.shape, y.shape, lens_thickness.shape)
             from srxraylib.plot.gol import plot_image
-            plot_image(1e6 * lens_thickness.T, 1e6 * x, 1e6 * y)
+            plot_image(1e6 * lens_thickness.T, 1e6 * x, 1e6 * y, title="Lens surface profile / um",
+                       xtitle="X / um", ytitle="Y / um")
 
         except:
             print("\n\n\n\n\n>>>>>>>> ERROR IN proj_thick_2D_crl\n\n\n\n\n\n")
