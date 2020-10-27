@@ -16,22 +16,25 @@ from syned.beamline.shape import SurfaceShape, Plane, Paraboloid, ParabolicCylin
 from syned.beamline.shape import Convexity, Direction
 
 
-class OWWORealLens2D(OWWOOpticalElementWithBoundaryShape):
+class OWWORealLens2D(OWWOOpticalElement):
 
     name = "Lens"
     description = "Wofry: Real Lens 2D"
     icon = "icons/lens.png"
     priority = 20
 
+    number_of_curved_surfaces = Setting(2)
+    lens_radius = Setting(200e-6)
 
-    surface_shape = Setting(1)
+    surface_shape = Setting(0)
     two_d_lens = Setting(0)
     wall_thickness = Setting(10e-6)
-    lens_radius = Setting(200e-6)
-    number_of_refractive_surfaces = Setting(1)
+
     material = Setting(1)
 
-
+    aperture_shape = Setting(0)
+    aperture_dimension_v = Setting(100e-6)
+    aperture_dimension_h = Setting(200e-6)
     # TODO: this is redundant...
     # width = Setting(1e-3)
     # height = Setting(1e-4)
@@ -45,7 +48,8 @@ class OWWORealLens2D(OWWOOpticalElementWithBoundaryShape):
 
 
     def set_visible(self):
-        self.lens_radius_box_id.setVisible(self.surface_shape in [1,2])
+        self.lens_radius_box_id.setVisible(self.number_of_curved_surfaces != 0)
+        self.lens_width_id.setVisible(self.aperture_shape == 1)
 
     def get_material_name(self, index=None):
         materials_list = ["", "Be", "Al", "Diamond"]
@@ -56,66 +60,78 @@ class OWWORealLens2D(OWWOOpticalElementWithBoundaryShape):
 
     def draw_specific_box(self):
 
-        super().draw_specific_box()
-
-        self.lens_box = oasysgui.widgetBox(self.tab_bas, "Real Lens Setting", addSpace=True, orientation="vertical")
-
-        gui.comboBox(self.lens_box, self, "surface_shape", label="Lens shape", labelWidth=350,
-                     items=["Flat", "Parabolic", "Circular"],
-                     sendSelectedValue=False, orientation="horizontal", callback=self.set_visible)
+        self.lens_box = oasysgui.widgetBox(self.tab_bas, "Real Lens Setting", addSpace=False, orientation="vertical",
+                                           height=350)
 
         oasysgui.lineEdit(self.lens_box, self, "wall_thickness", "(t_wall) Wall thickness [m]", labelWidth=260, valueType=float, orientation="horizontal")
-
-        self.lens_radius_box_id = oasysgui.widgetBox(self.lens_box, orientation="vertical")
-        oasysgui.lineEdit(self.lens_radius_box_id, self, "lens_radius", "(R) radius of curvature [m]", labelWidth=260,
-                          valueType=float, orientation="horizontal",)
-
-        gui.comboBox(self.lens_box, self, "number_of_refractive_surfaces", label="Number of refractive surfaces", labelWidth=350,
-                     items=["1", "2"], sendSelectedValue=False, orientation="horizontal")
-
-        gui.comboBox(self.lens_box, self, "two_d_lens", label="Focusing in", labelWidth=350,
-                     items=["2D", "1D (tangential)", "1D (sagittal)"], sendSelectedValue=False, orientation="horizontal")
 
         gui.comboBox(self.lens_box, self, "material", label="Lens material",
                      items=self.get_material_name(),
                      sendSelectedValue=False, orientation="horizontal")
 
+
+        gui.comboBox(self.lens_box, self, "number_of_curved_surfaces", label="Number of curved surfaces", labelWidth=350,
+                     items=["0 (parallel plate)", "1 (plano-concave)", "2 (bi-concave)"],
+                     sendSelectedValue=False, orientation="horizontal", callback=self.set_visible)
+
+
+        self.lens_radius_box_id = oasysgui.widgetBox(self.lens_box, orientation="vertical", height=None)
+        oasysgui.lineEdit(self.lens_radius_box_id, self, "lens_radius", "(R) radius of curvature [m]", labelWidth=260,
+                          valueType=float, orientation="horizontal",)
+
+        gui.comboBox(self.lens_radius_box_id, self, "surface_shape", label="Lens shape", labelWidth=350,
+                     items=["Parabolic", "Circular"],
+                     sendSelectedValue=False, orientation="horizontal")
+
+        gui.comboBox(self.lens_radius_box_id, self, "two_d_lens", label="Focusing in", labelWidth=350,
+                     items=["2D", "1D (tangential)", "1D (sagittal)"], sendSelectedValue=False, orientation="horizontal")
+
+
+        # super().draw_specific_box() # adds boundary box
+        gui.comboBox(self.lens_box, self, "aperture_shape", label="Aperture shape", labelWidth=350,
+                     items=["Circular", "Rectangular"],
+                     sendSelectedValue=False, orientation="horizontal", callback=self.set_visible)
+        oasysgui.lineEdit(self.lens_box, self, "aperture_dimension_v", "Aperture V (height/diameter) [m]", labelWidth=260,
+                          valueType=float, orientation="horizontal",)
+
+        self.lens_width_id = oasysgui.widgetBox(self.lens_box, orientation="vertical", height=None)
+        oasysgui.lineEdit(self.lens_width_id, self, "aperture_dimension_h", "Aperture H (width) [m]", labelWidth=260,
+                          valueType=float, orientation="horizontal",)
+
+        self.set_visible()
+
+
     def get_optical_element(self):
 
-        if self.surface_shape == 0:
-            surface_shape1 = Plane()
-        elif self.surface_shape == 1:
-            if self.two_d_lens == 0:
-                surface_shape1 = Paraboloid(parabola_parameter=self.lens_radius, convexity=Convexity.DOWNWARD)
-            elif self.two_d_lens == 1:
-                surface_shape1 = ParabolicCylinder(parabola_parameter=self.lens_radius, cylinder_direction=Direction.TANGENTIAL, convexity=Convexity.DOWNWARD)
-            elif self.two_d_lens == 2:
-                surface_shape1 = ParabolicCylinder(parabola_parameter=self.lens_radius, cylinder_direction=Direction.TANGENTIAL, convexity=Convexity.UPWARD)
-        elif self.surface_shape == 2:
-            if self.two_d_lens == 0:
-                surface_shape1 = Sphere(radius=self.lens_radius, convexity=Convexity.DOWNWARD)
-            elif self.two_d_lens == 1:
-                surface_shape1 = SphericalCylinder(radius=self.lens_radius, cylinder_direction=Direction.TANGENTIAL, convexity=Convexity.DOWNWARD)
-            elif self.two_d_lens == 3:
-                surface_shape1 = SphericalCylinder(radius=self.lens_radius, cylinder_direction=Direction.SAGITTAL, convexity=Convexity.UPWARD)
-
-        if self.number_of_refractive_surfaces == 0:
-            surface_shape2 = Plane()
-        else:
-            surface_shape2 = surface_shape1   #   not used!
-
-
-        bs = self.get_boundary_shape()
-        return WOLens(name="Real Lens", surface_shape1=surface_shape1, surface_shape2=surface_shape2,
-                    boundary_shape=bs, thickness=self.wall_thickness,
-                      material=self.get_material_name(index=self.material) )
+        return WOLens.create_from_keywords(
+            name=self.name,
+            number_of_curved_surfaces=self.number_of_curved_surfaces,
+            two_d_lens=self.two_d_lens,
+            surface_shape=self.surface_shape,
+            wall_thickness=self.wall_thickness,
+            lens_radius=self.lens_radius,
+            material=self.get_material_name(index=self.material),
+            aperture_shape=self.aperture_shape,
+            aperture_dimension_h=self.aperture_dimension_h,
+            aperture_dimension_v=self.aperture_dimension_v,
+        )
 
     def get_optical_element_python_code(self):
         txt  = ""
-        # txt += "\nfrom wofry.beamline.optical_elements.ideal_elements.lens import WOIdealLens"
-        # txt += "\n"
-        # txt += "\noptical_element = WOIdealLens(name='%s',focal_x=%f,focal_y=%f)"%(self.oe_name,self.focal_x,self.focal_y)
-        # txt += "\n"
+        txt += "\nfrom orangecontrib.esrf.wofry.util.lens import WOLens"
+        txt += "\n"
+        txt += "\noptical_element = WOLens.create_from_keywords(name=%s,number_of_curved_surfaces=%d,two_d_lens=%d,surface_shape=%d,wall_thickness=%g,lens_radius=%g,material='%s',aperture_shape=%d,aperture_dimension_h=%g,aperture_dimension_v=%g)" \
+               % (self.name,\
+                  self.number_of_curved_surfaces,\
+                  self.two_d_lens,\
+                  self.surface_shape,\
+                  self.wall_thickness,\
+                  self.lens_radius,\
+                  self.get_material_name(index=self.material),\
+                  self.aperture_shape,\
+                  self.aperture_dimension_h,\
+                  self.aperture_dimension_v,)
+        txt += "\n"
         return txt
 
     def check_data(self):
@@ -133,6 +149,11 @@ class OWWORealLens2D(OWWOOpticalElementWithBoundaryShape):
                 raise Exception("Syned Data not correct: Optical Element is not a Lens")
         else:
             raise Exception("Syned Data not correct: Empty Optical Element")
+
+    def propagate_wavefront(self):
+        super().propagate_wavefront()
+        print("\n\n\n\n>>>>>>>>>>>>> WRITING FILES........")
+
 
 if __name__ == "__main__":
     import sys
