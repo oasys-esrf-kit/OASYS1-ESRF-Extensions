@@ -94,11 +94,11 @@ class WOLens(Lens, OpticalElementDecorator):
                          _tilt_bfs_x=0, _tilt_bfs_y=0, _ang_rot_ez_bfs=0, _wt_offst_bfs=0,
                          isdgr=False, project=True,)
 
-            print(">>> ", x.shape, y.shape, lens_thickness.shape)
-
-            from srxraylib.plot.gol import plot_image
-            plot_image(1e6 * lens_thickness.T, 1e6 * x, 1e6 * y, title="Lens surface profile / um",
-                       xtitle="X / um", ytitle="Y / um")
+            # print(">>> ", x.shape, y.shape, lens_thickness.shape)
+            #
+            # from srxraylib.plot.gol import plot_image
+            # plot_image(1e6 * lens_thickness.T, 1e6 * x, 1e6 * y, title="Lens surface profile / um",
+            #            xtitle="X / um", ytitle="Y / um")
 
         except:
             raise Exception("Error running barc4ro.proj_thick_2D_crl")

@@ -15,6 +15,8 @@ from orangecontrib.wofry.widgets.gui.ow_optical_element import OWWOOpticalElemen
 from syned.beamline.shape import SurfaceShape, Plane, Paraboloid, ParabolicCylinder, Sphere, SphericalCylinder
 from syned.beamline.shape import Convexity, Direction
 
+from oasys.util.oasys_util import write_surface_file
+
 
 class OWWORealLens2D(OWWOOpticalElement):
 
@@ -41,7 +43,9 @@ class OWWORealLens2D(OWWOOpticalElement):
     shape = Setting(1)
     radius = Setting(100e-6)
 
-
+    write_input_wavefront = Setting(0)
+    write_profile_flag = Setting(0)
+    write_profile = Setting("lens_profile_2D.h5")
 
     def __init__(self):
         super().__init__()
@@ -50,6 +54,7 @@ class OWWORealLens2D(OWWOOpticalElement):
     def set_visible(self):
         self.lens_radius_box_id.setVisible(self.number_of_curved_surfaces != 0)
         self.lens_width_id.setVisible(self.aperture_shape == 1)
+        self.box_file_out.setVisible(self.write_profile_flag == 1)
 
     def get_material_name(self, index=None):
         materials_list = ["", "Be", "Al", "Diamond"]
@@ -98,8 +103,25 @@ class OWWORealLens2D(OWWOOpticalElement):
         oasysgui.lineEdit(self.lens_width_id, self, "aperture_dimension_h", "Aperture H (width) [m]", labelWidth=260,
                           valueType=float, orientation="horizontal",)
 
-        self.set_visible()
 
+
+        # files i/o tab
+        self.tab_files = oasysgui.createTabPage(self.tabs_setting, "File I/O")
+        files_box = oasysgui.widgetBox(self.tab_files, "Files", addSpace=True, orientation="vertical")
+
+        gui.comboBox(files_box, self, "write_input_wavefront", label="Input wf to file (for script)",
+                     items=["No", "Yes [wavefront2D_input.h5]"], sendSelectedValue=False, orientation="horizontal")
+
+        gui.comboBox(files_box, self, "write_profile_flag", label="Dump profile to file",
+                     items=["No", "Yes"], sendSelectedValue=False, orientation="horizontal",
+                     callback=self.set_visible)
+
+        self.box_file_out = gui.widgetBox(files_box, "", addSpace=False, orientation="vertical")
+        oasysgui.lineEdit(self.box_file_out, self, "write_profile", "File name",
+                            labelWidth=200, valueType=str, orientation="horizontal")
+
+
+        self.set_visible()
 
     def get_optical_element(self):
 
@@ -152,8 +174,17 @@ class OWWORealLens2D(OWWOOpticalElement):
 
     def propagate_wavefront(self):
         super().propagate_wavefront()
-        print("\n\n\n\n>>>>>>>>>>>>> WRITING FILES........")
 
+        if self.write_input_wavefront == 1:
+            self.input_data.get_wavefront().save_h5_file("wavefront2D_input.h5",subgroupname="wfr",
+                                         intensity=True,phase=False,overwrite=True,verbose=False)
+            print("\nFile with input wavefront wavefront2D_input.h5 written to disk.")
+
+        if self.write_profile_flag == 1:
+            xx, yy, s = self.get_optical_element().get_surface_thickness_mesh(self.input_data.get_wavefront())
+            write_surface_file(s.T, xx, yy, self.write_profile, overwrite=True)
+            print("\nFile for OASYS " + self.write_profile + " written to disk.")
+            
 
 if __name__ == "__main__":
     import sys
