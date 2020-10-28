@@ -184,7 +184,7 @@ class OWWORealLens2D(OWWOOpticalElement):
             xx, yy, s = self.get_optical_element().get_surface_thickness_mesh(self.input_data.get_wavefront())
             write_surface_file(s.T, xx, yy, self.write_profile, overwrite=True)
             print("\nFile for OASYS " + self.write_profile + " written to disk.")
-            
+
 
 if __name__ == "__main__":
     import sys
