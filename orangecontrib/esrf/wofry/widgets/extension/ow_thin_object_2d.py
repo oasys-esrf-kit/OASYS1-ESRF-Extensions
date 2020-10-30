@@ -4,24 +4,20 @@ from orangewidget import gui
 from oasys.widgets import gui as oasysgui
 from oasys.widgets import congruence
 
-# from syned.beamline.optical_elements.ideal_elements.lens import IdealLens
-from orangecontrib.esrf.syned.util.lens import Lens # TODO: from syned.beamline.optical_elements....
-
-# from wofry.beamline.optical_elements.ideal_elements.lens import WOIdealLens
-from orangecontrib.esrf.wofry.util.lens import WOLens
 
 from orangecontrib.wofry.widgets.gui.ow_optical_element import OWWOOpticalElement, OWWOOpticalElementWithBoundaryShape
 
-from syned.beamline.shape import SurfaceShape, Plane, Paraboloid, ParabolicCylinder, Sphere, SphericalCylinder
-from syned.beamline.shape import Convexity, Direction
-
-from oasys.util.oasys_util import write_surface_file
+from oasys.util.oasys_util import write_surface_file, read_surface_file
 from wofry.beamline.decorators import OpticalElementDecorator
 from syned.beamline.optical_element import OpticalElement
+import xraylib
+
+from scipy.interpolate import interp2d
+
+
+
+
 # mimics a syned element
-
-
-
 class ThinObject(OpticalElement):
     def __init__(self,
                  name="Undefined",
@@ -35,9 +31,10 @@ class ThinObject(OpticalElement):
 
         # support text contaning name of variable, help text and unit. Will be stored in self._support_dictionary
         self._set_support_text([
-                    ("name",                "Name" ,                                "" ),
-                    ("boundary_shape",      "Boundary shape",                       "" ),
-                    ("material",            "Material (element, compound or name)", "" ),
+                    ("name",                       "Name" ,                                "" ),
+                    ("boundary_shape",             "Boundary shape",                       "" ),
+                    ("material",                   "Material (element, compound or name)", "" ),
+                    ("file_with_thickness_mesh",   "File with thickness mesh",             "" ),
             ] )
 
 
@@ -59,43 +56,56 @@ class WOThinObject(ThinObject, OpticalElementDecorator):
                       material=material)
 
     def applyOpticalElement(self, wavefront, parameters=None, element_index=None):
-        return wavefront
-        #
-        #
-        # photon_energy = wavefront.get_photon_energy()
-        # wave_length = wavefront.get_wavelength()
-        #
-        # if self.get_material() == "Be": # Be
-        #     element = "Be"
-        #     density = xraylib.ElementDensity(4)
-        # elif self.get_material() == "Al": # Al
-        #     element = "Al"
-        #     density = xraylib.ElementDensity(13)
-        # elif self.get_material() == "Diamond": # Diamond
-        #     element = "C"
-        #     density = 3.51
-        # else:
-        #     raise Exception("Bad material: " + self.get_material())
-        #
-        # refraction_index = xraylib.Refractive_Index(element, photon_energy/1000, density)
-        # refraction_index_delta = 1 - refraction_index.real
-        # att_coefficient = 4*numpy.pi * (xraylib.Refractive_Index(element, photon_energy/1000, density)).imag / wave_length
-        #
-        # print("\n\n\n ==========  parameters recovered from xraylib : ")
-        # print("Element: %s" % element)
-        # print("        density = %g " % density)
-        # print("Photon energy = %g eV" % (photon_energy))
-        # print("Refracion index delta = %g " % (refraction_index_delta))
-        # print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
-        #
-        # amp_factors = numpy.sqrt(numpy.exp(-1.0 * att_coefficient * lens_thickness))
-        # phase_shifts = -1.0 * wavefront.get_wavenumber() * refraction_index_delta * lens_thickness
-        #
-        # output_wavefront = wavefront.duplicate()
-        # output_wavefront.rescale_amplitudes(amp_factors)
-        # output_wavefront.add_phase_shifts(phase_shifts)
-        #
-        # return output_wavefront
+        # return wavefront
+
+        print("\n\n\n ==========  parameters from optical element : ")
+        print(self.info())
+
+        photon_energy = wavefront.get_photon_energy()
+        wave_length = wavefront.get_wavelength()
+
+        if self.get_material() == "Be": # Be
+            element = "Be"
+            density = xraylib.ElementDensity(4)
+        elif self.get_material() == "Al": # Al
+            element = "Al"
+            density = xraylib.ElementDensity(13)
+        elif self.get_material() == "Diamond": # Diamond
+            element = "C"
+            density = 3.51
+        else:
+            raise Exception("Bad material: " + self.get_material())
+
+        refraction_index = xraylib.Refractive_Index(element, photon_energy/1000, density)
+        refraction_index_delta = 1 - refraction_index.real
+        att_coefficient = 4*numpy.pi * (xraylib.Refractive_Index(element, photon_energy/1000, density)).imag / wave_length
+
+        print("\n\n\n ==========  parameters recovered from xraylib : ")
+        print("Element: %s" % element)
+        print("        density = %g " % density)
+        print("Photon energy = %g eV" % (photon_energy))
+        print("Refracion index delta = %g " % (refraction_index_delta))
+        print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
+
+        xx, yy, zz = read_surface_file(self.get_file_with_thickness_mesh())
+        if zz.min() < 0: zz -= zz.min()
+        # print(">>>>>", xx.shape, yy.shape, zz.shape)
+        # from srxraylib.plot.gol import plot_image
+        # plot_image(zz.T,xx,yy)
+
+        f = interp2d(xx, yy, zz, kind='linear', bounds_error=False, fill_value=0)
+        x = wavefront.get_coordinate_x()
+        y = wavefront.get_coordinate_y()
+        interpolated_profile = f(x, y)
+
+        amp_factors = numpy.sqrt(numpy.exp(-1.0 * att_coefficient * interpolated_profile))
+        phase_shifts = -1.0 * wavefront.get_wavenumber() * refraction_index_delta * interpolated_profile
+
+        output_wavefront = wavefront.duplicate()
+        output_wavefront.rescale_amplitudes(amp_factors.T)
+        output_wavefront.add_phase_shifts(phase_shifts.T)
+
+        return output_wavefront
 
 
 
@@ -103,7 +113,7 @@ class OWWOThinObject2D(OWWOOpticalElement):
 
     name = "ThinObject"
     description = "Wofry: Thin Object 2D"
-    icon = "icons/thin_object.png"
+    icon = "icons/thin_object.jpg"
     priority = 30
 
 
@@ -123,6 +133,47 @@ class OWWOThinObject2D(OWWOOpticalElement):
     def __init__(self):
         super().__init__()
 
+    # overwrite this method to add tab with thickness profile
+    def initializeTabs(self):
+        size = len(self.tab)
+        indexes = range(0, size)
+
+        for index in indexes:
+            self.tabs.removeTab(size-1-index)
+
+        titles = ["Intensity","Phase","Thickness Profile"]
+        self.tab = []
+        self.plot_canvas = []
+
+        for index in range(0, len(titles)):
+            self.tab.append(gui.createTabPage(self.tabs, titles[index]))
+            self.plot_canvas.append(None)
+
+        for tab in self.tab:
+            tab.setFixedHeight(self.IMAGE_HEIGHT)
+            tab.setFixedWidth(self.IMAGE_WIDTH)
+
+    def do_plot_results(self, progressBarValue=80):
+        super().do_plot_results(progressBarValue)
+        if not self.view_type == 0:
+            if not self.wavefront_to_plot is None:
+
+                self.progressBarSet(progressBarValue)
+
+                xx, yy, zz = read_surface_file(self.file_with_thickness_mesh)
+                if zz.min() < 0: zz -= zz.min()
+
+                self.plot_data2D(data2D=zz.T,
+                                 dataX=1e6*xx,
+                                 dataY=1e6*xx,
+                                 progressBarValue=progressBarValue,
+                                 tabs_canvas_index=2,
+                                 plot_canvas_index=2,
+                                 title="thickness profile",
+                                 xtitle="Horizontal [$\mu$m] ( %d pixels)"%(xx.size),
+                                 ytitle="Vertical [$\mu$m] ( %d pixels)"%(yy.size))
+
+                self.progressBarFinished()
 
     def set_visible(self):
         self.box_file_out.setVisible(self.write_profile_flag == 1)
@@ -227,8 +278,10 @@ if __name__ == "__main__":
 
     a = QApplication(sys.argv)
     ow = OWWOThinObject2D()
-    input_wavefront = GenericWavefront2D.initialize_wavefront_from_range(-0.002,0.002,-0.001,0.001,(400,200))
+    ow.file_with_thickness_mesh = "/Users/srio/Downloads/SRW_M_thk_res_workflow_a_FC_CDn01.dat.h5"
+    input_wavefront = GenericWavefront2D.initialize_wavefront_from_range(-0.0002,0.0002,-0.0002,0.0002,(400,200))
     ow.set_input(input_wavefront)
+
 
     ow.show()
     a.exec_()

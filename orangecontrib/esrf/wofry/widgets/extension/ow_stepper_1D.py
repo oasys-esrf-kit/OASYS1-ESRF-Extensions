@@ -28,7 +28,7 @@ class OWstepper1D(WofryWidget):
     id = "GenericWavefrontViewer1D"
     description = "Generic Wavefront Viewer 1D"
     icon = "icons/stepper.png"
-    priority = 100
+    priority = 15
 
     category = "Wofry Tools"
     keywords = ["data", "file", "load", "read"]

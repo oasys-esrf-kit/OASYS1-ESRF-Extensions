@@ -23,7 +23,7 @@ class OWWORealLens2D(OWWOOpticalElement):
     name = "Lens"
     description = "Wofry: Real Lens 2D"
     icon = "icons/lens.png"
-    priority = 20
+    priority = 25
 
     number_of_curved_surfaces = Setting(2)
     lens_radius = Setting(200e-6)

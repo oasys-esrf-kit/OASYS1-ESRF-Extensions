@@ -28,7 +28,7 @@ class OWUndulatorGaussian2D(WofryWidget):
     id = "UndulatorGaussian2D"
     description = "Undulator approximated by Gaussian Shell-model 2D"
     icon = "icons/ugaussian.png"
-    priority = 3
+    priority = 20
 
     category = "Wofry Wavefront Propagation"
     keywords = ["data", "file", "load", "read"]
@@ -450,10 +450,6 @@ class OWUndulatorGaussian2D(WofryWidget):
 
             self.wofry_script.set_code(self.generate_python_code(sigmaI_h,sigmaI_v,ih,iv,beta_h,beta_v))
 
-            # try:
-            #     self.writeStdOut(self.generate_python_code(sigmaI_h,sigmaI_v,ih,iv,beta_h,beta_v))
-            # except:
-            #     pass
 
             self.send("WofryData", WofryData(wavefront=self.wavefront2D))
 

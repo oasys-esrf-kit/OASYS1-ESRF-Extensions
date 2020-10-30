@@ -32,7 +32,7 @@ class OWLens1D(WofryWidget):
     id = "WofryLens1D"
     description = "ESRF Lens 1D"
     icon = "icons/lens.png"
-    priority = 3
+    priority = 4
 
     category = "Wofry Wavefront Propagation"
     keywords = ["data", "file", "load", "read"]
