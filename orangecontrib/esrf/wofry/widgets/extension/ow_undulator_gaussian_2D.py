@@ -19,6 +19,8 @@ from syned.storage_ring.magnetic_structures.undulator import Undulator
 from oasys.util.oasys_util import EmittingStream, TTYGrabber
 import sys
 from wofry.propagator.util.gaussian_schell_model import GaussianSchellModel1D, GaussianSchellModel2D
+from orangecontrib.xoppy.util.python_script import PythonScript  # TODO: change import from wofry!!!
+
 
 class OWUndulatorGaussian2D(WofryWidget):
 
@@ -82,9 +84,20 @@ class OWUndulatorGaussian2D(WofryWidget):
 
     wavefront2D = None
 
+    _gsm_2d = None
 
     def __init__(self):
         super().__init__(is_automatic=False, show_view_options=True)
+
+        #
+        # add script tab to tabs panel
+        #
+        script_tab = oasysgui.createTabPage(self.main_tabs, "Script")
+        self.wofry_script = PythonScript()
+        self.wofry_script.code_area.setFixedHeight(400)
+        script_box = gui.widgetBox(script_tab, "Python script", addSpace=True, orientation="horizontal")
+        script_box.layout().addWidget(self.wofry_script)
+
 
         self.runaction = widget.OWAction("Generate Wavefront", self)
         self.runaction.triggered.connect(self.generate)
@@ -179,11 +192,12 @@ class OWUndulatorGaussian2D(WofryWidget):
 
         left_box_5 = oasysgui.widgetBox(self.mode_index_box, "", addSpace=True, orientation="horizontal", ) #width=550, height=50)
         tmp = oasysgui.lineEdit(left_box_5, self, "index_sorted_mode", "Mode",
-                          labelWidth=200, valueType=int, orientation="horizontal")
-        tmp.setToolTip("index_sorted_mode")
-        gui.button(left_box_5, self, "+1", callback=self.increase_mode_index)
-        gui.button(left_box_5, self, "-1", callback=self.decrease_mode_index)
-        gui.button(left_box_5, self, "0", callback=self.reset_mode_index)
+                        labelWidth=200, valueType=int, tooltip = "index_sorted_mode",
+                        orientation="horizontal")
+
+        gui.button(left_box_5, self, "+1", callback=self.increase_mode_index, width=30)
+        gui.button(left_box_5, self, "-1", callback=self.decrease_mode_index, width=30)
+        gui.button(left_box_5, self,  "0", callback=self.reset_mode_index, width=30)
 
         oasysgui.lineEdit(self.mode_index_box, self, "spectral_density_threshold", "Spectral Density Threshold (e.g. 0.99)", labelWidth=250, tooltip="coherent_fraction_threshold", valueType=float, orientation="horizontal")
 
@@ -205,8 +219,11 @@ class OWUndulatorGaussian2D(WofryWidget):
 
     def increase_mode_index(self):
         self.index_sorted_mode += 1
-        nmax = (self._n_h) * (self._n_v) - 1
-        if self.index_sorted_mode > nmax: self.index_sorted_mode = nmax
+        try:
+            nmax = (self._n_h) * (self._n_v) - 1
+            if self.index_sorted_mode > nmax: self.index_sorted_mode = nmax
+        except:
+            pass
         self.generate()
 
     def decrease_mode_index(self):
@@ -230,7 +247,7 @@ class OWUndulatorGaussian2D(WofryWidget):
         for index in indexes:
             self.tabs.removeTab(size-1-index)
 
-        titles = ["Wavefront 2D","Cumulated occupation", "Eigenvalues map / Eigenvalue(0,0)"]
+        titles = ["Wavefront 2D","Cumulated occupation", "Eigenvalues map"]
         self.tab = []
         self.plot_canvas = []
 
@@ -368,10 +385,24 @@ class OWUndulatorGaussian2D(WofryWidget):
                 self._n_h = int(numpy.log(1.0 - self.spectral_density_threshold) / numpy.log(q_h))
                 self._n_v = int(numpy.log(1.0 - self.spectral_density_threshold) / numpy.log(q_v))
 
+                if self._n_h < 1: self._n_h = 1
+                if self._n_v < 1: self._n_v = 1
+
                 print("\nTo consider %f of spectral density in each direction we need %d (H) x %d (V) modes (% d total modes)." % \
                       (self.spectral_density_threshold, self._n_h, self._n_v, self._n_h * self._n_v))
 
-                self._gsm_2d = GaussianSchellModel2D(1.0, sigmaI_h, sigmaMu_h, sigmaI_v, sigmaMu_v)
+                # this avoids to recalculate the eigenvalues map (time consuming) if only mode indices are changed
+                if self._gsm_2d is None:
+                    self._gsm_2d = GaussianSchellModel2D(1.0, sigmaI_h, sigmaMu_h, sigmaI_v, sigmaMu_v)
+                else:
+                    if (     self._gsm_2d._mode_x._sigma_s == sigmaI_h) and \
+                            (self._gsm_2d._mode_x._sigma_g == sigmaMu_h) and \
+                            (self._gsm_2d._mode_y._sigma_s == sigmaI_v) and \
+                            (self._gsm_2d._mode_y._sigma_g == sigmaMu_v) and \
+                            (self._spectral_density_threshold_backup == self.spectral_density_threshold):
+                        pass
+                    else:
+                        self._gsm_2d = GaussianSchellModel2D(1.0, sigmaI_h, sigmaMu_h, sigmaI_v, sigmaMu_v)
 
 
                 ih, iv = self._gsm_2d.sortedModeIndices(self.index_sorted_mode, n_points=self._n_h * self._n_v)
@@ -389,33 +420,40 @@ class OWUndulatorGaussian2D(WofryWidget):
                                                            )
 
             if self.view_type > 0: # skip if no plots
-                N = self._n_h * self._n_v
-                # compute cumulated occupation and eigenvalue map
-                sorted_array = []
-                for i in range(N):
-                    ihh, ivv = self._gsm_2d.sortedModeIndices(i, n_points=N)
-                    sorted_array.append([ihh, ivv])
+                if self.use_emittances == 0:
+                    self._cumulated_occupation = numpy.array([1.0])
+                    self._eigenvalues_map = numpy.ones((1,1))
+                else:
+                    N = self._n_h * self._n_v
+                    # compute cumulated occupation and eigenvalue map
+                    sorted_array = []
+                    for i in range(N):
+                        ihh, ivv = self._gsm_2d.sortedModeIndices(i, n_points=N)
+                        sorted_array.append([ihh, ivv])
 
 
-                eigenvalues_x = numpy.array([self._gsm_2d._mode_x.beta(i) for i in range(N)])
-                eigenvalues_y = numpy.array([self._gsm_2d._mode_y.beta(i) for i in range(N)])
+                    eigenvalues_x = numpy.array([self._gsm_2d._mode_x.beta(i) for i in range(N)])
+                    eigenvalues_y = numpy.array([self._gsm_2d._mode_y.beta(i) for i in range(N)])
 
-                eigenvalues = numpy.zeros(N)
-                for i in range(eigenvalues.size):
-                    eigenvalues[i] = eigenvalues_x[sorted_array[i][0]] * \
-                                     eigenvalues_y[sorted_array[i][1]]
+                    eigenvalues = numpy.zeros(N)
+                    for i in range(eigenvalues.size):
+                        eigenvalues[i] = eigenvalues_x[sorted_array[i][0]] * \
+                                         eigenvalues_y[sorted_array[i][1]]
 
-                self._cumulated_occupation = numpy.cumsum(eigenvalues)
-                self._eigenvalues_map = numpy.outer(eigenvalues_x[0:self._n_h],eigenvalues_y[0:self._n_v])
+                    self._cumulated_occupation = numpy.cumsum(eigenvalues)
+                    self._eigenvalues_map = numpy.outer(eigenvalues_x[0:self._n_h],eigenvalues_y[0:self._n_v])
+                    self._spectral_density_threshold_backup = self.spectral_density_threshold
 
 
             self.initializeTabs()
             self.plot_results()
 
-            try:
-                self.writeStdOut(self.generate_python_code())
-            except:
-                pass
+            self.wofry_script.set_code(self.generate_python_code(sigmaI_h,sigmaI_v,ih,iv,beta_h,beta_v))
+
+            # try:
+            #     self.writeStdOut(self.generate_python_code(sigmaI_h,sigmaI_v,ih,iv,beta_h,beta_v))
+            # except:
+            #     pass
 
             self.send("WofryData", WofryData(wavefront=self.wavefront2D))
 
@@ -426,41 +464,31 @@ class OWUndulatorGaussian2D(WofryWidget):
 
             self.progressBarFinished()
 
-    def generate_python_code(self):
+    def generate_python_code(self,sigmaI_h,sigmaI_v,ih,iv,beta_h,beta_v):
 
-        txt = ""
 
-        # txt += "\n\n#"
-        # txt += "\n# create input_wavefront\n#"
-        # txt += "\n#"
-        # txt += "\nfrom wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D"
-        #
-        # if self.initialize_from == 0:
-        #     txt += "\ninput_wavefront = GenericWavefront2D.initialize_wavefront_from_range(x_min=%g,x_max=%g,y_min=%g,y_max=%g,number_of_points=(%d,%d))"%\
-        #     (self.range_from_h,self.range_to_h,self.range_from_v,self.range_to_v,self.number_of_points_h, self.number_of_points_v)
-        #
-        # else:
-        #     txt += "\ninput_wavefront = GenericWavefront2D.initialize_wavefront_from_steps(x_start=%g, x_step=%g,y_start=%g,y_step=%g,"+\
-        #            "number_of_points=(%d,%d))"%\
-        #            (self.steps_start_h,self.steps_step_h,self.steps_start_v,self.steps_step_v,self.number_of_points_h,self.number_of_points_v)
-        #
-        # if self.units == 0:
-        #     txt += "\ninput_wavefront.set_photon_energy(%g)"%(self.energy)
-        # else:
-        #     txt += "\ninput_wavefront.set_wavelength(%g)"%(self.wavelength)
-        #
-        # if self.kind_of_wave == 0: #plane
-        #     if self.initialize_amplitude == 0:
-        #         txt += "\ninput_wavefront.set_plane_wave_from_complex_amplitude(complex_amplitude=complex(%g,%g))"%(self.complex_amplitude_re,self.complex_amplitude_im)
-        #     else:
-        #         txt += "\ninput_wavefront.set_plane_wave_from_amplitude_and_phase(amplitude=%g,phase=%g)"%(self.amplitude,self.phase)
-        # elif self.kind_of_wave == 1: # spheric
-        #     txt += "\ninput_wavefront.set_spherical_wave(radius=%g,complex_amplitude=complex(%g, %g))"%(self.radius,self.complex_amplitude_re,self.complex_amplitude_im)
-        # elif self.kind_of_wave == 2: # gaussian
-        #     txt += "\nwavefront2D.set_gaussian(sigma_x=%g,sigma_y=%g,amplitude=%g )"%(self.gaussian_sigma_h,self.gaussian_sigma_v,self.gaussian_amplitude)
-        # elif self.kind_of_wave == 3: # g.s.m.
-        #     txt += "\nwavefront2D.set_gaussian_hermite_mode(sigma_x=%g,sigma_y=%g,amplitude=%g,nx=%d,ny=%d)"%\
-        #            (self.gaussian_sigma_h,self.gaussian_sigma_v,self.gaussian_amplitude,self.gaussian_mode_h,self.gaussian_mode_v)
+
+        txt = "#"
+        txt += "\n# create input_wavefront\n#"
+        txt += "\n#"
+        txt += "\nfrom wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D"
+
+        if self.initialize_from == 0:
+            txt += "\ninput_wavefront = GenericWavefront2D.initialize_wavefront_from_range(x_min=%g,x_max=%g,y_min=%g,y_max=%g,number_of_points=(%d,%d))"%\
+            (self.range_from_h,self.range_to_h,self.range_from_v,self.range_to_v,self.number_of_points_h, self.number_of_points_v)
+
+        else:
+            txt += "\ninput_wavefront = GenericWavefront2D.initialize_wavefront_from_steps(x_start=%g, x_step=%g,y_start=%g,y_step=%g,"+\
+                   "number_of_points=(%d,%d))"%\
+                   (self.steps_start_h,self.steps_step_h,self.steps_start_v,self.steps_step_v,self.number_of_points_h,self.number_of_points_v)
+
+        txt += "\ninput_wavefront.set_photon_energy(%g)"%(self.photon_energy)
+
+        txt += "\ninput_wavefront.set_gaussian_hermite_mode(sigma_x=%g,sigma_y=%g,amplitude=1.0,nx=%d,ny=%d,betax=%g,betay=%g)"%\
+                (sigmaI_h,sigmaI_v,ih,iv,beta_h,beta_v)
+
+        txt += "\n\n\nfrom srxraylib.plot.gol import plot_image"
+        txt += "\nplot_image(input_wavefront.get_intensity(), input_wavefront.get_coordinate_x(),input_wavefront.get_coordinate_y())"
 
         return txt
 
@@ -471,7 +499,11 @@ class OWUndulatorGaussian2D(WofryWidget):
 
             # titles = ["Wavefront 2D Intensity"]
             titles = ["Wavefront 2D Intensity", "Cumulated occupation", "Eigenvalues map"]
-            ih, iv = self._gsm_2d.sortedModeIndices(self.index_sorted_mode, n_points=self._n_h * self._n_v)
+            try:
+                ih, iv = self._gsm_2d.sortedModeIndices(self.index_sorted_mode, n_points=self._n_h * self._n_v)
+            except:
+                ih, iv = 0, 0
+
             self.plot_data2D(data2D=self.wavefront2D.get_intensity(),
                              dataX=1e6 * self.wavefront2D.get_coordinate_x(),
                              dataY=1e6 * self.wavefront2D.get_coordinate_y(),
@@ -507,15 +539,28 @@ class OWUndulatorGaussian2D(WofryWidget):
 
             nx, ny = self._eigenvalues_map.shape
 
+            tx = 1
+            ty = 1
+            if nx > 1:
+                dataX = numpy.arange(nx) * nx / (nx - 1)
+            else:
+                dataX = numpy.array([0,2])
+
+            if ny > 1:
+                dataY = numpy.arange(ny) * ny / (ny - 1)
+            else:
+                dataY = numpy.array([0,2])
+
+
             self.plot_data2D(data2D=self._eigenvalues_map / self._eigenvalues_map[0,0],
-                             dataX=numpy.arange(nx) * nx /  (nx -1) ,
-                             dataY=numpy.arange(ny) * ny /  (ny -1) ,
+                             dataX=dataX,
+                             dataY=dataY,
                              progressBarValue=progressBarValue,
                              tabs_canvas_index=2,
                              plot_canvas_index=2,
-                             title=titles[2],
-                             xtitle="H mode index",
-                             ytitle="V mode index")
+                             title="Eigenvalue(n,m) / Eigenvalue(0,0)",
+                             xtitle="H mode index n",
+                             ytitle="V mode index m")
 
 
             self.progressBarFinished()
