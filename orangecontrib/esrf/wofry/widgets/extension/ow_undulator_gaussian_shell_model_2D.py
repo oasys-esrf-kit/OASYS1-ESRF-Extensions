@@ -22,9 +22,9 @@ from wofry.propagator.util.gaussian_schell_model import GaussianSchellModel1D, G
 from orangecontrib.xoppy.util.python_script import PythonScript  # TODO: change import from wofry!!!
 
 
-class OWUndulatorGaussian2D(WofryWidget):
+class OWUndulatorGaussianShellModel2D(WofryWidget):
 
-    name = "Undulator Gaussian 2D"
+    name = "Undulator Gaussian Shell-model 2D"
     id = "UndulatorGaussian2D"
     description = "Undulator approximated by Gaussian Shell-model 2D"
     icon = "icons/ugaussian.png"
@@ -567,7 +567,7 @@ if __name__ == "__main__":
     from PyQt5.QtWidgets import QApplication
 
     a = QApplication(sys.argv)
-    ow = OWUndulatorGaussian2D()
+    ow = OWUndulatorGaussianShellModel2D()
 
     ow.show()
     a.exec_()

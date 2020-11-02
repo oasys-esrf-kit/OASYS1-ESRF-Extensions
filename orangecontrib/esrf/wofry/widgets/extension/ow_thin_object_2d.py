@@ -15,7 +15,10 @@ import xraylib
 from scipy.interpolate import interp2d
 
 
-
+from oasys.util.oasys_objects import OasysPreProcessorData, OasysSurfaceData
+from wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D
+from orangecontrib.wofry.util.wofry_objects import WofryData
+from syned.widget.widget_decorator import WidgetDecorator
 
 # mimics a syned element
 class ThinObject(OpticalElement):
@@ -116,6 +119,13 @@ class OWWOThinObject2D(OWWOOpticalElement):
     icon = "icons/thin_object.jpg"
     priority = 30
 
+    inputs = [("WofryData", WofryData, "set_input"),
+              ("GenericWavefront2D", GenericWavefront2D, "set_input"),
+              WidgetDecorator.syned_input_data()[0],
+              # ("Oasys PreProcessorData", OasysPreProcessorData, "set_input"),
+              ("Surface Data", OasysSurfaceData, "set_input")
+              ]
+
 
     material = Setting(1)
 
@@ -131,7 +141,25 @@ class OWWOThinObject2D(OWWOOpticalElement):
     file_with_thickness_mesh = Setting("<none>")
 
     def __init__(self):
+
         super().__init__()
+
+    def set_input(self, input_data):
+
+        do_execute = False
+        # if isinstance(input_data, OasysPreProcessorData):
+        #     self.file_with_thickness_mesh = self.oasys_data.error_profile_data
+        if isinstance(input_data, OasysSurfaceData):
+            self.file_with_thickness_mesh = input_data.surface_data_file
+        elif isinstance(input_data, WofryData):
+            self.input_data = input_data
+            do_execute = True
+        elif isinstance(input_data, GenericWavefront2D):
+            self.input_data = WofryData(wavefront=input_data)
+            do_execute = True
+
+        if self.is_automatic_execution and do_execute:
+            self.propagate_wavefront()
 
     # overwrite this method to add tab with thickness profile
     def initializeTabs(self):
@@ -278,7 +306,7 @@ if __name__ == "__main__":
 
     a = QApplication(sys.argv)
     ow = OWWOThinObject2D()
-    ow.file_with_thickness_mesh = "/Users/srio/Downloads/SRW_M_thk_res_workflow_a_FC_CDn01.dat.h5"
+    ow.file_with_thickness_mesh = "/home/srio/Downloads/SRW_M_thk_res_workflow_a_FC_CDn01.dat.h5"
     input_wavefront = GenericWavefront2D.initialize_wavefront_from_range(-0.0002,0.0002,-0.0002,0.0002,(400,200))
     ow.set_input(input_wavefront)
 
