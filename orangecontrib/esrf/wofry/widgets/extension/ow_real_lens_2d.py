@@ -20,7 +20,8 @@ from oasys.util.oasys_util import write_surface_file
 
 class OWWORealLens2D(OWWOOpticalElement):
 
-    name = "Lens"
+    name = "Lens 2D"
+    id = "WofryLens2D"
     description = "Wofry: Real Lens 2D"
     icon = "icons/lens.png"
     priority = 25

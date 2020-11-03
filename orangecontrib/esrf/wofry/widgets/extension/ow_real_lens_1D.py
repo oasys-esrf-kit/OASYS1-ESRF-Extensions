@@ -26,11 +26,11 @@ from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
 from barc4ro.projected_thickness import proj_thick_1D_crl
 import xraylib
 
-class OWLens1D(WofryWidget):
+class OWWORealLens1D(WofryWidget):
 
     name = "Lens 1D"
     id = "WofryLens1D"
-    description = "ESRF Lens 1D"
+    description = "Wofry: Real Lens 1D"
     icon = "icons/lens.png"
     priority = 4
 
@@ -874,7 +874,7 @@ if __name__ == '__main__':
         return input_wavefront
 
     app = QApplication([])
-    ow = OWLens1D()
+    ow = OWWORealLens1D()
     ow.set_input(create_wavefront())
 
     # ow.receive_dabam_profile(numpy.array([[-1.50,0],[1.50,0]]))

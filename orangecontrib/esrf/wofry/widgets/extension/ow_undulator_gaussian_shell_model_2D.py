@@ -1,4 +1,5 @@
 import numpy
+import sys
 
 from PyQt5.QtGui import QPalette, QColor, QFont
 from PyQt5.QtWidgets import QMessageBox
@@ -7,49 +8,41 @@ from orangewidget import widget
 from orangewidget.settings import Setting
 from oasys.widgets import gui as oasysgui
 from oasys.widgets import congruence
-
-from wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D
-
-from orangecontrib.wofry.util.wofry_objects import WofryData
-from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
+from oasys.util.oasys_util import TriggerOut, EmittingStream
 
 from syned.beamline.beamline import Beamline
 from syned.storage_ring.magnetic_structures.undulator import Undulator
 
-from oasys.util.oasys_util import EmittingStream, TTYGrabber
-import sys
-from wofry.propagator.util.gaussian_schell_model import GaussianSchellModel1D, GaussianSchellModel2D
+from wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D
+from wofry.propagator.util.gaussian_schell_model import GaussianSchellModel2D
+
+from orangecontrib.wofry.util.wofry_objects import WofryData
+from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
 from orangecontrib.xoppy.util.python_script import PythonScript  # TODO: change import from wofry!!!
 
 
 class OWUndulatorGaussianShellModel2D(WofryWidget):
 
     name = "Undulator Gaussian Shell-model 2D"
-    id = "UndulatorGaussian2D"
+    id = "UndulatorGSM2D"
     description = "Undulator approximated by Gaussian Shell-model 2D"
-    icon = "icons/ugaussian.png"
+    icon = "icons/undulator_gsm_2d.png"
     priority = 20
 
     category = "Wofry Wavefront Propagation"
     keywords = ["data", "file", "load", "read"]
 
     inputs = [
-                ("SynedData", Beamline, "receive_syned_data")
+                ("SynedData", Beamline, "receive_syned_data"),
+                ("Trigger", TriggerOut, "receive_trigger_signal"),
                 ]
     outputs = [
-                # {"name":"GenericWavefront2D",
-                # "type":GenericWavefront2D,
-                # "doc":"GenericWavefront2D",
-                # "id":"GenericWavefront2D"},
                {"name":"WofryData",
                 "type":WofryData,
                 "doc":"WofryData",
                 "id":"WofryData"}
                 ]
 
-    units = Setting(1)
-    energy = Setting(1000.0)
-    # wavelength = Setting(1e-10)
     number_of_points_h = Setting(100)
     number_of_points_v = Setting(100)
 
@@ -64,10 +57,6 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
     steps_start_v = Setting(-0.0005)
     steps_step_v  = Setting(1e-6)
 
-
-
-
-
     sigma_h=Setting(3.01836e-05)
     sigma_v=Setting(3.63641e-06)
     sigma_divergence_h=Setting(4.36821e-06)
@@ -81,9 +70,7 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
 
     spectral_density_threshold = Setting(0.99)
 
-
     wavefront2D = None
-
     _gsm_2d = None
 
     def __init__(self):
@@ -133,9 +120,10 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
         number_of_points_box = oasysgui.widgetBox(box_space, "", addSpace=False, orientation="horizontal")
 
         oasysgui.lineEdit(number_of_points_box, self, "number_of_points_h", "Number of Points                    (H)",
-                          labelWidth=200, valueType=int, orientation="horizontal")
-        oasysgui.lineEdit(number_of_points_box, self, "number_of_points_v", "x (V)",
+                          labelWidth=200, tooltip="number_of_points_h",
                           valueType=int, orientation="horizontal")
+        oasysgui.lineEdit(number_of_points_box, self, "number_of_points_v", "x (V)",
+                          tooltip="number_of_points_v", valueType=int, orientation="horizontal")
 
         gui.comboBox(box_space, self, "initialize_from", label="Space Initialization", labelWidth=350,
                      items=["From Range", "From Steps"],
@@ -145,40 +133,43 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
         self.initialization_box_1 = oasysgui.widgetBox(box_space, "", addSpace=False, orientation="vertical")
 
         oasysgui.lineEdit(self.initialization_box_1, self, "range_from_h", "(H) From [m]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="range_from_h", valueType=float, orientation="horizontal")
 
         oasysgui.lineEdit(self.initialization_box_1, self, "range_to_h", "          To [m]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="range_to_h", valueType=float, orientation="horizontal")
 
         oasysgui.lineEdit(self.initialization_box_1, self, "range_from_v", "(V) From [m]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="range_from_v", valueType=float, orientation="horizontal")
 
         oasysgui.lineEdit(self.initialization_box_1, self, "range_to_v", "          To [m]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="range_to_v", valueType=float, orientation="horizontal")
 
         self.initialization_box_2 = oasysgui.widgetBox(box_space, "", addSpace=False, orientation="vertical")
 
         oasysgui.lineEdit(self.initialization_box_2, self, "steps_start_h", "(H) Start [m]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="steps_start_h", valueType=float, orientation="horizontal")
 
         oasysgui.lineEdit(self.initialization_box_2, self, "steps_step_h", "      Step [m]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="steps_step_h", valueType=float, orientation="horizontal")
 
         oasysgui.lineEdit(self.initialization_box_2, self, "steps_start_v", "(V) Start [m]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="steps_start_v", valueType=float, orientation="horizontal")
 
         oasysgui.lineEdit(self.initialization_box_2, self, "steps_step_v", "      Step [m]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="steps_step_v", valueType=float, orientation="horizontal")
 
         self.set_Initialization()
 
         left_box_3 = oasysgui.widgetBox(self.tab_sou, "Undulator Parameters", addSpace=True, orientation="vertical")
 
         oasysgui.lineEdit(left_box_3, self, "photon_energy", "Photon Energy [eV]",
-                          labelWidth=250, valueType=float, orientation="horizontal")
+                          labelWidth=250, tooltip="photon_energy",
+                          valueType=float, orientation="horizontal")
 
 
-        oasysgui.lineEdit(left_box_3, self, "undulator_length", "Undulator Length [m]", labelWidth=250, tooltip="Undulator Length [m]", valueType=float, orientation="horizontal")
+        oasysgui.lineEdit(left_box_3, self, "undulator_length", "Undulator Length [m]",
+                          labelWidth=250, tooltip="undulator_length",
+                          valueType=float, orientation="horizontal")
 
 
         left_box_4 = oasysgui.widgetBox(self.tab_sou, "Working conditions", addSpace=True, orientation="vertical")
@@ -188,28 +179,40 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
                      callback=self.set_visible,
                      sendSelectedValue=False, orientation="horizontal")
 
-        self.mode_index_box = oasysgui.widgetBox(left_box_4, "", addSpace=True, orientation="vertical", ) #width=550, height=50)
+        self.mode_index_box = oasysgui.widgetBox(left_box_4, "", addSpace=True, orientation="vertical", )
 
-        left_box_5 = oasysgui.widgetBox(self.mode_index_box, "", addSpace=True, orientation="horizontal", ) #width=550, height=50)
-        tmp = oasysgui.lineEdit(left_box_5, self, "index_sorted_mode", "Mode",
-                        labelWidth=200, valueType=int, tooltip = "index_sorted_mode",
+        left_box_5 = oasysgui.widgetBox(self.mode_index_box, "", addSpace=True, orientation="horizontal", )
+        tmp = oasysgui.lineEdit(left_box_5, self, "index_sorted_mode", "Mode", valueType=int,
+                        labelWidth=200, tooltip = "index_sorted_mode",
                         orientation="horizontal")
 
         gui.button(left_box_5, self, "+1", callback=self.increase_mode_index, width=30)
         gui.button(left_box_5, self, "-1", callback=self.decrease_mode_index, width=30)
         gui.button(left_box_5, self,  "0", callback=self.reset_mode_index, width=30)
 
-        oasysgui.lineEdit(self.mode_index_box, self, "spectral_density_threshold", "Spectral Density Threshold (e.g. 0.99)", labelWidth=250, tooltip="coherent_fraction_threshold", valueType=float, orientation="horizontal")
+        oasysgui.lineEdit(self.mode_index_box, self, "spectral_density_threshold",
+                          "Spectral Density Threshold (e.g. 0.99)",
+                          labelWidth=250, tooltip="spectral_density_threshold",
+                          valueType=float, orientation="horizontal")
 
 
 
-        self.emittances_box = oasysgui.widgetBox(self.tab_emit, "Electron beam sizes", addSpace=True, orientation="vertical")
+        self.emittances_box = oasysgui.widgetBox(self.tab_emit, "Electron beam sizes", addSpace=True,
+                                                 orientation="vertical")
 
-        self.le_sigma_h = oasysgui.lineEdit(self.emittances_box, self, "sigma_h", "Size RMS H", labelWidth=250, tooltip="Size RMS H", valueType=float, orientation="horizontal")
-        self.le_sigma_v = oasysgui.lineEdit(self.emittances_box, self, "sigma_v", "Size RMS V", labelWidth=250, tooltip="Size RMS V", valueType=float, orientation="horizontal")
+        self.le_sigma_h = oasysgui.lineEdit(self.emittances_box, self, "sigma_h", "Size RMS H",
+                                            labelWidth=250, tooltip="sigma_h",
+                                            valueType=float, orientation="horizontal")
+        self.le_sigma_v = oasysgui.lineEdit(self.emittances_box, self, "sigma_v", "Size RMS V",
+                                            labelWidth=250, tooltip="sigma_v",
+                                            valueType=float, orientation="horizontal")
 
-        oasysgui.lineEdit(self.emittances_box, self, "sigma_divergence_h", "Divergence RMS H [rad]", labelWidth=250, tooltip="Divergence RMS H [rad]", valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.emittances_box, self, "sigma_divergence_v", "Divergence RMS V [rad]", labelWidth=250, tooltip="Divergence RMS V [rad]", valueType=float, orientation="horizontal")
+        oasysgui.lineEdit(self.emittances_box, self, "sigma_divergence_h", "Divergence RMS H [rad]",
+                          labelWidth=250, tooltip="sigma_divergence_h",
+                          valueType=float, orientation="horizontal")
+        oasysgui.lineEdit(self.emittances_box, self, "sigma_divergence_v", "Divergence RMS V [rad]",
+                          labelWidth=250, tooltip="sigma_divergence_v",
+                          valueType=float, orientation="horizontal")
 
         self.set_visible()
 
@@ -274,7 +277,6 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
             congruence.checkStrictlyPositiveNumber(self.steps_step_h, "Step (H)")
             congruence.checkStrictlyPositiveNumber(self.steps_step_v, "Step (V)")
 
-
         congruence.checkNumber(self.index_sorted_mode, "Mode index")
 
 
@@ -301,6 +303,25 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
             else:
                 raise ValueError("Syned data not correct")
 
+    def receive_trigger_signal(self, trigger):
+
+        if trigger and trigger.new_object == True:
+            if trigger.has_additional_parameter("variable_name"):
+                variable_name = trigger.get_additional_parameter("variable_name").strip()
+                variable_display_name = trigger.get_additional_parameter("variable_display_name").strip()
+                variable_value = trigger.get_additional_parameter("variable_value")
+                variable_um = trigger.get_additional_parameter("variable_um")
+
+                if "," in variable_name:
+                    variable_names = variable_name.split(",")
+
+                    for variable_name in variable_names:
+                        setattr(self, variable_name.strip(), variable_value)
+                else:
+                    setattr(self, variable_name, variable_value)
+
+                self.generate()
+
     def generate(self):
 
         try:
@@ -308,19 +329,20 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
 
             sys.stdout = EmittingStream(textWritten=self.writeStdOut)
 
-
             self.progressBarInit()
 
             self.check_fields()
 
             if self.initialize_from == 0:
-                self.wavefront2D = GenericWavefront2D.initialize_wavefront_from_range(x_min=self.range_from_h, x_max=self.range_to_h,
-                                                                                      y_min=self.range_from_v, y_max=self.range_to_v,
-                                                                                      number_of_points=(self.number_of_points_h, self.number_of_points_v))
+                self.wavefront2D = GenericWavefront2D.initialize_wavefront_from_range(
+                    x_min=self.range_from_h, x_max=self.range_to_h,
+                    y_min=self.range_from_v, y_max=self.range_to_v,
+                    number_of_points=(self.number_of_points_h, self.number_of_points_v))
             else:
-                self.wavefront2D = GenericWavefront2D.initialize_wavefront_from_steps(x_start=self.steps_start_h, x_step=self.steps_step_h,
-                                                                                      y_start=self.steps_start_v, y_step=self.steps_step_v,
-                                                                                      number_of_points=(self.number_of_points_h, self.number_of_points_v))
+                self.wavefront2D = GenericWavefront2D.initialize_wavefront_from_steps(
+                    x_start=self.steps_start_h, x_step=self.steps_step_h,
+                    y_start=self.steps_start_v, y_step=self.steps_step_v,
+                    number_of_points=(self.number_of_points_h, self.number_of_points_v))
 
             self.wavefront2D.set_photon_energy(self.photon_energy)
             wavelength = self.wavefront2D.get_wavelength()
@@ -381,7 +403,6 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
                 q_h = 1.0 / (1 + beta_h ** 2 / 2 + beta_h * numpy.sqrt(1 + (beta_h / 2) ** 2))
                 q_v = 1.0 / (1 + beta_v ** 2 / 2 + beta_v * numpy.sqrt(1 + (beta_v / 2) ** 2))
 
-                # print(">>>>", cumulated_occupation, 1.0 - cumulated_occupation)
                 self._n_h = int(numpy.log(1.0 - self.spectral_density_threshold) / numpy.log(q_h))
                 self._n_v = int(numpy.log(1.0 - self.spectral_density_threshold) / numpy.log(q_v))
 
@@ -493,7 +514,6 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
 
             self.progressBarSet(progressBarValue)
 
-            # titles = ["Wavefront 2D Intensity"]
             titles = ["Wavefront 2D Intensity", "Cumulated occupation", "Eigenvalues map"]
             try:
                 ih, iv = self._gsm_2d.sortedModeIndices(self.index_sorted_mode, n_points=self._n_h * self._n_v)
@@ -509,19 +529,6 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
                              title=titles[0] + "; mode index = %d = (%d, %d)" % (self.index_sorted_mode, ih, iv),                             xtitle="Horizontal [$\mu$m] ( %d pixels)" % (self.wavefront2D.get_coordinate_x().size),
                              ytitle="Vertical [$\mu$m] ( %d pixels)" % (self.wavefront2D.get_coordinate_y().size))
 
-
-            # self.plot_data2D(data2D=self.wavefront2D.get_phase(from_minimum_intensity=0.1),
-            #                  dataX=1e6 * self.wavefront2D.get_coordinate_x(),
-            #                  dataY=1e6 * self.wavefront2D.get_coordinate_y(),
-            #                  progressBarValue=progressBarValue,
-            #                  tabs_canvas_index=1,
-            #                  plot_canvas_index=1,
-            #                  title=titles[1],
-            #                  xtitle="Horizontal [$\mu$m] ( %d pixels)" % (
-            #                      self.wavefront2D.get_coordinate_x().size),
-            #                  ytitle="Vertical [$\mu$m] ( %d pixels)" % (self.wavefront2D.get_coordinate_y().size))
-            x = numpy.linspace(0,100)
-            y = x**2
             self.plot_data1D(numpy.arange(self._cumulated_occupation.size),
                              self._cumulated_occupation / self._cumulated_occupation[-1],
                              progressBarValue=progressBarValue,
@@ -534,9 +541,6 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
 
 
             nx, ny = self._eigenvalues_map.shape
-
-            tx = 1
-            ty = 1
             if nx > 1:
                 dataX = numpy.arange(nx) * nx / (nx - 1)
             else:
@@ -563,7 +567,6 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
 
 
 if __name__ == "__main__":
-    import sys
     from PyQt5.QtWidgets import QApplication
 
     a = QApplication(sys.argv)

@@ -14,6 +14,7 @@ from orangecontrib.wofry.util.wofry_objects import WofryData
 from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
 
 from oasys.util.oasys_util import TriggerIn, TriggerOut, EmittingStream
+from orangecontrib.xoppy.util.python_script import PythonScript  # TODO: change import from wofry!!!
 
 class OWGenericWavefront1D(WofryWidget):
 
@@ -26,11 +27,7 @@ class OWGenericWavefront1D(WofryWidget):
     category = "Wofry Wavefront Propagation"
     keywords = ["data", "file", "load", "read"]
 
-    outputs = [{"name":"GenericWavefront1D",
-                "type":GenericWavefront1D,
-                "doc":"GenericWavefront1D",
-                "id":"GenericWavefront1D"},
-               {"name":"WofryData",
+    outputs = [{"name":"WofryData",
                 "type":WofryData,
                 "doc":"WofryData",
                 "id":"WofryData"}]
@@ -46,9 +43,8 @@ class OWGenericWavefront1D(WofryWidget):
     range_to = Setting(0.0005)
     steps_start = Setting(-0.0005)
     steps_step = Setting(1e-6)
+
     kind_of_wave = Setting(0)
-
-
     initialize_amplitude = Setting(0)
     complex_amplitude_re = Setting(1.0)
     complex_amplitude_im = Setting(0.0)
@@ -71,6 +67,15 @@ class OWGenericWavefront1D(WofryWidget):
 
     def __init__(self):
         super().__init__(is_automatic=False, show_view_options=False)
+
+        #
+        # add script tab to tabs panel
+        #
+        script_tab = oasysgui.createTabPage(self.main_tabs, "Script")
+        self.wofry_script = PythonScript()
+        self.wofry_script.code_area.setFixedHeight(400)
+        script_box = gui.widgetBox(script_tab, "Python script", addSpace=True, orientation="horizontal")
+        script_box.layout().addWidget(self.wofry_script)
 
         self.runaction = widget.OWAction("Generate Wavefront", self)
         self.runaction.triggered.connect(self.generate)
@@ -111,19 +116,19 @@ class OWGenericWavefront1D(WofryWidget):
         self.units_box_1 = oasysgui.widgetBox(box_energy, "", addSpace=False, orientation="vertical")
 
         oasysgui.lineEdit(self.units_box_1, self, "energy", "Photon Energy [eV]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="energy", valueType=float, orientation="horizontal")
 
         self.units_box_2 = oasysgui.widgetBox(box_energy, "", addSpace=False, orientation="vertical")
 
         oasysgui.lineEdit(self.units_box_2, self, "wavelength", "Photon Wavelength [m]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="wavelength", valueType=float, orientation="horizontal")
 
         self.set_Units()
 
         box_space = oasysgui.widgetBox(self.tab_sou, "Space Settings", addSpace=False, orientation="vertical")
 
         oasysgui.lineEdit(box_space, self, "number_of_points", "Number of Points",
-                          labelWidth=300, valueType=int, orientation="horizontal")
+                          labelWidth=300, tooltip="number_of_points", valueType=int, orientation="horizontal")
 
         gui.comboBox(box_space, self, "initialize_from", label="Space Initialization", labelWidth=350,
                      items=["From Range", "From Steps"],
@@ -133,20 +138,22 @@ class OWGenericWavefront1D(WofryWidget):
         self.initialization_box_1 = oasysgui.widgetBox(box_space, "", addSpace=False, orientation="vertical")
 
         oasysgui.lineEdit(self.initialization_box_1, self, "range_from", "From  [m]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="range_from", valueType=float, orientation="horizontal")
 
         oasysgui.lineEdit(self.initialization_box_1, self, "range_to", "To [m]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="range_to", valueType=float, orientation="horizontal")
 
         self.initialization_box_2 = oasysgui.widgetBox(box_space, "", addSpace=False, orientation="vertical")
 
         oasysgui.lineEdit(self.initialization_box_2, self, "steps_start", "Start [m]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="steps_start", valueType=float, orientation="horizontal")
 
         oasysgui.lineEdit(self.initialization_box_2, self, "steps_step", "Step [m]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="steps_step", valueType=float, orientation="horizontal")
 
         self.set_Initialization()
+
+
 
         box_amplitude = oasysgui.widgetBox(self.tab_sou, "Amplitude and phase Settings", addSpace=False, orientation="vertical")
 
@@ -164,7 +171,7 @@ class OWGenericWavefront1D(WofryWidget):
         # --- PLANE
 
         oasysgui.lineEdit(self.plane_box, self, "inclination", "Inclination [rad]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="inclination", valueType=float, orientation="horizontal")
 
         gui.comboBox(self.plane_box, self, "initialize_amplitude", label="Amplitude Initialization", labelWidth=350,
                      items=["Complex", "Amplitude and Phase"],
@@ -174,73 +181,72 @@ class OWGenericWavefront1D(WofryWidget):
         self.amplitude_box_1 = oasysgui.widgetBox(self.plane_box, "", addSpace=False, orientation="horizontal", height=50)
 
         oasysgui.lineEdit(self.amplitude_box_1, self, "complex_amplitude_re", "Complex Amplitude ",
-                          labelWidth=250, valueType=float, orientation="horizontal")
+                          labelWidth=250, tooltip="complex_amplitude_re", valueType=float, orientation="horizontal")
 
         oasysgui.lineEdit(self.amplitude_box_1, self, "complex_amplitude_im", " + ",
-                          valueType=float, orientation="horizontal")
+                          valueType=float, tooltip="complex_amplitude_im", orientation="horizontal")
 
         oasysgui.widgetLabel(self.amplitude_box_1, "i", labelWidth=15)
 
         self.amplitude_box_2 = oasysgui.widgetBox(self.plane_box, "", addSpace=False, orientation="vertical", height=50)
 
         oasysgui.lineEdit(self.amplitude_box_2, self, "amplitude", "Amplitude",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="amplitude", valueType=float, orientation="horizontal")
 
         oasysgui.lineEdit(self.amplitude_box_2, self, "phase", "Phase",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="phase", valueType=float, orientation="horizontal")
 
         self.set_Amplitude()
 
         # ------ SPHERIC
 
         oasysgui.lineEdit(self.spherical_box, self, "radius", "Radius [m]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="radius", valueType=float, orientation="horizontal")
 
         oasysgui.lineEdit(self.spherical_box, self, "center", "Center [m]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
+                          labelWidth=300, tooltip="center", valueType=float, orientation="horizontal")
 
         amplitude_box_3 = oasysgui.widgetBox(self.spherical_box, "", addSpace=False, orientation="horizontal", height=50)
 
         oasysgui.lineEdit(amplitude_box_3, self, "complex_amplitude_re", "Complex Amplitude ",
-                          labelWidth=250, valueType=float, orientation="horizontal")
+                          labelWidth=250, tooltip="complex_amplitude_re", valueType=float, orientation="horizontal")
 
         oasysgui.lineEdit(amplitude_box_3, self, "complex_amplitude_im", " + ",
-                          valueType=float, orientation="horizontal")
+                          valueType=float, tooltip="complex_amplitude_im", orientation="horizontal")
 
         oasysgui.widgetLabel(amplitude_box_3, "i", labelWidth=15)
 
         # ---- GAUSSIAN
 
         oasysgui.lineEdit(self.gaussian_box, self, "gaussian_sigma", "Sigma I",
-                          labelWidth=250, valueType=float, orientation="horizontal")
+                          labelWidth=250, tooltip="gaussian_sigma", valueType=float, orientation="horizontal")
 
         oasysgui.lineEdit(self.gaussian_box, self, "gaussian_amplitude", "Amplitude of the Spectral Density",
-                          labelWidth=250, valueType=float, orientation="horizontal")
+                          labelWidth=250, tooltip="gaussian_amplitude", valueType=float, orientation="horizontal")
 
         oasysgui.lineEdit(self.gaussian_box, self, "gaussian_shift", "Center",
-                          labelWidth=250, valueType=float, orientation="horizontal")
+                          labelWidth=250, tooltip="gaussian_shift", valueType=float, orientation="horizontal")
 
         # ---- GAUSSIAN SHELL MODEL
 
         oasysgui.lineEdit(self.gsm_box, self, "gaussian_sigma", "Sigma I",
-                          labelWidth=250, valueType=float, orientation="horizontal")
+                          labelWidth=250, tooltip="gaussian_sigma", valueType=float, orientation="horizontal")
 
         oasysgui.lineEdit(self.gsm_box, self, "gaussian_beta", "beta = Sigma Mu/Sigma I",
-                          labelWidth=250, valueType=float, orientation="horizontal")
+                          labelWidth=250, tooltip="gaussian_beta", valueType=float, orientation="horizontal")
 
         oasysgui.lineEdit(self.gsm_box, self, "gaussian_amplitude", "Amplitude of the Spectral Density",
-                          labelWidth=250, valueType=float, orientation="horizontal")
+                          labelWidth=250, tooltip="gaussian_amplitude", valueType=float, orientation="horizontal")
 
 
         mode_index_box = oasysgui.widgetBox(self.gsm_box, "", addSpace=True, orientation="horizontal", ) #width=550, height=50)
         tmp = oasysgui.lineEdit(mode_index_box, self, "gaussian_mode", "Mode",
-                          labelWidth=200, valueType=int, orientation="horizontal")
-        tmp.setToolTip("gaussian_mode")
+                          labelWidth=200, tooltip="gaussian_mode", valueType=int, orientation="horizontal")
         gui.button(mode_index_box, self, "+1", callback=self.increase_mode_index)
 
 
         oasysgui.lineEdit(self.gsm_box, self, "gaussian_shift", "Center",
-                          labelWidth=250, valueType=float, orientation="horizontal")
+                          labelWidth=250, tooltip="gaussian_shift", valueType=float, orientation="horizontal")
 
         gui.checkBox(box_amplitude, self, "add_random_phase", "Add random phase")
 
@@ -364,13 +370,8 @@ class OWGenericWavefront1D(WofryWidget):
                 except:
                     pass
 
-            try:
-                python_code = self.generate_python_code()
-                self.writeStdOut(python_code)
-            except:
-                pass
+            self.wofry_script.set_code(self.generate_python_code())
 
-            self.send("GenericWavefront1D", self.wavefront1D)
             self.send("WofryData", WofryData(wavefront=self.wavefront1D))
 
         except Exception as exception:
@@ -384,7 +385,7 @@ class OWGenericWavefront1D(WofryWidget):
 
         txt = ""
 
-        txt += "\n\n#"
+        txt += "#"
         txt += "\n# create input_wavefront\n#"
         txt += "\n#"
         txt += "\nfrom wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D"
