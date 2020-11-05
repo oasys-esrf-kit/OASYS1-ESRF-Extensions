@@ -24,9 +24,9 @@ from oasys.util.oasys_util import get_fwhm
 
 class OWstepper1D(WofryWidget):
 
-    name = " Generic Wavefront Viewer 1D"
-    id = "GenericWavefrontViewer1D"
-    description = "Generic Wavefront Viewer 1D"
+    name = "Loop stepper 1D"
+    id = "LoopStepper1D"
+    description = "Loop stepper 1D"
     icon = "icons/stepper.png"
     priority = 15
 
@@ -44,7 +44,6 @@ class OWstepper1D(WofryWidget):
     #
     # trigger
     #
-    number_of_new_objects = Setting(3)
     current_new_object = 0
     run_loop = True
     suspend_loop = False
@@ -53,12 +52,11 @@ class OWstepper1D(WofryWidget):
     variable_display_name = Setting("<variable display name>")
     variable_um = Setting("<u.m.>")
 
-    variable_value_from = Setting(100.0)
+    variable_value_from = Setting(1000.0)
     variable_value_to = Setting(1100.0)
+    number_of_new_objects = Setting(100)
     variable_value_step = Setting(100.0)
-
-    list_of_values = Setting([""])
-    kind_of_loop = Setting(0)
+    accumulate_flag = Setting(0)
 
     current_variable_value = None
 
@@ -67,18 +65,16 @@ class OWstepper1D(WofryWidget):
     #################################
 
     #
-    # viwer
+    # viewer
     #
     wofry_data = None
     accumulated_data = None
 
-    titles = ["Wavefront 1D Intensity (current/last run)",
-              # "Wavefront 1D Phase", "Wavefront Real(Amplitude)","Wavefront Imag(Amplitude)",
+    titles = ["Intensity (current/last run)","Intensity (accumulated)",
               "Scanned peak", "Scanned FWHM", "Scanned Integral", "Scans"]
 
     def __init__(self):
         super().__init__(is_automatic=False, show_view_options=True)  #<<<<<<<<<<<<<<<<<<<
-
 
         #
         #
@@ -149,50 +145,23 @@ class OWstepper1D(WofryWidget):
         self.re_start_button.setFixedHeight(35)
         self.re_start_button.setEnabled(False)
 
-        left_box_1 = oasysgui.widgetBox(self.tab_trig, "Loop Management", addSpace=True, orientation="vertical", width=385, height=450) # 320
+        left_box_1 = oasysgui.widgetBox(self.tab_trig, "Loop Management", addSpace=True, orientation="vertical", width=385, height=220) # 320
 
         oasysgui.lineEdit(left_box_1, self, "variable_name", "Variable Name", labelWidth=100, valueType=str, orientation="horizontal")
-        oasysgui.lineEdit(left_box_1, self, "variable_display_name", "Variable Display Name", labelWidth=100, valueType=str, orientation="horizontal")
-        oasysgui.lineEdit(left_box_1, self, "variable_um", "Variable Units", labelWidth=250, valueType=str, orientation="horizontal")
 
         gui.separator(left_box_1)
 
-        gui.comboBox(left_box_1, self, "kind_of_loop", label="Kind of Loop", labelWidth=350,
-                     items=["From Range", "From List"],
-                     callback=self.set_KindOfLoop, sendSelectedValue=False, orientation="horizontal")
+        oasysgui.lineEdit(left_box_1, self, "variable_value_from", "Value From", labelWidth=250, valueType=float, orientation="horizontal", callback=self.calculate_step)
+        oasysgui.lineEdit(left_box_1, self, "variable_value_to", "Value to", labelWidth=250, valueType=float, orientation="horizontal", callback=self.calculate_step)
+        oasysgui.lineEdit(left_box_1, self, "number_of_new_objects", "Number of Steps", labelWidth=250, valueType=int, orientation="horizontal", callback=self.calculate_step)
+        oasysgui.lineEdit(left_box_1, self, "variable_value_step", "Step Value", labelWidth=250, valueType=float, orientation="horizontal", callback=self.calculate_step2)
 
-        self.left_box_1_1 = oasysgui.widgetBox(left_box_1, "", addSpace=False, orientation="vertical", width=365, height=100)
-        self.left_box_1_2 = oasysgui.widgetBox(left_box_1, "", addSpace=False, orientation="vertical", width=365, height=100)
 
-        oasysgui.lineEdit(self.left_box_1_1, self, "variable_value_from", "Value From", labelWidth=250, valueType=float, orientation="horizontal", callback=self.calculate_step)
-        oasysgui.lineEdit(self.left_box_1_1, self, "variable_value_to", "Value to", labelWidth=250, valueType=float, orientation="horizontal", callback=self.calculate_step)
-        oasysgui.lineEdit(self.left_box_1_1, self, "number_of_new_objects", "Number of Steps", labelWidth=250, valueType=int, orientation="horizontal", callback=self.calculate_step)
 
-        self.list_of_values_ta = oasysgui.textArea(height=100, width=365, readOnly=False)
-        self.list_of_values_ta.textChanged.connect(self.list_of_values_ta_changed)
 
-        text = ""
-        for value in self.list_of_values:
-            text += value + "\n"
+        left_box_2 = oasysgui.widgetBox(self.tab_trig, "Advancement", addSpace=True, orientation="vertical", width=385, height=90) # 320
 
-        self.list_of_values_ta.setText(text[:-1])
-        self.left_box_1_2.layout().addWidget(self.list_of_values_ta)
-
-        self.le_variable_value_step = oasysgui.lineEdit(self.left_box_1_1, self, "variable_value_step", "Step Value", labelWidth=250, valueType=float, orientation="horizontal")
-        self.le_variable_value_step.setReadOnly(True)
-        font = QFont(self.le_variable_value_step.font())
-        font.setBold(True)
-        self.le_variable_value_step.setFont(font)
-        palette = QPalette(self.le_variable_value_step.palette()) # make a copy of the palette
-        palette.setColor(QPalette.Text, QColor('dark blue'))
-        palette.setColor(QPalette.Base, QColor(243, 240, 160))
-        self.le_variable_value_step.setPalette(palette)
-
-        self.set_KindOfLoop()
-
-        gui.separator(left_box_1)
-
-        self.le_current_new_object = oasysgui.lineEdit(left_box_1, self, "current_new_object", "Current New " + self.get_object_name(), labelWidth=250, valueType=int, orientation="horizontal")
+        self.le_current_new_object = oasysgui.lineEdit(left_box_2, self, "current_new_object", "Current New " + self.get_object_name(), labelWidth=250, valueType=int, orientation="horizontal")
         self.le_current_new_object.setReadOnly(True)
         font = QFont(self.le_current_new_object.font())
         font.setBold(True)
@@ -202,7 +171,7 @@ class OWstepper1D(WofryWidget):
         palette.setColor(QPalette.Base, QColor(243, 240, 160))
         self.le_current_new_object.setPalette(palette)
 
-        self.le_current_new_object = oasysgui.lineEdit(left_box_1, self, "current_variable_value", "Current Variable Value", labelWidth=250, valueType=float, orientation="horizontal")
+        self.le_current_new_object = oasysgui.lineEdit(left_box_2, self, "current_variable_value", "Current Variable Value", labelWidth=250, valueType=float, orientation="horizontal")
         self.le_current_new_object.setReadOnly(True)
         font = QFont(self.le_current_new_object.font())
         font.setBold(True)
@@ -216,7 +185,9 @@ class OWstepper1D(WofryWidget):
         #=====================================================================================
         # Wavefront
         #=====================================================================================
-        button_box = oasysgui.widgetBox(self.tab_trig, "Plots", addSpace=True, orientation="horizontal") #, width=385, height=120)
+        display_control_box = oasysgui.widgetBox(self.tab_trig, "Plots", addSpace=True, orientation="vertical") #, width=385, height=120)
+
+        button_box = oasysgui.widgetBox(display_control_box, "", addSpace=False, orientation="horizontal") #, width=385, height=120)
         gui.separator(button_box)
         button = gui.button(button_box, self, "Refresh", callback=self.refresh)
         font = QFont(button.font())
@@ -237,6 +208,24 @@ class OWstepper1D(WofryWidget):
         palette.setColor(QPalette.ButtonText, QColor('Dark Blue'))
         button.setPalette(palette) # assign new palette
         button.setFixedHeight(45)
+
+        left_box_3 = oasysgui.widgetBox(display_control_box, "", addSpace=True, orientation="vertical") #, width=385, height=120)
+
+        oasysgui.lineEdit(left_box_3, self, "variable_display_name", "Variable Display Name", labelWidth=175, valueType=str, orientation="horizontal")
+        oasysgui.lineEdit(left_box_3, self, "variable_um", "Variable Units", labelWidth=250, valueType=str, orientation="horizontal")
+
+        gui.comboBox(left_box_3, self, "accumulate_flag", label="Display scans:", labelWidth=350,
+                     items=["current", "accumulated"],
+                     sendSelectedValue=False, orientation="horizontal",
+                     callback=self.replot_after_accumulate_change)
+
+        self.calculate_step()
+
+    def replot_after_accumulate_change(self):
+        if self.view_type != 0:
+            self.progressBarInit()
+            self.plot_results()
+            self.progressBarFinished
 
     def initializeTabs(self):
         size = len(self.titles) # len(self.tab)
@@ -299,7 +288,7 @@ class OWstepper1D(WofryWidget):
             self.passTrigger(TriggerIn(new_object=True))
 
     def refresh(self):
-        self.progressBarInit()
+
         self.wofry_output.setText("")
         sys.stdout = EmittingStream(textWritten=self.writeStdOut)
         try:
@@ -307,23 +296,23 @@ class OWstepper1D(WofryWidget):
                 if self.current_variable_value is not None:
                     print("> Running %s (%s) = " % (self.variable_name, self.variable_display_name), self.current_variable_value)
 
-                if self.view_type > 0:
+                if self.view_type != 0:
+                    self.progressBarInit()
                     current_index = self.tabs.currentIndex()
                     self.initializeTabs()
                     self.plot_results()
                     self.tabs.setCurrentIndex(current_index)
+                    self.progressBarFinished()
         except Exception as exception:
             QMessageBox.critical(self, "Error", str(exception), QMessageBox.Ok)
 
-        self.progressBarFinished()
 
-    def do_plot_results(self, progressBarValue):
+    def do_plot_results(self, progressBarValue=50):
         if self.accumulated_data is None:
             return
         else:
 
             self.progressBarSet(progressBarValue)
-
 
             self.plot_data1D(x=1e6*self.accumulated_data["x"],
                              y=self.accumulated_data["intensity"],
@@ -348,62 +337,83 @@ class OWstepper1D(WofryWidget):
                 integral = numpy.zeros(nruns)
                 all_scans = numpy.zeros((nruns, len(self.accumulated_data['intensities'][0])))
                 for i in range(nruns):
-                    peak[i] = numpy.max(self.accumulated_data['intensities'][i])
+                    current_profile = self.accumulated_data['intensities'][i]
+                    if i == 0:
+                        accumulated_profile = current_profile.copy()
+                    else:
+                        accumulated_profile += current_profile
+
+
+                    if self.accumulate_flag == 0:
+                        active_profile = current_profile
+                    elif self.accumulate_flag == 1:
+                        active_profile = accumulated_profile
+
+                    peak[i] = numpy.max(active_profile)
                     try:
-                        fwhm[i], tmp, tmp = get_fwhm(self.accumulated_data['intensities'][i], self.accumulated_data['x'] )
+                        fwhm[i], _, _ = get_fwhm(active_profile, self.accumulated_data['x'] )
                         print("fwhm: ", i, fwhm[i])
                     except:
                         fwhm[i] = 0.0
                         print("bad fwhm: ",i,fwhm[i])
-                    integral[i] = (self.accumulated_data['intensities'][i]).sum()
-                    all_scans[i, :] = self.accumulated_data['intensities'][i]
+                    integral[i] = (active_profile).sum()
+                    all_scans[i, :] = active_profile
             except:
                 x = numpy.array([-2,-1])
                 peak = numpy.array([-1, -1])
                 fwhm = numpy.array([-1, -1])
 
-            self.plot_data1D(x=x,
-                             y=peak,
+            self.plot_data1D(x=1e6*self.accumulated_data["x"],
+                             y=accumulated_profile,
                              progressBarValue=progressBarValue + 5,
                              tabs_canvas_index=1,
                              plot_canvas_index=1,
+                             title=self.titles[1],
+                             calculate_fwhm=True,
+                             xtitle="Spatial Coordinate [$\mu$m]",
+                             ytitle="Intensity")
+
+            self.plot_data1D(x=x,
+                             y=peak,
+                             progressBarValue=progressBarValue + 5,
+                             tabs_canvas_index=2,
+                             plot_canvas_index=2,
                              calculate_fwhm=False,
-                             title="%s nruns: %s" % (self.titles[1] , self.accumulated_data["counter"]),
+                             title="%s nruns: %s" % (self.titles[2] , self.accumulated_data["counter"]),
                              xtitle="%s [%s]" % (self.variable_display_name, self.variable_um),
                              ytitle="Peak Intensity")
 
             self.plot_data1D(x=x,
                              y=1e6*fwhm,
                              progressBarValue=progressBarValue + 5,
-                             tabs_canvas_index=2,
-                             plot_canvas_index=2,
+                             tabs_canvas_index=3,
+                             plot_canvas_index=3,
                              calculate_fwhm=False,
-                             title="%s nruns: %s" % (self.titles[2] , len(self.accumulated_data["intensities"])),
+                             title="%s nruns: %s" % (self.titles[3] , len(self.accumulated_data["intensities"])),
                              xtitle="%s [%s]" % (self.variable_display_name, self.variable_um),
                              ytitle="FWHM [um]")
 
             self.plot_data1D(x=x,
                              y=integral,
                              progressBarValue=progressBarValue + 5,
-                             tabs_canvas_index=3,
-                             plot_canvas_index=3,
+                             tabs_canvas_index=4,
+                             plot_canvas_index=4,
                              calculate_fwhm=False,
-                             title="%s nruns: %s" % (self.titles[3] , len(self.accumulated_data["intensities"])),
+                             title="%s nruns: %s" % (self.titles[4] , len(self.accumulated_data["intensities"])),
                              xtitle="%s [%s]" % (self.variable_display_name, self.variable_um),
                              ytitle="Integral [a.u.]")
 
             if nruns > 1:
                 self.plot_data2D(all_scans, x, 1e6*self.accumulated_data["x"],
                                  progressBarValue=progressBarValue + 5,
-                                 tabs_canvas_index=4,
-                                 plot_canvas_index=4,
-                                 title="%s nruns: %s" % (self.titles[4] , len(self.accumulated_data["intensities"])),
+                                 tabs_canvas_index=5,
+                                 plot_canvas_index=5,
+                                 title="%s nruns: %s" % (self.titles[5] , len(self.accumulated_data["intensities"])),
                                  xtitle="%s [%s]" % (self.variable_display_name, self.variable_um),
                                  ytitle="Spatial Coordinate [$\mu$m]",)
 
             print("> current value: ",self.current_variable_value)
             print("> current valueSS: ", self.accumulated_data["current_variable_values"])
-            print("> list of values: ",self.list_of_values)
             print("> current new object: ",self.current_new_object)
             print("> self.variable_name = ", self.variable_name)
             print("> self.variable_display_name = ",self.variable_display_name)
@@ -414,7 +424,6 @@ class OWstepper1D(WofryWidget):
 
 
     def reset_accumumation(self):
-
         self.initializeTabs()
         self.accumulated_data = None
         self.wofry_data = None
@@ -422,26 +431,16 @@ class OWstepper1D(WofryWidget):
     #
     # trigger methods
     #
-    def list_of_values_ta_changed(self):
-        self.list_of_values = []
-
-        values = self.list_of_values_ta.toPlainText().split("\n")
-        for value in values:
-            if not value.strip() == "":
-                self.list_of_values.append(value)
-
-        self.number_of_new_objects = len(self.list_of_values)
-
-        if len(self.list_of_values) == 0:
-            self.list_of_values.append("")
-
-    def set_KindOfLoop(self):
-        self.left_box_1_1.setVisible(self.kind_of_loop == 0)
-        self.left_box_1_2.setVisible(self.kind_of_loop == 1)
 
     def calculate_step(self):
-        self.variable_value_step = round(
-            (self.variable_value_to - self.variable_value_from) / self.number_of_new_objects, 8)
+        if self.number_of_new_objects != 0:
+            self.variable_value_step = round(
+                (self.variable_value_to - self.variable_value_from) / self.number_of_new_objects, 8)
+
+    def calculate_step2(self):
+        self.number_of_new_objects = int((self.variable_value_to - self.variable_value_from) / \
+                                self.variable_value_step)
+        self.calculate_step()
 
     def startLoop(self):
 
@@ -451,13 +450,8 @@ class OWstepper1D(WofryWidget):
 
         do_loop = True
 
-        if self.kind_of_loop == 0:
-            self.current_variable_value = round(self.variable_value_from, 8)
-            self.calculate_step()
-        elif len(self.list_of_values) > 0:
-            self.current_variable_value = self.list_of_values[self.current_new_object - 1]
-        else:
-            do_loop = False
+        self.current_variable_value = round(self.variable_value_from, 8)
+        self.calculate_step()
 
         if do_loop:
             self.start_button.setEnabled(False)
@@ -514,22 +508,16 @@ class OWstepper1D(WofryWidget):
                         return
 
                     if (self.current_new_object < self.number_of_new_objects) or (
-                            self.current_new_object == self.number_of_new_objects and self.kind_of_loop == 0):
+                            self.current_new_object == self.number_of_new_objects):
                         if self.current_variable_value is None:
                             self.current_new_object = 1
 
-                            if self.kind_of_loop == 0:
-                                self.current_variable_value = round(self.variable_value_from, 8)
-                                self.calculate_step()
-                            elif len(self.list_of_values) > 0:
-                                self.current_variable_value = self.list_of_values[self.current_new_object - 1]
+                            self.current_variable_value = round(self.variable_value_from, 8)
+                            self.calculate_step()
                         else:
                             self.current_new_object += 1
-                            if self.kind_of_loop == 0:
-                                self.current_variable_value = round(
-                                    self.current_variable_value + self.variable_value_step, 8)
-                            elif len(self.list_of_values) > 0:
-                                self.current_variable_value = self.list_of_values[self.current_new_object - 1]
+                            self.current_variable_value = round(
+                                self.current_variable_value + self.variable_value_step, 8)
 
                         self.setStatusMessage(
                             "Running " + self.get_object_name() + " " + str(self.current_new_object) + " of " + str(

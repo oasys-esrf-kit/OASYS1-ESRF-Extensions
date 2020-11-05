@@ -71,7 +71,7 @@ class OWUndulatorGaussianShellModel1D(WofryWidget):
 
     def __init__(self):
 
-        super().__init__(is_automatic=False, show_view_options=False)
+        super().__init__(is_automatic=False, show_view_options=True)
 
         #
         # add script tab to tabs panel
@@ -393,15 +393,17 @@ class OWUndulatorGaussianShellModel1D(WofryWidget):
                     sigmaI, self.index_sorted_mode, amplitude=1.0, shift=0.0, beta=beta)
 
 
-
             if self.use_emittances == 0:
                 self._cumulated_occupation = numpy.array([1.0])
             else:
                 indices = numpy.arange(_n)
                 self._cumulated_occupation = (1.0 - q ** (indices+1))
 
-            self.initializeTabs()
-            self.plot_results()
+            if self.view_type != 0:
+                self.initializeTabs()
+                self.plot_results()
+            else:
+                self.progressBarFinished()
 
             self.wofry_script.set_code(self.generate_python_code(sigmaI,beta))
 

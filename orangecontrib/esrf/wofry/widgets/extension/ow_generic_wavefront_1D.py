@@ -1,4 +1,5 @@
 import numpy
+import sys
 
 from PyQt5.QtGui import QPalette, QColor, QFont
 from PyQt5.QtWidgets import QMessageBox
@@ -66,7 +67,7 @@ class OWGenericWavefront1D(WofryWidget):
     titles = ["Wavefront 1D Intensity", "Wavefront 1D Phase","Wavefront Real(Amplitude)","Wavefront Imag(Amplitude)"]
 
     def __init__(self):
-        super().__init__(is_automatic=False, show_view_options=False)
+        super().__init__(is_automatic=False, show_view_options=True)
 
         #
         # add script tab to tabs panel
@@ -321,8 +322,12 @@ class OWGenericWavefront1D(WofryWidget):
 
 
     def generate(self):
-        try:
+        if True: # try:
             self.wofry_output.setText("")
+
+            self.wofry_output.setText("")
+
+            sys.stdout = EmittingStream(textWritten=self.writeStdOut)
 
             self.progressBarInit()
 
@@ -362,24 +367,31 @@ class OWGenericWavefront1D(WofryWidget):
                 current_index = self.tabs.currentIndex()
             except:
                 current_index = None
-            self.initializeTabs()
-            self.plot_results()
-            if current_index is not None:
-                try:
-                    self.tabs.setCurrentIndex(current_index)
-                except:
-                    pass
+
+
+            if self.view_type != 0:
+                self.initializeTabs()
+                self.plot_results()
+                if current_index is not None:
+                    try:
+                        self.tabs.setCurrentIndex(current_index)
+                    except:
+                        pass
+            else:
+                self.progressBarFinished()
 
             self.wofry_script.set_code(self.generate_python_code())
 
-            self.send("WofryData", WofryData(wavefront=self.wavefront1D))
-
-        except Exception as exception:
-            QMessageBox.critical(self, "Error", str(exception), QMessageBox.Ok)
-
-            if self.IS_DEVELOP: raise exception
-
-            self.progressBarFinished()
+            try:
+                self.send("WofryData", WofryData(wavefront=self.wavefront1D))
+            except:
+                pass
+        # except Exception as exception:
+        #     QMessageBox.critical(self, "Error", str(exception), QMessageBox.Ok)
+        #
+        #     if self.IS_DEVELOP: raise exception
+        #
+        #     self.progressBarFinished()
 
     def generate_python_code(self):
 
