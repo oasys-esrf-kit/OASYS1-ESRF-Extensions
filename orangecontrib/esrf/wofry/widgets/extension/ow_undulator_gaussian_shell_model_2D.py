@@ -66,7 +66,8 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
     undulator_length=Setting(4.0)
 
     use_emittances = Setting(1)
-    index_sorted_mode = Setting(0)
+    mode_index = Setting(0)
+    # index_sorted_mode = Setting(0) # old
 
     spectral_density_threshold = Setting(0.99)
 
@@ -182,8 +183,8 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
         self.mode_index_box = oasysgui.widgetBox(left_box_4, "", addSpace=True, orientation="vertical", )
 
         left_box_5 = oasysgui.widgetBox(self.mode_index_box, "", addSpace=True, orientation="horizontal", )
-        tmp = oasysgui.lineEdit(left_box_5, self, "index_sorted_mode", "Mode", valueType=int,
-                        labelWidth=200, tooltip = "index_sorted_mode",
+        tmp = oasysgui.lineEdit(left_box_5, self, "mode_index", "Mode", valueType=int,
+                        labelWidth=200, tooltip = "mode_index",
                         orientation="horizontal")
 
         gui.button(left_box_5, self, "+1", callback=self.increase_mode_index, width=30)
@@ -221,21 +222,21 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
         self.mode_index_box.setVisible(self.use_emittances == 1)
 
     def increase_mode_index(self):
-        self.index_sorted_mode += 1
+        self.mode_index += 1
         try:
             nmax = (self._n_h) * (self._n_v) - 1
-            if self.index_sorted_mode > nmax: self.index_sorted_mode = nmax
+            if self.mode_index > nmax: self.mode_index = nmax
         except:
             pass
         self.generate()
 
     def decrease_mode_index(self):
-        self.index_sorted_mode -= 1
-        if self.index_sorted_mode < 0: self.index_sorted_mode = 0
+        self.mode_index -= 1
+        if self.mode_index < 0: self.mode_index = 0
         self.generate()
 
     def reset_mode_index(self):
-        self.index_sorted_mode = 0
+        self.mode_index = 0
         self.generate()
 
     def set_Initialization(self):
@@ -277,7 +278,7 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
             congruence.checkStrictlyPositiveNumber(self.steps_step_h, "Step (H)")
             congruence.checkStrictlyPositiveNumber(self.steps_step_v, "Step (V)")
 
-        congruence.checkNumber(self.index_sorted_mode, "Mode index")
+        congruence.checkNumber(self.mode_index, "Mode index")
 
 
     def receive_syned_data(self, data):
@@ -426,9 +427,9 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
                         self._gsm_2d = GaussianSchellModel2D(1.0, sigmaI_h, sigmaMu_h, sigmaI_v, sigmaMu_v)
 
 
-                ih, iv = self._gsm_2d.sortedModeIndices(self.index_sorted_mode, n_points=self._n_h * self._n_v)
+                ih, iv = self._gsm_2d.sortedModeIndices(self.mode_index, n_points=self._n_h * self._n_v)
 
-                print("2D mode index %d corresponds to (H,V)=(%d,%d) modes." % (self.index_sorted_mode, ih, iv))
+                print("2D mode index %d corresponds to (H,V)=(%d,%d) modes." % (self.mode_index, ih, iv))
 
 
                 self.wavefront2D.set_gaussian_hermite_mode(sigma_x=sigmaI_h,
@@ -516,7 +517,7 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
 
             titles = ["Wavefront 2D Intensity", "Cumulated occupation", "Eigenvalues map"]
             try:
-                ih, iv = self._gsm_2d.sortedModeIndices(self.index_sorted_mode, n_points=self._n_h * self._n_v)
+                ih, iv = self._gsm_2d.sortedModeIndices(self.mode_index, n_points=self._n_h * self._n_v)
             except:
                 ih, iv = 0, 0
 
@@ -526,7 +527,7 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
                              progressBarValue=progressBarValue,
                              tabs_canvas_index=0,
                              plot_canvas_index=0,
-                             title=titles[0] + "; mode index = %d = (%d, %d)" % (self.index_sorted_mode, ih, iv),                             xtitle="Horizontal [$\mu$m] ( %d pixels)" % (self.wavefront2D.get_coordinate_x().size),
+                             title=titles[0] + "; mode index = %d = (%d, %d)" % (self.mode_index, ih, iv), xtitle="Horizontal [$\mu$m] ( %d pixels)" % (self.wavefront2D.get_coordinate_x().size),
                              ytitle="Vertical [$\mu$m] ( %d pixels)" % (self.wavefront2D.get_coordinate_y().size))
 
             self.plot_data1D(numpy.arange(self._cumulated_occupation.size),

@@ -56,7 +56,8 @@ class OWGenericWavefront1D(WofryWidget):
     gaussian_sigma = Setting(0.001)
     gaussian_amplitude = Setting(1.0)
     gaussian_beta = Setting(1.0)
-    gaussian_mode = Setting(0)
+    mode_index = Setting(0)
+
     gaussian_shift = Setting(0.0)
 
     amplitude = Setting(1.0)
@@ -241,8 +242,8 @@ class OWGenericWavefront1D(WofryWidget):
 
 
         mode_index_box = oasysgui.widgetBox(self.gsm_box, "", addSpace=True, orientation="horizontal", ) #width=550, height=50)
-        tmp = oasysgui.lineEdit(mode_index_box, self, "gaussian_mode", "Mode",
-                          labelWidth=200, tooltip="gaussian_mode", valueType=int, orientation="horizontal")
+        tmp = oasysgui.lineEdit(mode_index_box, self, "mode_index", "Mode",
+                          labelWidth=200, tooltip="mode_index", valueType=int, orientation="horizontal")
         gui.button(mode_index_box, self, "+1", callback=self.increase_mode_index)
 
 
@@ -255,7 +256,7 @@ class OWGenericWavefront1D(WofryWidget):
         self.set_KindOfWave()
 
     def increase_mode_index(self):
-        self.gaussian_mode += 1
+        self.mode_index += 1
         self.generate()
 
     def set_Units(self):
@@ -318,7 +319,7 @@ class OWGenericWavefront1D(WofryWidget):
             congruence.checkNumber(self.gaussian_shift, "Center of the Gaussian")
 
             if self.kind_of_wave == 3:
-                congruence.checkPositiveNumber(self.gaussian_mode, "Mode")
+                congruence.checkPositiveNumber(self.mode_index, "Mode")
 
 
     def generate(self):
@@ -357,8 +358,8 @@ class OWGenericWavefront1D(WofryWidget):
                 self.wavefront1D.set_gaussian(sigma_x=self.gaussian_sigma, amplitude=self.gaussian_amplitude,
                                               shift=self.gaussian_shift)
             elif self.kind_of_wave == 3: # g.s.m.
-                self.wavefront1D.set_gaussian_hermite_mode(sigma_x=self.gaussian_sigma,amplitude=self.gaussian_amplitude,
-                                            mode_x=self.gaussian_mode,shift=self.gaussian_shift,beta=self.gaussian_beta)
+                self.wavefront1D.set_gaussian_hermite_mode(sigma_x=self.gaussian_sigma, amplitude=self.gaussian_amplitude,
+                                                           mode_x=self.mode_index, shift=self.gaussian_shift, beta=self.gaussian_beta)
 
             if self.add_random_phase:
                 self.wavefront1D.add_phase_shifts(2*numpy.pi*numpy.random.random(self.wavefront1D.size()))
@@ -431,7 +432,7 @@ class OWGenericWavefront1D(WofryWidget):
                    (self.gaussian_sigma,self.gaussian_amplitude,self.gaussian_shift)
         elif self.kind_of_wave == 3: # g.s.m.
             txt += "\ninput_wavefront.set_gaussian_hermite_mode(sigma_x=%g,amplitude=%g,mode_x=%d,shift=%f,beta=%g)"%\
-                   (self.gaussian_sigma,self.gaussian_amplitude,self.gaussian_mode,self.gaussian_shift,self.gaussian_beta)
+                   (self.gaussian_sigma, self.gaussian_amplitude, self.mode_index, self.gaussian_shift, self.gaussian_beta)
 
             #
             # if self.add_random_phase:
