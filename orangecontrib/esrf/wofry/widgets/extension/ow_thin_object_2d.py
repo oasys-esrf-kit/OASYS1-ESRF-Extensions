@@ -120,7 +120,7 @@ class OWWOThinObject2D(OWWOOpticalElement):
     priority = 30
 
     inputs = [("WofryData", WofryData, "set_input"),
-              ("GenericWavefront2D", GenericWavefront2D, "set_input"),
+              # ("GenericWavefront2D", GenericWavefront2D, "set_input"),
               WidgetDecorator.syned_input_data()[0],
               # ("Oasys PreProcessorData", OasysPreProcessorData, "set_input"),
               ("Surface Data", OasysSurfaceData, "set_input")

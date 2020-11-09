@@ -49,7 +49,7 @@ class OWRefractiveCorrector1D(WofryWidget):
                 "id":"Trigger"}]
 
     inputs = [("WofryData", WofryData, "set_input"),
-              ("GenericWavefront1D", GenericWavefront1D, "set_input"),
+              # ("GenericWavefront1D", GenericWavefront1D, "set_input"),
               WidgetDecorator.syned_input_data()[0]]
 
     correction_method = Setting(1)
@@ -112,7 +112,7 @@ class OWRefractiveCorrector1D(WofryWidget):
 
 
         gui.comboBox(box_corrector, self, "correction_method", label="Correction type", labelWidth=350,
-                     items=["None","Focus to waist with reflector"],
+                     items=["None","Focus to waist"],
                      callback=self.set_visible,
                      sendSelectedValue=False, orientation="horizontal")
 
