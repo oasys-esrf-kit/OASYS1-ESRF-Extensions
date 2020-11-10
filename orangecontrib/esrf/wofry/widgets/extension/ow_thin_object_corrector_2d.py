@@ -20,7 +20,7 @@ from wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D
 
 from orangecontrib.esrf.wofry.widgets.extension.ow_thin_object_2d import WOThinObject # TODO: change import
 from orangecontrib.wofry.util.wofry_objects import WofryData
-from orangecontrib.wofry.widgets.gui.ow_optical_element import OWWOOpticalElement, OWWOOpticalElementWithBoundaryShape
+from orangecontrib.esrf.wofry.widgets.gui.ow_optical_element import OWWOOpticalElement # TODO: from orangecontrib.wofry.widgets.gui.ow_optical_element import OWWOOpticalElement
 
 
 # mimics a wofry element
@@ -40,10 +40,10 @@ class WOThinObjectCorrector(WOThinObject):
                  material=material,
                          )
 
-        self.correction_method = correction_method
-        self.focus_at = focus_at
-        self.wall_thickness = wall_thickness
-        self.apply_correction_to_wavefront = apply_correction_to_wavefront
+        self._correction_method = correction_method
+        self._focus_at = focus_at
+        self._wall_thickness = wall_thickness
+        self._apply_correction_to_wavefront = apply_correction_to_wavefront
 
     def applyOpticalElement(self, wavefront, parameters=None, element_index=None):
 
@@ -52,9 +52,9 @@ class WOThinObjectCorrector(WOThinObject):
         x = wavefront.get_coordinate_x()
         y = wavefront.get_coordinate_y()
 
-        if self.correction_method == 0: # write file with zero profile
+        if self._correction_method == 0: # write file with zero profile
             profile = numpy.zeros((x.size, y.size))
-        elif self.correction_method == 1:
+        elif self._correction_method == 1:
 
             print("\n\n\n ==========  parameters from optical element : ")
             print(self.info())
@@ -85,24 +85,34 @@ class WOThinObjectCorrector(WOThinObject):
 
             # auxiliar spherical wavefront
             wavefront_model = wavefront.duplicate()
-            wavefront_model.set_spherical_wave(radius=-self.focus_at, complex_amplitude=1.0,)
+            wavefront_model.set_spherical_wave(radius=-self._focus_at, complex_amplitude=1.0,)
 
 
-            phase_correction = numpy.imag( wavefront_model.get_complex_amplitude() / wavefront.get_complex_amplitude())
-            profile = phase_correction / wavefront.get_wavenumber() / refraction_index_delta
+            phase_correction = numpy.angle( wavefront_model.get_complex_amplitude() / wavefront.get_complex_amplitude())
+            profile = -phase_correction / wavefront.get_wavenumber() / refraction_index_delta
 
 
-        profile += self.wall_thickness
+        profile += self._wall_thickness
         write_surface_file(profile.T, x, y, self.get_file_with_thickness_mesh(), overwrite=True)
         print("\nFile for OASYS " + self.get_file_with_thickness_mesh() + " written to disk.")
 
-
-        if self.apply_correction_to_wavefront > 0:
+        if self._apply_correction_to_wavefront > 0:
             output_wavefront = super().applyOpticalElement(wavefront, parameters=parameters, element_index=element_index)
         else:
             output_wavefront = wavefront
 
         return output_wavefront
+
+    def to_python_code(self, data=None):
+        txt  = ""
+        txt += "\nfrom orangecontrib.esrf.wofry.widgets.extension.ow_thin_object_corrector_2d import WOThinObjectCorrector"
+        txt += "\n"
+        txt += "\noptical_element = WOThinObjectCorrector(name='%s',file_with_thickness_mesh='%s',material='%s',\n" % \
+               (self.get_name(), self.get_file_with_thickness_mesh(), self.get_material())
+        txt += "    correction_method=%d, focus_at= %g, wall_thickness=%g, apply_correction_to_wavefront=%d)" % \
+               (self._correction_method, self._focus_at, self._wall_thickness, self._apply_correction_to_wavefront)
+        txt += "\n"
+        return txt
 
 
 
@@ -144,24 +154,7 @@ class OWWOThinObjectCorrector2D(OWWOOpticalElement):
 
     def __init__(self):
 
-        super().__init__()
-
-    def set_input(self, input_data):
-
-        do_execute = False
-        # if isinstance(input_data, OasysPreProcessorData):
-        #     self.file_with_thickness_mesh = self.oasys_data.error_profile_data
-        # if isinstance(input_data, OasysSurfaceData):
-        #     self.file_with_thickness_mesh = input_data.surface_data_file
-        if isinstance(input_data, WofryData):
-            self.input_data = input_data
-            do_execute = True
-        elif isinstance(input_data, GenericWavefront2D):
-            self.input_data = WofryData(wavefront=input_data)
-            do_execute = True
-
-        if self.is_automatic_execution and do_execute:
-            self.propagate_wavefront()
+        super().__init__(is_automatic=True, show_view_options=True, show_script_tab=True)
 
     def draw_specific_box(self):
 
@@ -186,15 +179,6 @@ class OWWOThinObjectCorrector2D(OWWOOpticalElement):
                      sendSelectedValue=False, orientation="horizontal")
 
 
-        # self.box_refraction_index_id = oasysgui.widgetBox(self.box_corrector_1, "", addSpace=False, orientation="horizontal")
-        # tmp = oasysgui.lineEdit(self.box_refraction_index_id, self, "refraction_index_delta", "Refraction index delta",
-        #                   labelWidth=300, valueType=float, orientation="horizontal", tooltip="refraction_index_delta")
-        #
-        # self.box_att_coefficient_id = oasysgui.widgetBox(self.box_corrector_1, "", addSpace=False, orientation="horizontal")
-        # tmp = oasysgui.lineEdit(self.box_att_coefficient_id, self, "att_coefficient", "Attenuation coefficient [m-1]",
-        #                   labelWidth=300, valueType=float, orientation="horizontal",tooltip="att_coefficient")
-
-
         self.box_wall_thickness_id = oasysgui.widgetBox(self.box_corrector_1, "", addSpace=False, orientation="horizontal")
         tmp = oasysgui.lineEdit(self.thinobject_box, self, "wall_thickness", "Wall thickness [m]",
                           labelWidth=300, valueType=float, orientation="horizontal", tooltip="wall_thickness")
@@ -216,6 +200,21 @@ class OWWOThinObjectCorrector2D(OWWOOpticalElement):
                      items=["No", "Yes [wavefront2D_input.h5]"], sendSelectedValue=False, orientation="horizontal")
 
         self.set_visible()
+
+
+    def set_input(self, input_data):
+
+        do_execute = False
+
+        if isinstance(input_data, WofryData):
+            self.input_data = input_data
+            do_execute = True
+        elif isinstance(input_data, GenericWavefront2D):
+            self.input_data = WofryData(wavefront=input_data)
+            do_execute = True
+
+        if self.is_automatic_execution and do_execute:
+            self.propagate_wavefront()
 
     # overwrite this method to add tab with thickness profile
     def initializeTabs(self):
@@ -282,22 +281,7 @@ class OWWOThinObjectCorrector2D(OWWOOpticalElement):
                                      )
 
     def get_optical_element_python_code(self):
-        txt  = ""
-        # txt += "\nfrom orangecontrib.esrf.wofry.util.lens import WOLens"
-        # txt += "\n"
-        # txt += "\noptical_element = WOLens.create_from_keywords(name=%s,number_of_curved_surfaces=%d,two_d_lens=%d,surface_shape=%d,wall_thickness=%g,lens_radius=%g,material='%s',aperture_shape=%d,aperture_dimension_h=%g,aperture_dimension_v=%g)" \
-        #        % (self.name,\
-        #           self.number_of_curved_surfaces,\
-        #           self.two_d_lens,\
-        #           self.surface_shape,\
-        #           self.wall_thickness,\
-        #           self.lens_radius,\
-        #           self.get_material_name(index=self.material),\
-        #           self.aperture_shape,\
-        #           self.aperture_dimension_h,\
-        #           self.aperture_dimension_v,)
-        txt += "\n"
-        return txt
+        return self.get_optical_element().to_python_code()
 
     def check_data(self):
         super().check_data()

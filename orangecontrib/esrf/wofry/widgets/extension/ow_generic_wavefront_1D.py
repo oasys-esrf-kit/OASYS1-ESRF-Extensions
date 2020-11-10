@@ -12,10 +12,10 @@ from oasys.widgets import congruence
 from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
 
 from orangecontrib.wofry.util.wofry_objects import WofryData
-from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
+from orangecontrib.esrf.wofry.widgets.gui.ow_wofry_widget import WofryWidget # TODO: from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
+
 
 from oasys.util.oasys_util import TriggerIn, TriggerOut, EmittingStream
-from orangecontrib.xoppy.util.python_script import PythonScript  # TODO: change import from wofry!!!
 
 class OWGenericWavefront1D(WofryWidget):
 
@@ -68,16 +68,7 @@ class OWGenericWavefront1D(WofryWidget):
     titles = ["Wavefront 1D Intensity", "Wavefront 1D Phase","Wavefront Real(Amplitude)","Wavefront Imag(Amplitude)"]
 
     def __init__(self):
-        super().__init__(is_automatic=False, show_view_options=True)
-
-        #
-        # add script tab to tabs panel
-        #
-        script_tab = oasysgui.createTabPage(self.main_tabs, "Script")
-        self.wofry_script = PythonScript()
-        self.wofry_script.code_area.setFixedHeight(400)
-        script_box = gui.widgetBox(script_tab, "Python script", addSpace=True, orientation="horizontal")
-        script_box.layout().addWidget(self.wofry_script)
+        super().__init__(is_automatic=False, show_view_options=True, show_script_tab=True)
 
         self.runaction = widget.OWAction("Generate Wavefront", self)
         self.runaction.triggered.connect(self.generate)

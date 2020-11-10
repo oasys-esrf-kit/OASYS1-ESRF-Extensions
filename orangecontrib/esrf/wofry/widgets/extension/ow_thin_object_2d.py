@@ -1,24 +1,24 @@
 import numpy
-from orangewidget.settings import Setting
-from orangewidget import gui
-from oasys.widgets import gui as oasysgui
-from oasys.widgets import congruence
-
-
-from orangecontrib.wofry.widgets.gui.ow_optical_element import OWWOOpticalElement, OWWOOpticalElementWithBoundaryShape
-
-from oasys.util.oasys_util import write_surface_file, read_surface_file
-from wofry.beamline.decorators import OpticalElementDecorator
-from syned.beamline.optical_element import OpticalElement
+from scipy.interpolate import interp2d
 import xraylib
 
-from scipy.interpolate import interp2d
+
+from orangewidget.settings import Setting
+from orangewidget import gui
+
+from oasys.widgets import gui as oasysgui
+from oasys.widgets import congruence
+from oasys.util.oasys_util import write_surface_file, read_surface_file
+from oasys.util.oasys_objects import OasysSurfaceData
 
 
-from oasys.util.oasys_objects import OasysPreProcessorData, OasysSurfaceData
-from wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D
-from orangecontrib.wofry.util.wofry_objects import WofryData
+from syned.beamline.optical_element import OpticalElement
 from syned.widget.widget_decorator import WidgetDecorator
+
+from wofry.beamline.decorators import OpticalElementDecorator
+
+from orangecontrib.esrf.wofry.widgets.gui.ow_optical_element import OWWOOpticalElement # TODO: from orangecontrib.wofry.widgets.gui.ow_optical_element import OWWOOpticalElement
+from orangecontrib.wofry.util.wofry_objects import WofryData
 
 # mimics a syned element
 class ThinObject(OpticalElement):
@@ -110,6 +110,15 @@ class WOThinObject(ThinObject, OpticalElementDecorator):
 
         return output_wavefront
 
+    def to_python_code(self, data=None):
+        txt  = ""
+        txt += "\nfrom orangecontrib.esrf.wofry.widgets.extension.ow_thin_object_2d import WOThinObject"
+        txt += "\n"
+        txt += "\noptical_element = WOThinObject(name='%s',file_with_thickness_mesh='%s',material='%s')" % \
+               (self.get_name(), self.get_file_with_thickness_mesh(), self.get_material())
+        txt += "\n"
+        return txt
+
 
 
 class OWWOThinObject2D(OWWOOpticalElement):
@@ -142,7 +151,39 @@ class OWWOThinObject2D(OWWOOpticalElement):
 
     def __init__(self):
 
-        super().__init__()
+        super().__init__(is_automatic=True, show_view_options=True, show_script_tab=True)
+
+    def draw_specific_box(self):
+
+        self.thinobject_box = oasysgui.widgetBox(self.tab_bas, "Thin Object Setting", addSpace=False, orientation="vertical",
+                                           height=350)
+
+        gui.comboBox(self.thinobject_box, self, "material", label="Lens material",
+                     items=self.get_material_name(),
+                     sendSelectedValue=False, orientation="horizontal")
+
+        oasysgui.lineEdit(self.thinobject_box, self, "file_with_thickness_mesh", "File with thickness mesh",
+                            labelWidth=200, valueType=str, orientation="horizontal")
+
+
+        # files i/o tab
+        self.tab_files = oasysgui.createTabPage(self.tabs_setting, "File I/O")
+        files_box = oasysgui.widgetBox(self.tab_files, "Files", addSpace=True, orientation="vertical")
+
+        gui.comboBox(files_box, self, "write_input_wavefront", label="Input wf to file (for script)",
+                     items=["No", "Yes [wavefront2D_input.h5]"], sendSelectedValue=False, orientation="horizontal")
+
+        gui.comboBox(files_box, self, "write_profile_flag", label="Dump profile to file",
+                     items=["No", "Yes"], sendSelectedValue=False, orientation="horizontal",
+                     callback=self.set_visible)
+
+        self.box_file_out = gui.widgetBox(files_box, "", addSpace=False, orientation="vertical")
+        oasysgui.lineEdit(self.box_file_out, self, "write_profile", "File name",
+                            labelWidth=200, valueType=str, orientation="horizontal")
+
+
+        self.set_visible()
+
 
     def set_input(self, input_data):
 
@@ -213,60 +254,14 @@ class OWWOThinObject2D(OWWOOpticalElement):
         else:
             return materials_list[index]
 
-    def draw_specific_box(self):
-
-        self.thinobject_box = oasysgui.widgetBox(self.tab_bas, "Thin Object Setting", addSpace=False, orientation="vertical",
-                                           height=350)
-
-        gui.comboBox(self.thinobject_box, self, "material", label="Lens material",
-                     items=self.get_material_name(),
-                     sendSelectedValue=False, orientation="horizontal")
-
-        oasysgui.lineEdit(self.thinobject_box, self, "file_with_thickness_mesh", "File with thickness mesh",
-                            labelWidth=200, valueType=str, orientation="horizontal")
-
-
-        # files i/o tab
-        self.tab_files = oasysgui.createTabPage(self.tabs_setting, "File I/O")
-        files_box = oasysgui.widgetBox(self.tab_files, "Files", addSpace=True, orientation="vertical")
-
-        gui.comboBox(files_box, self, "write_input_wavefront", label="Input wf to file (for script)",
-                     items=["No", "Yes [wavefront2D_input.h5]"], sendSelectedValue=False, orientation="horizontal")
-
-        gui.comboBox(files_box, self, "write_profile_flag", label="Dump profile to file",
-                     items=["No", "Yes"], sendSelectedValue=False, orientation="horizontal",
-                     callback=self.set_visible)
-
-        self.box_file_out = gui.widgetBox(files_box, "", addSpace=False, orientation="vertical")
-        oasysgui.lineEdit(self.box_file_out, self, "write_profile", "File name",
-                            labelWidth=200, valueType=str, orientation="horizontal")
-
-
-        self.set_visible()
-
     def get_optical_element(self):
 
-        return WOThinObject(name="Undefined",
+        return WOThinObject(name=self.name,
                  file_with_thickness_mesh=self.file_with_thickness_mesh,
                  material=self.get_material_name(self.material))
 
     def get_optical_element_python_code(self):
-        txt  = ""
-        # txt += "\nfrom orangecontrib.esrf.wofry.util.lens import WOLens"
-        # txt += "\n"
-        # txt += "\noptical_element = WOLens.create_from_keywords(name=%s,number_of_curved_surfaces=%d,two_d_lens=%d,surface_shape=%d,wall_thickness=%g,lens_radius=%g,material='%s',aperture_shape=%d,aperture_dimension_h=%g,aperture_dimension_v=%g)" \
-        #        % (self.name,\
-        #           self.number_of_curved_surfaces,\
-        #           self.two_d_lens,\
-        #           self.surface_shape,\
-        #           self.wall_thickness,\
-        #           self.lens_radius,\
-        #           self.get_material_name(index=self.material),\
-        #           self.aperture_shape,\
-        #           self.aperture_dimension_h,\
-        #           self.aperture_dimension_v,)
-        txt += "\n"
-        return txt
+        return self.get_optical_element().to_python_code()
 
     def check_data(self):
         super().check_data()
