@@ -31,7 +31,7 @@
 		<node id="27" name="Screen 1D" position="(1132.0, 953.0)" project_name="OASYS1-WOFRY" qualified_name="orangecontrib.wofry.widgets.beamline_elements.ow_screen_1d.OWWOScreen1D" title="Screen 1D @188m" version="" />
 		<node id="28" name="Loop stepper 1D" position="(1001.0, 1112.0)" project_name="OASYS1-ESRF-Extensions" qualified_name="orangecontrib.esrf.wofry.widgets.extension.ow_stepper_1D.OWstepper1D" title=" Generic Wavefront Viewer 1D" version="" />
 		<node id="29" name="Loop stepper 1D" position="(1013.0, 703.0)" project_name="OASYS1-ESRF-Extensions" qualified_name="orangecontrib.esrf.wofry.widgets.extension.ow_stepper_1D.OWstepper1D" title=" Generic Wavefront Viewer 1D" version="" />
-		<node id="30" name="Generic Wavefront 1D" position="(103.0, 729.0)" project_name="OASYS1-ESRF-Extensions" qualified_name="orangecontrib.esrf.wofry.widgets.extension.ow_generic_wavefront_1D.OWGenericWavefront1D" title="Generic Wavefront 1D (H Marco)" version="" />
+		<node id="30" name="Generic Wavefront 1D" position="(105.0, 707.0)" project_name="OASYS1-ESRF-Extensions" qualified_name="orangecontrib.esrf.wofry.widgets.extension.ow_generic_wavefront_1D.OWGenericWavefront1D" title="Generic Wavefront 1D (H Marco)" version="" />
 		<node id="31" name="Generic Wavefront 1D" position="(102.0, 1066.0)" project_name="OASYS1-ESRF-Extensions" qualified_name="orangecontrib.esrf.wofry.widgets.extension.ow_generic_wavefront_1D.OWGenericWavefront1D" title="Generic Wavefront 1D (Marco)" version="" />
 		<node id="32" name="Slit" position="(285.0, 1214.0)" project_name="OASYS1-WOFRY" qualified_name="orangecontrib.wofry.widgets.beamline_elements.ow_slits.OWWOSlit" title="Slit" version="" />
 		<node id="33" name="Slit" position="(510.0, 1212.0)" project_name="OASYS1-WOFRY" qualified_name="orangecontrib.wofry.widgets.beamline_elements.ow_slits.OWWOSlit" title="Slit" version="" />
@@ -597,7 +597,7 @@ aW9ucQ6JWAwAAABraW5kX29mX3dhdmVxD0sDWAoAAABtb2RlX2luZGV4cRBHQEQAAAAAAABYEAAA
 AG51bWJlcl9vZl9wb2ludHNxEU3oA1gFAAAAcGhhc2VxEkcAAAAAAAAAAFgGAAAAcmFkaXVzcRNH
 QGGAAAAAAABYCgAAAHJhbmdlX2Zyb21xFEe/H3UQTVUdaVgIAAAAcmFuZ2VfdG9xFUc/H3UQTVUd
 aVgTAAAAc2F2ZWRXaWRnZXRHZW9tZXRyeXEWY3NpcApfdW5waWNrbGVfdHlwZQpxF1gMAAAAUHlR
-dDUuUXRDb3JlcRhYCgAAAFFCeXRlQXJyYXlxGUNCAdnQywADAAAAAACQAAAAnwAABbcAAANfAAAA
+dDUuUXRDb3JlcRhYCgAAAFFCeXRlQXJyYXlxGUNCAdnQywADAAAAAACQAAAAegAABbcAAANfAAAA
 kAAAAJ8AAAW3AAADXwAAAAAAAAAABpAAAACQAAAAnwAABbcAAANfcRqFcRuHcRxScR1YCwAAAHN0
 ZXBzX3N0YXJ0cR5Hv0BiTdLxqfxYCgAAAHN0ZXBzX3N0ZXBxH0c+sMb3oLXtjVgFAAAAdW5pdHNx
 IEsAWAkAAAB2aWV3X3R5cGVxIUsAWAoAAAB3YXZlbGVuZ3RocSJHPdt839nXvbt1Lg==
@@ -1811,13 +1811,13 @@ AAAAdS4=
 AFB5UXQ1LlF0Q29yZXEDWAoAAABRQnl0ZUFycmF5cQRDQgHZ0MsAAwAAAAAASAAAABcAAAKpAAAC
 wAAAAEgAAAAtAAACqQAAAsAAAAAAAgAAAAWgAAAASAAAAC0AAAKpAAACwHEFhXEGh3EHUnEIcy4=
 </properties>
-		<properties format="pickle" node_id="54">gAN9cQAoWAwAAABhdXRvX2V4ZWN1dGVxAYlYEgAAAGN1cnJlbnRTY3JpcHRJbmRleHECSwFYCQAA
+		<properties format="pickle" node_id="54">gAN9cQAoWAwAAABhdXRvX2V4ZWN1dGVxAYlYEgAAAGN1cnJlbnRTY3JpcHRJbmRleHECSwBYCQAA
 AGZvbnRfc2l6ZXEDSwRYEQAAAGxpYnJhcnlMaXN0U291cmNlcQRdcQVjb2FzeXMud2lkZ2V0cy50
 b29scy5vd19weXRob25fc2NyaXB0ClNjcmlwdApxBimBcQd9cQgoWAQAAABuYW1lcQlYCgAAAE5l
 dyBzY3JpcHRxClgGAAAAc2NyaXB0cQtYMgAAAHByaW50KGluX29iamVjdF8xLmdldF9iZWFtbGlu
 ZSgpLnRvX3B5dGhvbl9jb2RlKCkpcQxYBQAAAGZsYWdzcQ1LAFgIAAAAZmlsZW5hbWVxDk51YmFY
 EwAAAHNhdmVkV2lkZ2V0R2VvbWV0cnlxD2NzaXAKX3VucGlja2xlX3R5cGUKcRBYDAAAAFB5UXQ1
-LlF0Q29yZXERWAoAAABRQnl0ZUFycmF5cRJDQgHZ0MsAAwAAAAABlAAAANMAAASzAAADKgAAAZQA
+LlF0Q29yZXERWAoAAABRQnl0ZUFycmF5cRJDQgHZ0MsAAwAAAAABlAAAAK4AAASzAAADKgAAAZQA
 AADTAAAEswAAAyoAAAAAAAAAAAaQAAABlAAAANMAAASzAAADKnEThXEUh3EVUnEWWA0AAABzcGxp
 dHRlclN0YXRlcRdOdS4=
 </properties>

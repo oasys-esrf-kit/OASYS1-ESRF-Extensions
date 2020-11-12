@@ -27,6 +27,8 @@ from wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D
 from orangecontrib.wofry.util.wofry_objects import WofryData
 from orangecontrib.esrf.wofry.widgets.gui.ow_wofry_widget import WofryWidget # TODO: from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
 
+from orangecontrib.esrf.wofry.util.wofry_beamline import WOBeamline
+
 def initialize_default_propagator_2D():
     propagator = PropagationManager.Instance()
 
@@ -48,10 +50,11 @@ class OWWOOpticalElement(WofryWidget, WidgetDecorator):
     keywords = ["data", "file", "load", "read"]
     category = "Wofry Optical Elements"
 
-    outputs = [{"name":"GenericWavefront2D",
-                "type":GenericWavefront2D,
-                "doc":"GenericWavefront2D",
-                "id":"GenericWavefront2D"},
+    outputs = [
+                # {"name":"GenericWavefront2D",
+                # "type":GenericWavefront2D,
+                # "doc":"GenericWavefront2D",
+                # "id":"GenericWavefront2D"},
                {"name":"WofryData",
                 "type":WofryData,
                 "doc":"WofryData",
@@ -195,7 +198,7 @@ class OWWOOpticalElement(WofryWidget, WidgetDecorator):
         congruence.checkAngle(self.angle_azimuthal, "Rotation along Beam Axis")
 
     def propagate_wavefront(self):
-        try:
+        if True: #try:
             self.wofry_output.setText("")
             self.progressBarInit()
 
@@ -219,7 +222,50 @@ class OWWOOpticalElement(WofryWidget, WidgetDecorator):
                                                                               angle_radial=numpy.radians(self.angle_radial),
                                                                               angle_azimuthal=numpy.radians(self.angle_azimuthal)))
 
-            beamline.append_beamline_element(beamline_element)
+            #
+            # this will store the propagation parameters in beamline in order to perform the propagation in the script
+            #
+
+            # 2D
+            # ==
+            # propagators_list = ["Fresnel",   "Fresnel (Convolution)",  "Fraunhofer",    "Integral",    "Fresnel Zoom XY"   ]
+            # class_name       = ["Fresnel2D", "FresnelConvolution2D",   "Fraunhofer2D",  "Integral2D",  "FresnelZoomXY2D"   ]
+            # handler_name     = ["FRESNEL_2D","FRESNEL_CONVOLUTION_2D", "FRAUNHOFER_2D", "INTEGRAL_2D", "FRESNEL_ZOOM_XY_2D"]
+            if self.propagator == 0:
+                propagator_info = {
+                    "propagator_class_name": "Fresnel2D",
+                    "propagator_handler_name": self.get_handler_name(),
+                    "propagator_additional_parameters_names": [],
+                    "propagator_additional_parameters_values": []}
+            elif self.propagator == 1:
+                propagator_info = {
+                    "propagator_class_name": "FresnelConvolution2D",
+                    "propagator_handler_name": self.get_handler_name(),
+                    "propagator_additional_parameters_names": [],
+                    "propagator_additional_parameters_values": []}
+            elif self.propagator == 2:
+                propagator_info = {
+                    "propagator_class_name": "Fraunhofer2D",
+                    "propagator_handler_name": self.get_handler_name(),
+                    "propagator_additional_parameters_names": [],
+                    "propagator_additional_parameters_values": []}
+            elif self.propagator == 3:
+                propagator_info = {
+                    "propagator_class_name": "Integral2D",
+                    "propagator_handler_name": self.get_handler_name(),
+                    "propagator_additional_parameters_names": [],
+                    "propagator_additional_parameters_values": []}
+            elif self.propagator == 4:
+                propagator_info = {
+                    "propagator_class_name": "FresnelZoomXY2D",
+                    "propagator_handler_name": self.get_handler_name(),
+                    "propagator_additional_parameters_names": ['shift_half_pixel', 'magnification_x','magnification_y'],
+                    "propagator_additional_parameters_values": [self.shift_half_pixel, self.magnification_x, self.magnification_y]}
+
+            if isinstance(beamline, WOBeamline): # backcpmpatibility
+                beamline.append_beamline_element(beamline_element, propagator_info)
+            else:
+                beamline.append_beamline_element(beamline_element)
 
             propagation_elements = PropagationElements()
             propagation_elements.add_beamline_element(beamline_element)
@@ -244,22 +290,20 @@ class OWWOOpticalElement(WofryWidget, WidgetDecorator):
             self.do_plot_results()
             self.progressBarFinished()
 
-            self.send("GenericWavefront2D", output_wavefront)
             self.send("WofryData", WofryData(beamline=beamline, wavefront=output_wavefront))
             self.send("Trigger", TriggerIn(new_object=True))
 
             try:
-                # self.writeStdOut(self.propagate_python_code())
-                self.wofry_script.set_code(self.propagate_python_code())
+                self.wofry_script.set_code(beamline.to_python_code())
             except:
                 pass
-        except Exception as e:
-            QMessageBox.critical(self, "Error", str(e.args[0]), QMessageBox.Ok)
-
-            self.setStatusMessage("")
-            self.progressBarFinished()
-
-            if self.IS_DEVELOP: raise e
+        # except Exception as e:
+        #     QMessageBox.critical(self, "Error", str(e.args[0]), QMessageBox.Ok)
+        #
+        #     self.setStatusMessage("")
+        #     self.progressBarFinished()
+        #
+        #     if self.IS_DEVELOP: raise e
 
     def propagate_python_code(self, write_wavefront_template=True):
         txt = "#"
@@ -357,7 +401,7 @@ class OWWOOpticalElement(WofryWidget, WidgetDecorator):
     def set_input(self, wofry_data):
         if not wofry_data is None:
             if isinstance(wofry_data, WofryData): self.input_data = wofry_data
-            else: self.input_data = WofryData(wavefront=wofry_data)
+            else: raise Exception("Only wofry_data allowed as input") # self.input_data = WofryData(wavefront=wofry_data)
 
             if self.is_automatic_execution:
                 self.propagate_wavefront()
