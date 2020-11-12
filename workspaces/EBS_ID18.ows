@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<scheme description="" title="ID18" version="2.0" working_directory="/Users/srio/Oasys" workspace_units="0">
+<scheme description="" title="ID18" version="2.0" working_directory="/home/srio/Oasys" workspace_units="0">
 	<nodes>
 		<node id="0" name="Undulator Light Source" position="(107.0, 141.0)" project_name="OASYS1-SYNED" qualified_name="orangecontrib.syned.widgets.light_sources.ow_undulator_light_source.OWUndulatorLightSource" title="Undulator Light Source U20" version="" />
 		<node id="1" name="Screen 1D" position="(525.0, 210.0)" project_name="OASYS1-WOFRY" qualified_name="orangecontrib.wofry.widgets.beamline_elements.ow_screen_1d.OWWOScreen1D" title="Screen 1D" version="" />
@@ -55,6 +55,7 @@
 		<node id="51" name="Aperture" position="(891.0, 1602.0)" project_name="OASYS1-SRW" qualified_name="orangecontrib.srw.widgets.optical_elements.ow_srw_aperture.OWSRWAperture" title="Aperture" version="" />
 		<node id="52" name="Aperture" position="(1192.0, 1611.0)" project_name="OASYS1-SRW" qualified_name="orangecontrib.srw.widgets.optical_elements.ow_srw_aperture.OWSRWAperture" title="Aperture" version="" />
 		<node id="53" name="Info" position="(1283.0, 1611.0)" project_name="OASYS1-SRW" qualified_name="orangecontrib.srw.widgets.tools.ow_srw_info.OWSRWInfo" title="Info" version="" />
+		<node id="54" name="Python Script" position="(328.0, 622.0)" project_name="OASYS1" qualified_name="oasys.widgets.tools.ow_python_script.OWPythonScript" title="Python Script" version="" />
 	</nodes>
 	<links>
 		<link enabled="true" id="0" sink_channel="WofryData" sink_node_id="7" source_channel="WofryData" source_node_id="1" />
@@ -106,6 +107,7 @@
 		<link enabled="true" id="46" sink_channel="SRWData" sink_node_id="51" source_channel="SRWData" source_node_id="48" />
 		<link enabled="true" id="47" sink_channel="SRWData" sink_node_id="52" source_channel="SRWData" source_node_id="50" />
 		<link enabled="true" id="48" sink_channel="SRWData" sink_node_id="53" source_channel="SRWData" source_node_id="52" />
+		<link enabled="true" id="49" sink_channel="in_object_1" sink_node_id="54" source_channel="WofryData" source_node_id="30" />
 	</links>
 	<annotations>
 		<text font-family="Helvetica" font-size="16" id="0" rect="(271.0, 38.0, 150.0, 35.0)">Horizontal</text>
@@ -595,8 +597,8 @@ aW9ucQ6JWAwAAABraW5kX29mX3dhdmVxD0sDWAoAAABtb2RlX2luZGV4cRBHQEQAAAAAAABYEAAA
 AG51bWJlcl9vZl9wb2ludHNxEU3oA1gFAAAAcGhhc2VxEkcAAAAAAAAAAFgGAAAAcmFkaXVzcRNH
 QGGAAAAAAABYCgAAAHJhbmdlX2Zyb21xFEe/H3UQTVUdaVgIAAAAcmFuZ2VfdG9xFUc/H3UQTVUd
 aVgTAAAAc2F2ZWRXaWRnZXRHZW9tZXRyeXEWY3NpcApfdW5waWNrbGVfdHlwZQpxF1gMAAAAUHlR
-dDUuUXRDb3JlcRhYCgAAAFFCeXRlQXJyYXlxGUNCAdnQywADAAAAAAEQAAABuAAABjcAAASdAAAB
-EAAAAd0AAAY3AAAEnQAAAAAAAAAAB4AAAAEQAAAB3QAABjcAAASdcRqFcRuHcRxScR1YCwAAAHN0
+dDUuUXRDb3JlcRhYCgAAAFFCeXRlQXJyYXlxGUNCAdnQywADAAAAAACQAAAAnwAABbcAAANfAAAA
+kAAAAJ8AAAW3AAADXwAAAAAAAAAABpAAAACQAAAAnwAABbcAAANfcRqFcRuHcRxScR1YCwAAAHN0
 ZXBzX3N0YXJ0cR5Hv0BiTdLxqfxYCgAAAHN0ZXBzX3N0ZXBxH0c+sMb3oLXtjVgFAAAAdW5pdHNx
 IEsAWAkAAAB2aWV3X3R5cGVxIUsAWAoAAAB3YXZlbGVuZ3RocSJHPdt839nXvbt1Lg==
 </properties>
@@ -1808,6 +1810,16 @@ AAAAdS4=
 		<properties format="pickle" node_id="53">gAN9cQBYEwAAAHNhdmVkV2lkZ2V0R2VvbWV0cnlxAWNzaXAKX3VucGlja2xlX3R5cGUKcQJYDAAA
 AFB5UXQ1LlF0Q29yZXEDWAoAAABRQnl0ZUFycmF5cQRDQgHZ0MsAAwAAAAAASAAAABcAAAKpAAAC
 wAAAAEgAAAAtAAACqQAAAsAAAAAAAgAAAAWgAAAASAAAAC0AAAKpAAACwHEFhXEGh3EHUnEIcy4=
+</properties>
+		<properties format="pickle" node_id="54">gAN9cQAoWAwAAABhdXRvX2V4ZWN1dGVxAYlYEgAAAGN1cnJlbnRTY3JpcHRJbmRleHECSwFYCQAA
+AGZvbnRfc2l6ZXEDSwRYEQAAAGxpYnJhcnlMaXN0U291cmNlcQRdcQVjb2FzeXMud2lkZ2V0cy50
+b29scy5vd19weXRob25fc2NyaXB0ClNjcmlwdApxBimBcQd9cQgoWAQAAABuYW1lcQlYCgAAAE5l
+dyBzY3JpcHRxClgGAAAAc2NyaXB0cQtYMgAAAHByaW50KGluX29iamVjdF8xLmdldF9iZWFtbGlu
+ZSgpLnRvX3B5dGhvbl9jb2RlKCkpcQxYBQAAAGZsYWdzcQ1LAFgIAAAAZmlsZW5hbWVxDk51YmFY
+EwAAAHNhdmVkV2lkZ2V0R2VvbWV0cnlxD2NzaXAKX3VucGlja2xlX3R5cGUKcRBYDAAAAFB5UXQ1
+LlF0Q29yZXERWAoAAABRQnl0ZUFycmF5cRJDQgHZ0MsAAwAAAAABlAAAANMAAASzAAADKgAAAZQA
+AADTAAAEswAAAyoAAAAAAAAAAAaQAAABlAAAANMAAASzAAADKnEThXEUh3EVUnEWWA0AAABzcGxp
+dHRlclN0YXRlcRdOdS4=
 </properties>
 	</node_properties>
 </scheme>

@@ -13,9 +13,13 @@ from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
 
 from orangecontrib.wofry.util.wofry_objects import WofryData
 from orangecontrib.esrf.wofry.widgets.gui.ow_wofry_widget import WofryWidget # TODO: from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
-
+from orangecontrib.esrf.wofry.util.wofry_light_source import WOLightSource
 
 from oasys.util.oasys_util import TriggerIn, TriggerOut, EmittingStream
+
+# from syned.beamline.beamline import Beamline
+from orangecontrib.esrf.wofry.util.wofry_beamline import WOBeamline # TODO: from wofry...
+
 
 class OWGenericWavefront1D(WofryWidget):
 
@@ -98,6 +102,7 @@ class OWGenericWavefront1D(WofryWidget):
         tabs_setting.setFixedWidth(self.CONTROL_AREA_WIDTH-5)
 
         self.tab_sou = oasysgui.createTabPage(tabs_setting, "Generic Wavefront 1D Settings")
+
 
         box_energy = oasysgui.widgetBox(self.tab_sou, "Energy Settings", addSpace=False, orientation="vertical")
 
@@ -312,130 +317,87 @@ class OWGenericWavefront1D(WofryWidget):
             if self.kind_of_wave == 3:
                 congruence.checkPositiveNumber(self.mode_index, "Mode")
 
+    def get_light_source(self):
+        return WOLightSource(
+            name                = self.name                ,
+            electron_beam       = None  ,
+            magnetic_structure  = None  ,
+            dimension           = 1           ,
+            initialize_from     = self.initialize_from     ,
+            range_from_h        = self.range_from        ,
+            range_to_h          = self.range_to          ,
+            range_from_v        = None       ,
+            range_to_v          = None       ,
+            steps_start_h       = self.steps_start       ,
+            steps_step_h        = self.steps_step        ,
+            steps_start_v       = None       ,
+            steps_step_v        = None       ,
+            number_of_points_h  = self.number_of_points  ,
+            number_of_points_v  = None  ,
+            energy              = self.energy       ,
+            sigma_h             = self.gaussian_sigma             ,
+            sigma_v             = None             ,
+            amplitude           = self.gaussian_amplitude           ,
+            kind_of_wave        = self.kind_of_wave   ,
+            n_h                 = self.mode_index                 ,
+            n_v                 = None                 ,
+            beta_h              = self.gaussian_beta              ,
+            beta_v              = None          ,
+            units               = self.units,
+            wavelength          = self.wavelength,
+            initialize_amplitude= self.initialize_amplitude,
+            complex_amplitude_re= self.complex_amplitude_re,
+            complex_amplitude_im= self.complex_amplitude_im,
+            phase               = self.phase,
+            radius              = self.radius,
+            center              = self.center,
+            inclination         = self.inclination,
+            gaussian_shift      = self.gaussian_shift,
+            add_random_phase    = self.add_random_phase,
+        )
+
 
     def generate(self):
-        if True: # try:
-            self.wofry_output.setText("")
 
-            self.wofry_output.setText("")
+        self.wofry_output.setText("")
 
-            sys.stdout = EmittingStream(textWritten=self.writeStdOut)
+        self.wofry_output.setText("")
 
-            self.progressBarInit()
+        sys.stdout = EmittingStream(textWritten=self.writeStdOut)
 
-            self.check_fields()
+        self.progressBarInit()
 
-            if self.initialize_from == 0:
-                self.wavefront1D = GenericWavefront1D.initialize_wavefront_from_range(x_min=self.range_from, x_max=self.range_to, number_of_points=self.number_of_points)
-            else:
-                self.wavefront1D = GenericWavefront1D.initialize_wavefront_from_steps(x_start=self.steps_start, x_step=self.steps_step, number_of_points=self.number_of_points)
+        self.check_fields()
 
-            if self.units == 0:
-                self.wavefront1D.set_photon_energy(self.energy)
-            else:
-                self.wavefront1D.set_wavelength(self.wavelength)
+        light_source = self.get_light_source()
 
-            if self.kind_of_wave == 0: #plane
-                if self.initialize_amplitude == 0:
-                    self.wavefront1D.set_plane_wave_from_complex_amplitude(complex_amplitude=complex(
-                        self.complex_amplitude_re, self.complex_amplitude_im), inclination=self.inclination)
-                else:
-                    self.wavefront1D.set_plane_wave_from_amplitude_and_phase(amplitude=self.amplitude, phase=self.phase,
-                                                                             inclination=self.inclination)
-            elif self.kind_of_wave == 1: # spheric
-                self.wavefront1D.set_spherical_wave(radius=self.radius, center=self.center,
-                                    complex_amplitude=complex(self.complex_amplitude_re, self.complex_amplitude_im))
-            elif self.kind_of_wave == 2: # gaussian
-                self.wavefront1D.set_gaussian(sigma_x=self.gaussian_sigma, amplitude=self.gaussian_amplitude,
-                                              shift=self.gaussian_shift)
-            elif self.kind_of_wave == 3: # g.s.m.
-                self.wavefront1D.set_gaussian_hermite_mode(sigma_x=self.gaussian_sigma, amplitude=self.gaussian_amplitude,
-                                                           mode_x=self.mode_index, shift=self.gaussian_shift, beta=self.gaussian_beta)
+        self.wavefront1D = light_source.get_wavefront()
 
-            if self.add_random_phase:
-                self.wavefront1D.add_phase_shifts(2*numpy.pi*numpy.random.random(self.wavefront1D.size()))
-
-            try:
-                current_index = self.tabs.currentIndex()
-            except:
-                current_index = None
+        try:
+            current_index = self.tabs.currentIndex()
+        except:
+            current_index = None
 
 
-            if self.view_type != 0:
-                self.initializeTabs()
-                self.plot_results()
-                if current_index is not None:
-                    try:
-                        self.tabs.setCurrentIndex(current_index)
-                    except:
-                        pass
-            else:
-                self.progressBarFinished()
-
-            self.wofry_script.set_code(self.generate_python_code())
-
-            try:
-                self.send("WofryData", WofryData(wavefront=self.wavefront1D))
-            except:
-                pass
-        # except Exception as exception:
-        #     QMessageBox.critical(self, "Error", str(exception), QMessageBox.Ok)
-        #
-        #     if self.IS_DEVELOP: raise exception
-        #
-        #     self.progressBarFinished()
-
-    def generate_python_code(self):
-
-        txt = ""
-
-        txt += "#"
-        txt += "\n# create input_wavefront\n#"
-        txt += "\n#"
-        txt += "\nfrom wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D"
-
-        if self.initialize_from == 0:
-            txt += "\ninput_wavefront = GenericWavefront1D.initialize_wavefront_from_range(x_min=%g,x_max=%g,number_of_points=%d)"%\
-            (self.range_from,self.range_to,self.number_of_points)
-
+        if self.view_type != 0:
+            self.initializeTabs()
+            self.plot_results()
+            if current_index is not None:
+                try:
+                    self.tabs.setCurrentIndex(current_index)
+                except:
+                    pass
         else:
-            txt += "\ninput_wavefront = GenericWavefront1D.initialize_wavefront_from_steps(x_start=%g, x_step=%g,number_of_points=%d)"%\
-                   (self.steps_start,self.steps_step,self.number_of_points)
-
-        if self.units == 0:
-            txt += "\ninput_wavefront.set_photon_energy(%g)"%(self.energy)
-        else:
-            txt += "\ninput_wavefront.set_wavelength(%g)"%(self.wavelength)
+            self.progressBarFinished()
 
 
 
-        if self.kind_of_wave == 0: #plane
-            if self.initialize_amplitude == 0:
-                txt += "\ninput_wavefront.set_plane_wave_from_complex_amplitude(complex_amplitude=complex(%g,%g),inclination=%g)"%\
-                       (self.complex_amplitude_re,self.complex_amplitude_im,self.inclination)
-            else:
-                txt += "\ninput_wavefront.set_plane_wave_from_amplitude_and_phase(amplitude=%g,phase=%g,inclination=%g)"%(self.amplitude,self.phase,self.inclination)
-        elif self.kind_of_wave == 1: # spheric
-            txt += "\ninput_wavefront.set_spherical_wave(radius=%g,center=%g,complex_amplitude=complex(%g, %g))"%\
-                   (self.radius,self.center,self.complex_amplitude_re,self.complex_amplitude_im)
-        elif self.kind_of_wave == 2: # gaussian
-            txt += "\ninput_wavefront.set_gaussian(sigma_x=%f, amplitude=%f,shift=%f)"%\
-                   (self.gaussian_sigma,self.gaussian_amplitude,self.gaussian_shift)
-        elif self.kind_of_wave == 3: # g.s.m.
-            txt += "\ninput_wavefront.set_gaussian_hermite_mode(sigma_x=%g,amplitude=%g,mode_x=%d,shift=%f,beta=%g)"%\
-                   (self.gaussian_sigma, self.gaussian_amplitude, self.mode_index, self.gaussian_shift, self.gaussian_beta)
-
-            #
-            # if self.add_random_phase:
-            #     self.wavefront1D.add_phase_shifts(2*numpy.pi*numpy.random.random(self.wavefront1D.size()))
-        if self.add_random_phase:
-            txt += "\ninput_wavefront.add_phase_shifts(2*numpy.pi*numpy.random.random(input_wavefront.size()))"
-
-        txt += "\n\n\nfrom srxraylib.plot.gol import plot"
-        txt += "\nplot(input_wavefront.get_abscissas(),input_wavefront.get_intensity())"
-
-        return txt
-
+        beamline = WOBeamline(light_source=light_source)
+        try:
+            self.wofry_script.set_code(beamline.to_python_code())
+        except:
+            pass
+        self.send("WofryData", WofryData(wavefront=self.wavefront1D, beamline=beamline))
 
     def do_plot_results(self, progressBarValue=80):
         if not self.wavefront1D is None:

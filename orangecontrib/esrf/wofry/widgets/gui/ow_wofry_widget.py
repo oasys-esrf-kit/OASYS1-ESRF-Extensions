@@ -32,7 +32,7 @@ class WofryWidget(AutomaticWidget):
 
     view_type=Setting(1)
 
-    def __init__(self, is_automatic=True, show_view_options=True, show_script_tab=False):
+    def __init__(self, is_automatic=True, show_view_options=True, show_script_tab=True):
         super().__init__(is_automatic)
 
         geom = QApplication.desktop().availableGeometry()
