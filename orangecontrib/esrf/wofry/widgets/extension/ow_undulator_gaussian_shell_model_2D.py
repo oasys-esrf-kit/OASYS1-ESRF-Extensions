@@ -1,5 +1,6 @@
 import numpy
 import sys
+import scipy.constants as codata
 
 from PyQt5.QtGui import QPalette, QColor, QFont
 from PyQt5.QtWidgets import QMessageBox
@@ -17,8 +18,10 @@ from wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D
 from wofry.propagator.util.gaussian_schell_model import GaussianSchellModel2D
 
 from orangecontrib.wofry.util.wofry_objects import WofryData
-from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
-from orangecontrib.xoppy.util.python_script import PythonScript  # TODO: change import from wofry!!!
+from orangecontrib.esrf.wofry.util.wofry_light_source import WOLightSource
+from orangecontrib.esrf.wofry.widgets.gui.ow_wofry_widget import WofryWidget # TODO: from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
+from orangecontrib.esrf.wofry.util.wofry_beamline import WOBeamline # TODO: from wofry...
+
 
 
 class OWUndulatorGaussianShellModel2D(WofryWidget):
@@ -67,7 +70,6 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
 
     use_emittances = Setting(1)
     mode_index = Setting(0)
-    # index_sorted_mode = Setting(0) # old
 
     spectral_density_threshold = Setting(0.99)
 
@@ -75,17 +77,7 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
     _gsm_2d = None
 
     def __init__(self):
-        super().__init__(is_automatic=False, show_view_options=True)
-
-        #
-        # add script tab to tabs panel
-        #
-        script_tab = oasysgui.createTabPage(self.main_tabs, "Script")
-        self.wofry_script = PythonScript()
-        self.wofry_script.code_area.setFixedHeight(400)
-        script_box = gui.widgetBox(script_tab, "Python script", addSpace=True, orientation="horizontal")
-        script_box.layout().addWidget(self.wofry_script)
-
+        super().__init__(is_automatic=False, show_view_options=True, show_script_tab=True)
 
         self.runaction = widget.OWAction("Generate Wavefront", self)
         self.runaction.triggered.connect(self.generate)
@@ -183,7 +175,7 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
         self.mode_index_box = oasysgui.widgetBox(left_box_4, "", addSpace=True, orientation="vertical", )
 
         left_box_5 = oasysgui.widgetBox(self.mode_index_box, "", addSpace=True, orientation="horizontal", )
-        tmp = oasysgui.lineEdit(left_box_5, self, "mode_index", "Mode", valueType=int,
+        oasysgui.lineEdit(left_box_5, self, "mode_index", "Mode", valueType=int,
                         labelWidth=200, tooltip = "mode_index",
                         orientation="horizontal")
 
@@ -323,6 +315,132 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
 
                 self.generate()
 
+
+    def calculate_gsm_parameters(self):
+
+        wavelength = codata.h * codata.c / codata.e / self.photon_energy
+
+        sigma_r = 2.740 / 4 / numpy.pi * numpy.sqrt(wavelength * self.undulator_length)
+        sigma_r_prime = 0.69 * numpy.sqrt(wavelength / self.undulator_length)
+
+        print("Radiation values at photon energy=%f eV:" % self.photon_energy)
+        print("   intensity sigma      : %6.3f um,  FWHM: %6.3f um" % (sigma_r * 1e6, sigma_r * 2.355e6))
+        print("   intensity sigmaprime: %6.3f urad, FWHM: %6.3f urad" % (sigma_r_prime * 1e6, sigma_r_prime * 2.355e6))
+
+        if self.use_emittances == 0:
+            sigmaI_h = sigma_r
+            sigmaI_v = sigma_r
+            beta_h, beta_v, ih, iv = 0, 0, 0, 0
+
+        elif self.use_emittances == 1:
+            Sx = numpy.sqrt(sigma_r ** 2 + self.sigma_h ** 2)
+            Sxp = numpy.sqrt(sigma_r_prime ** 2 + self.sigma_divergence_h ** 2)
+            Sy = numpy.sqrt(sigma_r ** 2 + self.sigma_v ** 2)
+            Syp = numpy.sqrt(sigma_r_prime ** 2 + self.sigma_divergence_v ** 2)
+
+            print("\nElectron beam values:")
+            print("   sigma_h : %6.3f um, sigma_v: %6.3f um\n" % (self.sigma_h * 1e6, self.sigma_v * 1e6))
+            print("\nPhoton beam values (convolution):")
+            print("   SIGMA_H p: %6.3f um, SIGMA_V: %6.3f um\n" % (Sx * 1e6, Sy * 1e6))
+            print("   SIGMA_H' : %6.3f urad, SIGMA_V': %6.3f urad\n" % (Sxp * 1e6, Syp * 1e6))
+
+            cf_h = sigma_r * sigma_r_prime / Sx / Sxp
+            cf_v = sigma_r * sigma_r_prime / Sy / Syp
+
+            print("\nCoherence fraction (from emittances):")
+            print("    CF_H: %6.5f, CF_V:%6.5f " % (cf_h, cf_v))
+
+            beta_h = cf_h / numpy.sqrt(1 - cf_h)
+            beta_v = cf_v / numpy.sqrt(1 - cf_v)
+
+            sigmaI_h = Sx
+            sigmaI_v = Sy
+            sigmaMu_h = beta_h * sigmaI_h
+            sigmaMu_v = beta_v * sigmaI_v
+
+            print("\nGaussian Shell-model (matching coherence fraction):")
+            print("    Horizontal:")
+            print("       beta: %6.3f" % beta_h)
+            print("       sigmaI : %6.3f um" % (sigmaI_h * 1e6))
+            print("       sigmaMu: %6.3f um" % (sigmaMu_h * 1e6))
+            print("    Vertical:")
+            print("       beta: %6.3f" % beta_v)
+            print("       sigmaI : %6.3f um" % (sigmaI_v * 1e6))
+            print("       sigmaMu: %6.3f um" % (sigmaMu_v * 1e6))
+
+            q_h = 1.0 / (1 + beta_h ** 2 / 2 + beta_h * numpy.sqrt(1 + (beta_h / 2) ** 2))
+            q_v = 1.0 / (1 + beta_v ** 2 / 2 + beta_v * numpy.sqrt(1 + (beta_v / 2) ** 2))
+
+            self._n_h = int(numpy.log(1.0 - self.spectral_density_threshold) / numpy.log(q_h))
+            self._n_v = int(numpy.log(1.0 - self.spectral_density_threshold) / numpy.log(q_v))
+
+            if self._n_h < 1: self._n_h = 1
+            if self._n_v < 1: self._n_v = 1
+
+            print(
+                "\nTo consider %f of spectral density in each direction we need %d (H) x %d (V) modes (% d total modes)." % \
+                (self.spectral_density_threshold, self._n_h, self._n_v, self._n_h * self._n_v))
+
+            # this avoids to recalculate the eigenvalues map (time consuming) if only mode indices are changed
+            if self._gsm_2d is None:
+                self._gsm_2d = GaussianSchellModel2D(1.0, sigmaI_h, sigmaMu_h, sigmaI_v, sigmaMu_v)
+            else:
+                if (self._gsm_2d._mode_x._sigma_s == sigmaI_h) and \
+                        (self._gsm_2d._mode_x._sigma_g == sigmaMu_h) and \
+                        (self._gsm_2d._mode_y._sigma_s == sigmaI_v) and \
+                        (self._gsm_2d._mode_y._sigma_g == sigmaMu_v) and \
+                        (self._spectral_density_threshold_backup == self.spectral_density_threshold):
+                    pass
+                else:
+                    self._gsm_2d = GaussianSchellModel2D(1.0, sigmaI_h, sigmaMu_h, sigmaI_v, sigmaMu_v)
+
+            ih, iv = self._gsm_2d.sortedModeIndices(self.mode_index, n_points=self._n_h * self._n_v)
+
+            print("2D mode index %d corresponds to (H,V)=(%d,%d) modes." % (self.mode_index, ih, iv))
+
+        return sigmaI_h, sigmaI_v, beta_h, beta_v, ih, iv
+
+    def get_light_source(self, sigmaI_h, sigmaI_v, beta_h, beta_v, ih, iv):
+
+        return WOLightSource(
+            name                = self.name                ,
+            # electron_beam       = None  ,
+            # magnetic_structure  = None  ,
+            dimension           = 2           ,
+            initialize_from     = self.initialize_from     ,
+            range_from_h        = self.range_from_h        ,
+            range_to_h          = self.range_to_h          ,
+            range_from_v        = self.range_from_v       ,
+            range_to_v          = self.range_to_v       ,
+            steps_start_h       = self.steps_start_h       ,
+            steps_step_h        = self.steps_step_h        ,
+            steps_start_v       = self.steps_start_v       ,
+            steps_step_v        = self.steps_step_v       ,
+            number_of_points_h  = self.number_of_points_h  ,
+            number_of_points_v  = self.number_of_points_v  ,
+            energy              = self.photon_energy       ,
+            sigma_h             = sigmaI_h             ,
+            sigma_v             = sigmaI_v             ,
+            amplitude           = 1.0           ,
+            kind_of_wave        = (3 if (self.use_emittances > 0) else 2)  ,
+            n_h                 = ih                 ,
+            n_v                 = iv                 ,
+            beta_h              = beta_h              ,
+            beta_v              = beta_v          ,
+            units               = 0,
+            # wavelength          = 0,
+            # initialize_amplitude= 0,
+            # complex_amplitude_re= 0,
+            # complex_amplitude_im= 0,
+            # phase               = 0,
+            # radius              = 0,
+            # center              = 0,
+            # inclination         = 0,
+            # gaussian_shift      = 0,
+            # add_random_phase    = 0,
+        )
+
+
     def generate(self):
 
         try:
@@ -346,100 +464,12 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
                     number_of_points=(self.number_of_points_h, self.number_of_points_v))
 
             self.wavefront2D.set_photon_energy(self.photon_energy)
-            wavelength = self.wavefront2D.get_wavelength()
 
-            sigma_r = 2.740 / 4 / numpy.pi * numpy.sqrt(wavelength * self.undulator_length)
-            sigma_r_prime = 0.69 * numpy.sqrt(wavelength / self.undulator_length)
+            sigmaI_h, sigmaI_v, beta_h, beta_v, ih, iv = self.calculate_gsm_parameters()
 
+            light_source = self.get_light_source(sigmaI_h, sigmaI_v, beta_h, beta_v, ih, iv)
+            self.wavefront2D = light_source.get_wavefront()
 
-            print("Radiation values at photon energy=%f eV:" % self.photon_energy)
-            print("   intensity sigma      : %6.3f um,  FWHM: %6.3f um" % (sigma_r * 1e6, sigma_r * 2.355e6))
-            print("   intensity sigmaprime: %6.3f urad, FWHM: %6.3f urad" % (sigma_r_prime * 1e6, sigma_r_prime * 2.355e6))
-
-            if self.use_emittances == 0:
-                Sx = sigma_r
-                Sxp = sigma_r_prime
-                Sy = sigma_r
-                Syp = sigma_r_prime
-
-                self.wavefront2D.set_gaussian(sigma_x=Sx, sigma_y=Sy, amplitude=1.0)
-
-            elif self.use_emittances == 1:
-                Sx  = numpy.sqrt( sigma_r**2       + self.sigma_h**2)
-                Sxp = numpy.sqrt( sigma_r_prime**2 + self.sigma_divergence_h**2)
-                Sy  = numpy.sqrt( sigma_r**2       + self.sigma_v**2)
-                Syp = numpy.sqrt( sigma_r_prime**2 + self.sigma_divergence_v**2)
-
-                print("\nElectron beam values:")
-                print("   sigma_h : %6.3f um, sigma_v: %6.3f um\n" % (self.sigma_h * 1e6, self.sigma_v * 1e6))
-                print("\nPhoton beam values (convolution):")
-                print("   SIGMA_H p: %6.3f um, SIGMA_V: %6.3f um\n" % (Sx * 1e6, Sy * 1e6))
-                print("   SIGMA_H' : %6.3f urad, SIGMA_V': %6.3f urad\n" % (Sxp * 1e6, Syp * 1e6))
-
-                cf_h = sigma_r * sigma_r_prime / Sx / Sxp
-                cf_v = sigma_r * sigma_r_prime / Sy / Syp
-
-                print("\nCoherence fraction (from emittances):")
-                print("    CF_H: %6.5f, CF_V:%6.5f " % (cf_h, cf_v))
-
-
-                beta_h = cf_h / numpy.sqrt(1 - cf_h)
-                beta_v = cf_v / numpy.sqrt(1 - cf_v)
-
-                sigmaI_h = Sx
-                sigmaI_v = Sy
-                sigmaMu_h = beta_h * sigmaI_h
-                sigmaMu_v = beta_v * sigmaI_v
-
-                print("\nGaussian Shell-model (matching coherence fraction):")
-                print("    Horizontal:")
-                print("       beta: %6.3f" % beta_h)
-                print("       sigmaI : %6.3f um" % (sigmaI_h  * 1e6))
-                print("       sigmaMu: %6.3f um" % (sigmaMu_h * 1e6))
-                print("    Vertical:")
-                print("       beta: %6.3f" % beta_v)
-                print("       sigmaI : %6.3f um" % (sigmaI_v  * 1e6))
-                print("       sigmaMu: %6.3f um" % (sigmaMu_v * 1e6))
-
-                q_h = 1.0 / (1 + beta_h ** 2 / 2 + beta_h * numpy.sqrt(1 + (beta_h / 2) ** 2))
-                q_v = 1.0 / (1 + beta_v ** 2 / 2 + beta_v * numpy.sqrt(1 + (beta_v / 2) ** 2))
-
-                self._n_h = int(numpy.log(1.0 - self.spectral_density_threshold) / numpy.log(q_h))
-                self._n_v = int(numpy.log(1.0 - self.spectral_density_threshold) / numpy.log(q_v))
-
-                if self._n_h < 1: self._n_h = 1
-                if self._n_v < 1: self._n_v = 1
-
-                print("\nTo consider %f of spectral density in each direction we need %d (H) x %d (V) modes (% d total modes)." % \
-                      (self.spectral_density_threshold, self._n_h, self._n_v, self._n_h * self._n_v))
-
-                # this avoids to recalculate the eigenvalues map (time consuming) if only mode indices are changed
-                if self._gsm_2d is None:
-                    self._gsm_2d = GaussianSchellModel2D(1.0, sigmaI_h, sigmaMu_h, sigmaI_v, sigmaMu_v)
-                else:
-                    if (     self._gsm_2d._mode_x._sigma_s == sigmaI_h) and \
-                            (self._gsm_2d._mode_x._sigma_g == sigmaMu_h) and \
-                            (self._gsm_2d._mode_y._sigma_s == sigmaI_v) and \
-                            (self._gsm_2d._mode_y._sigma_g == sigmaMu_v) and \
-                            (self._spectral_density_threshold_backup == self.spectral_density_threshold):
-                        pass
-                    else:
-                        self._gsm_2d = GaussianSchellModel2D(1.0, sigmaI_h, sigmaMu_h, sigmaI_v, sigmaMu_v)
-
-
-                ih, iv = self._gsm_2d.sortedModeIndices(self.mode_index, n_points=self._n_h * self._n_v)
-
-                print("2D mode index %d corresponds to (H,V)=(%d,%d) modes." % (self.mode_index, ih, iv))
-
-
-                self.wavefront2D.set_gaussian_hermite_mode(sigma_x=sigmaI_h,
-                                                           sigma_y=sigmaI_v,
-                                                           amplitude=1.0,
-                                                           nx=ih,
-                                                           ny=iv,
-                                                           betax=beta_h,
-                                                           betay=beta_v,
-                                                           )
 
             if self.view_type > 0: # skip if no plots
                 if self.use_emittances == 0:
@@ -470,10 +500,16 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
             self.initializeTabs()
             self.plot_results()
 
-            self.wofry_script.set_code(self.generate_python_code(sigmaI_h,sigmaI_v,ih,iv,beta_h,beta_v))
 
 
-            self.send("WofryData", WofryData(wavefront=self.wavefront2D))
+            beamline = WOBeamline(light_source=light_source)
+
+            try:
+                self.wofry_script.set_code(beamline.to_python_code())
+            except:
+                pass
+
+            self.send("WofryData", WofryData(wavefront=self.wavefront2D, beamline=beamline))
 
         except Exception as exception:
             QMessageBox.critical(self, "Error", str(exception), QMessageBox.Ok)
@@ -482,33 +518,33 @@ class OWUndulatorGaussianShellModel2D(WofryWidget):
 
             self.progressBarFinished()
 
-    def generate_python_code(self,sigmaI_h,sigmaI_v,ih,iv,beta_h,beta_v):
-
-
-
-        txt = "#"
-        txt += "\n# create input_wavefront\n#"
-        txt += "\n#"
-        txt += "\nfrom wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D"
-
-        if self.initialize_from == 0:
-            txt += "\ninput_wavefront = GenericWavefront2D.initialize_wavefront_from_range(x_min=%g,x_max=%g,y_min=%g,y_max=%g,number_of_points=(%d,%d))"%\
-            (self.range_from_h,self.range_to_h,self.range_from_v,self.range_to_v,self.number_of_points_h, self.number_of_points_v)
-
-        else:
-            txt += "\ninput_wavefront = GenericWavefront2D.initialize_wavefront_from_steps(x_start=%g, x_step=%g,y_start=%g,y_step=%g,"+\
-                   "number_of_points=(%d,%d))"%\
-                   (self.steps_start_h,self.steps_step_h,self.steps_start_v,self.steps_step_v,self.number_of_points_h,self.number_of_points_v)
-
-        txt += "\ninput_wavefront.set_photon_energy(%g)"%(self.photon_energy)
-
-        txt += "\ninput_wavefront.set_gaussian_hermite_mode(sigma_x=%g,sigma_y=%g,amplitude=1.0,nx=%d,ny=%d,betax=%g,betay=%g)"%\
-                (sigmaI_h,sigmaI_v,ih,iv,beta_h,beta_v)
-
-        txt += "\n\n\nfrom srxraylib.plot.gol import plot_image"
-        txt += "\nplot_image(input_wavefront.get_intensity(), input_wavefront.get_coordinate_x(),input_wavefront.get_coordinate_y())"
-
-        return txt
+    # def generate_python_code(self,sigmaI_h,sigmaI_v,ih,iv,beta_h,beta_v):
+    #
+    #
+    #
+    #     txt = "#"
+    #     txt += "\n# create input_wavefront\n#"
+    #     txt += "\n#"
+    #     txt += "\nfrom wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D"
+    #
+    #     if self.initialize_from == 0:
+    #         txt += "\ninput_wavefront = GenericWavefront2D.initialize_wavefront_from_range(x_min=%g,x_max=%g,y_min=%g,y_max=%g,number_of_points=(%d,%d))"%\
+    #         (self.range_from_h,self.range_to_h,self.range_from_v,self.range_to_v,self.number_of_points_h, self.number_of_points_v)
+    #
+    #     else:
+    #         txt += "\ninput_wavefront = GenericWavefront2D.initialize_wavefront_from_steps(x_start=%g, x_step=%g,y_start=%g,y_step=%g,"+\
+    #                "number_of_points=(%d,%d))"%\
+    #                (self.steps_start_h,self.steps_step_h,self.steps_start_v,self.steps_step_v,self.number_of_points_h,self.number_of_points_v)
+    #
+    #     txt += "\ninput_wavefront.set_photon_energy(%g)"%(self.photon_energy)
+    #
+    #     txt += "\ninput_wavefront.set_gaussian_hermite_mode(sigma_x=%g,sigma_y=%g,amplitude=1.0,nx=%d,ny=%d,betax=%g,betay=%g)"%\
+    #             (sigmaI_h,sigmaI_v,ih,iv,beta_h,beta_v)
+    #
+    #     txt += "\n\n\nfrom srxraylib.plot.gol import plot_image"
+    #     txt += "\nplot_image(input_wavefront.get_intensity(), input_wavefront.get_coordinate_x(),input_wavefront.get_coordinate_y())"
+    #
+    #     return txt
 
     def do_plot_results(self, progressBarValue):
         if not self.wavefront2D is None:

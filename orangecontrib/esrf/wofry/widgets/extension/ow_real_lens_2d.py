@@ -4,19 +4,11 @@ from orangewidget import gui
 from oasys.widgets import gui as oasysgui
 from oasys.widgets import congruence
 
-# from syned.beamline.optical_elements.ideal_elements.lens import IdealLens
 from orangecontrib.esrf.syned.util.lens import Lens # TODO: from syned.beamline.optical_elements....
-
-# from wofry.beamline.optical_elements.ideal_elements.lens import WOIdealLens
 from orangecontrib.esrf.wofry.util.lens import WOLens
-
-from orangecontrib.wofry.widgets.gui.ow_optical_element import OWWOOpticalElement, OWWOOpticalElementWithBoundaryShape
-
-from syned.beamline.shape import SurfaceShape, Plane, Paraboloid, ParabolicCylinder, Sphere, SphericalCylinder
-from syned.beamline.shape import Convexity, Direction
+from orangecontrib.esrf.wofry.widgets.gui.ow_optical_element import OWWOOpticalElement # TODO: from orangecontrib.wofry.widgets.gui.ow_optical_element import OWWOOpticalElement
 
 from oasys.util.oasys_util import write_surface_file
-
 
 class OWWORealLens2D(OWWOOpticalElement):
 
@@ -38,9 +30,7 @@ class OWWORealLens2D(OWWOOpticalElement):
     aperture_shape = Setting(0)
     aperture_dimension_v = Setting(100e-6)
     aperture_dimension_h = Setting(200e-6)
-    # TODO: this is redundant...
-    # width = Setting(1e-3)
-    # height = Setting(1e-4)
+
     shape = Setting(1)
     radius = Setting(100e-6)
 
@@ -49,8 +39,7 @@ class OWWORealLens2D(OWWOOpticalElement):
     write_profile = Setting("lens_profile_2D.h5")
 
     def __init__(self):
-        super().__init__()
-
+        super().__init__(is_automatic=True, show_view_options=True, show_script_tab=True)
 
     def set_visible(self):
         self.lens_radius_box_id.setVisible(self.number_of_curved_surfaces != 0)
@@ -140,22 +129,7 @@ class OWWORealLens2D(OWWOOpticalElement):
         )
 
     def get_optical_element_python_code(self):
-        txt  = ""
-        txt += "\nfrom orangecontrib.esrf.wofry.util.lens import WOLens"
-        txt += "\n"
-        txt += "\noptical_element = WOLens.create_from_keywords(name=%s,number_of_curved_surfaces=%d,two_d_lens=%d,surface_shape=%d,wall_thickness=%g,lens_radius=%g,material='%s',aperture_shape=%d,aperture_dimension_h=%g,aperture_dimension_v=%g)" \
-               % (self.name,\
-                  self.number_of_curved_surfaces,\
-                  self.two_d_lens,\
-                  self.surface_shape,\
-                  self.wall_thickness,\
-                  self.lens_radius,\
-                  self.get_material_name(index=self.material),\
-                  self.aperture_shape,\
-                  self.aperture_dimension_h,\
-                  self.aperture_dimension_v,)
-        txt += "\n"
-        return txt
+        return self.get_optical_element().to_python_code()
 
     def check_data(self):
         super().check_data()
@@ -190,13 +164,30 @@ class OWWORealLens2D(OWWOOpticalElement):
 if __name__ == "__main__":
     import sys
     from PyQt5.QtWidgets import QApplication
-    from wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D
+
+    def get_example_wofry_data():
+        from orangecontrib.esrf.wofry.util.wofry_light_source import WOLightSource
+        from orangecontrib.esrf.wofry.util.wofry_beamline import WOBeamline
+        from orangecontrib.wofry.util.wofry_objects import WofryData
+
+        light_source = WOLightSource(dimension=2,
+                                     initialize_from=0,
+                                     range_from_h=-0.002,
+                                     range_to_h=0.002,
+                                     range_from_v=-0.001,
+                                     range_to_v=0.001,
+                                     number_of_points_h=400,
+                                     number_of_points_v=200,
+                                     energy=10000.0,
+                                     )
+
+        return WofryData(wavefront=light_source.get_wavefront(),
+                           beamline=WOBeamline(light_source=light_source))
+
 
     a = QApplication(sys.argv)
     ow = OWWORealLens2D()
-    input_wavefront = GenericWavefront2D.initialize_wavefront_from_range(-0.002,0.002,-0.001,0.001,(400,200))
-    ow.set_input(input_wavefront)
-
+    ow.set_input(get_example_wofry_data())
     ow.show()
     a.exec_()
     ow.saveSettings()
