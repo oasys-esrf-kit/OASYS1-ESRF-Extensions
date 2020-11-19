@@ -1,38 +1,11 @@
-import sys, numpy,  scipy.constants as codata
+import os, sys
+import numpy
+import scipy.constants as codata
 
-from orangewidget import gui
-from orangewidget.settings import Setting
-from oasys.widgets import gui as oasysgui
-from oasys.widgets import congruence
 
 from syned.storage_ring.magnetic_structures.undulator import Undulator
 
-from orangecontrib.syned.widgets.gui import ow_insertion_device
-
-from PyQt5.QtWidgets import QTextEdit
-
-
-#############
-
-
-import os, sys
-
-from PyQt5.QtGui import QPalette, QColor, QFont
-from PyQt5.QtWidgets import QMessageBox
-from orangewidget import gui
-from orangewidget import widget
-from orangewidget.settings import Setting
-from oasys.widgets import gui as oasysgui
-from oasys.widgets import congruence
-
 from syned.storage_ring.magnetic_structures import insertion_device
-
-from orangecontrib.syned.widgets.gui import ow_light_source
-
-#############
-
-
-import os, sys
 
 from PyQt5.QtGui import QPalette, QColor, QFont
 from PyQt5.QtWidgets import QMessageBox, QApplication
@@ -49,24 +22,26 @@ from oasys.widgets.gui import ConfirmDialog
 
 from syned.storage_ring.light_source import LightSource, ElectronBeam
 from syned.beamline.beamline import Beamline
-from syned.util.json_tools import load_from_json_file, load_from_json_url
 
 
-#####################
 m2ev = codata.c * codata.h / codata.e
 
 VERTICAL = 1
 HORIZONTAL = 2
 BOTH = 3
 
-
-
 class OWEBS(OWWidget):
 
 
-    maintainer = "Luca Rebuffi"
-    maintainer_email = "luca.rebuffi(@at@)elettra.eu"
-    category = "Syned Light Sources"
+    name = "ESRF-EBS ID Light Source"
+    description = "Syned: ESRF-EBS ID Light Source"
+    icon = "icons/ebs.png"
+    priority = 1
+
+
+    maintainer = "Manuel Sanchez del Rio"
+    maintainer_email = "srio(@at@)esrf.eu"
+    category = "ESRF-EBS Syned Light Sources"
     keywords = ["data", "file", "load", "read"]
 
     outputs = [{"name":"SynedData",
@@ -74,14 +49,27 @@ class OWEBS(OWWidget):
                 "doc":"Syned Beamline",
                 "id":"data"}]
 
-    syned_file_name = Setting("Select *.json file")
 
-    source_name         = Setting("Undefined")
+    want_main_area = 1
 
-    electron_energy_in_GeV = Setting(2.0)
-    electron_energy_spread = Setting(0.001)
-    ring_current           = Setting(0.4)
-    number_of_bunches      = Setting(400)
+
+    MAX_WIDTH = 1320
+    MAX_HEIGHT = 700
+
+    IMAGE_WIDTH = 860
+    IMAGE_HEIGHT = 645
+
+    CONTROL_AREA_WIDTH = 405
+    TABS_AREA_HEIGHT = 650
+
+    TABS_AREA_HEIGHT = 625
+    CONTROL_AREA_WIDTH = 450
+
+
+    electron_energy_in_GeV = Setting(0.0)
+    electron_energy_spread = Setting(0.0)
+    ring_current           = Setting(0.0)
+    number_of_bunches      = Setting(0.0)
 
     moment_xx           = Setting(0.0)
     moment_xxp          = Setting(0.0)
@@ -109,21 +97,6 @@ class OWEBS(OWWidget):
 
     type_of_properties = Setting(0)
 
-    want_main_area=0
-
-    MAX_WIDTH = 460
-    MAX_HEIGHT = 700
-
-    TABS_AREA_HEIGHT = 625
-    CONTROL_AREA_WIDTH = 450
-
-
-    #########################
-    name = "Undulator Light Source"
-    description = "Syned: Undulator Light Source"
-    icon = "icons/undulator.png"
-    priority = 2
-
     auto_energy = Setting(0.0)
     auto_harmonic_number = Setting(1)
 
@@ -132,9 +105,15 @@ class OWEBS(OWWidget):
     period_length      = Setting(0.010)
     number_of_periods  = Setting(10)
 
+    ebs_id_index = Setting(0)
+    gap_mm = Setting(0.0)
+
+    gap_max = Setting(20.0)
+    harmonic_max = Setting(3)
 
     def __init__(self):
-        # super().__init__()
+
+        self.data_dict = get_data_dictionary()
 
         self.runaction = widget.OWAction("Send Data", self)
         self.runaction.triggered.connect(self.send_data)
@@ -180,25 +159,6 @@ class OWEBS(OWWidget):
 
         self.tab_sou = oasysgui.createTabPage(self.tabs_setting, "Light Source Setting")
 
-        box_json =  oasysgui.widgetBox(self.tab_sou, "Read/Write File", addSpace=False, orientation="vertical")
-
-        file_box = oasysgui.widgetBox(box_json, "", addSpace=False, orientation="horizontal")
-
-        self.le_syned_file_name = oasysgui.lineEdit(file_box, self, "syned_file_name", "Syned File Name/URL",
-                                                    labelWidth=150, valueType=str, orientation="horizontal")
-
-        gui.button(file_box, self, "...", callback=self.select_syned_file, width=25)
-
-        button_box = oasysgui.widgetBox(box_json, "", addSpace=False, orientation="horizontal")
-
-        button = gui.button(button_box, self, "Read Syned File", callback=self.read_syned_file)
-        button.setFixedHeight(25)
-
-        button = gui.button(button_box, self, "Write Syned File", callback=self.write_syned_file)
-        button.setFixedHeight(25)
-
-
-        oasysgui.lineEdit(self.tab_sou, self, "source_name", "Light Source Name", labelWidth=260, valueType=str, orientation="horizontal")
 
         self.electron_beam_box = oasysgui.widgetBox(self.tab_sou, "Electron Beam/Machine Parameters", addSpace=False, orientation="vertical")
 
@@ -208,7 +168,7 @@ class OWEBS(OWWidget):
 
         gui.comboBox(self.electron_beam_box, self, "type_of_properties", label="Electron Beam Properties", labelWidth=350,
                      items=["From 2nd Moments", "From Size/Divergence", "From Twiss papameters","Zero emittance"],
-                     callback=self.set_TypeOfProperties,
+                     callback=self.set_visible,
                      sendSelectedValue=False, orientation="horizontal")
 
         self.left_box_2_1 = oasysgui.widgetBox(self.electron_beam_box, "", addSpace=False, orientation="vertical", height=150)
@@ -244,45 +204,119 @@ class OWEBS(OWWidget):
         oasysgui.lineEdit(self.left_box_2_3_r, self, "electron_beam_eta_v",       "\u03B7y",        labelWidth=75, valueType=float, orientation="horizontal")
         oasysgui.lineEdit(self.left_box_2_3_r, self, "electron_beam_etap_v",      "\u03B7'y",       labelWidth=75, valueType=float, orientation="horizontal")
 
-        self.set_TypeOfProperties()
-
         gui.rubber(self.controlArea)
 
         ###################
 
-
-
-
         left_box_1 = oasysgui.widgetBox(self.tab_sou, "ID Parameters", addSpace=True, orientation="vertical")
 
-        oasysgui.lineEdit(left_box_1, self, "K_horizontal", "Horizontal K", labelWidth=260, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(left_box_1, self, "K_vertical", "Vertical K", labelWidth=260, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(left_box_1, self, "period_length", "Period Length [m]", labelWidth=260, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(left_box_1, self, "number_of_periods", "Number of Periods", labelWidth=260, valueType=float, orientation="horizontal")
+        out_list = [("ID%02d %s" % (self.data_dict["straight_section"][i], self.data_dict["id_name"][i])) for i in
+                    range(len(self.data_dict["id_name"]))]
+
+        gui.comboBox(left_box_1, self, "ebs_id_index", label="ID: ", labelWidth=350,
+                     items=out_list, callback=self.set_id,
+                     sendSelectedValue=False, orientation="horizontal")
+
+        oasysgui.lineEdit(left_box_1, self, "period_length", "Period Length [m]", labelWidth=260,
+                          valueType=float, orientation="horizontal", callback=self.update)
+        oasysgui.lineEdit(left_box_1, self, "number_of_periods", "Number of Periods", labelWidth=260,
+                          valueType=float, orientation="horizontal", callback=self.update)
+
+
+
+        left_box_1 = oasysgui.widgetBox(self.tab_sou, "Setting", addSpace=True, orientation="vertical")
+
+        # oasysgui.lineEdit(left_box_1, self, "K_horizontal", "Horizontal K", labelWidth=260, valueType=float, orientation="horizontal")
+        oasysgui.lineEdit(left_box_1, self, "K_vertical", "Vertical K", labelWidth=260,
+                          valueType=float, orientation="horizontal", callback=self.set_K)
+
+        oasysgui.lineEdit(left_box_1, self, "gap_mm", "Undulator Gap [mm]",
+                          labelWidth=250, valueType=float, orientation="horizontal",
+                          callback=self.set_gap)
+
+        left_box_2 = oasysgui.widgetBox(left_box_1, "", addSpace=False, orientation="vertical")
+        oasysgui.lineEdit(left_box_2, self, "auto_energy", "Photon Energy [eV]",
+                          labelWidth=250, valueType=float, orientation="horizontal",
+                          callback=self.auto_set_undulator_V)
+        oasysgui.lineEdit(left_box_2, self, "auto_harmonic_number", "Harmonic",
+                          labelWidth=250, valueType=int, orientation="horizontal",
+                          callback=self.auto_set_undulator_V)
+
 
 
         ####################################################
 
-        tab_util = oasysgui.createTabPage(self.tabs_setting, "Utility")
 
-        left_box_0 = oasysgui.widgetBox(tab_util, "Undulator calculated parameters", addSpace=False, orientation="vertical", height=450)
-        gui.button(left_box_0, self, "Update info", callback=self.update_info)
+        tab_util = oasysgui.createTabPage(self.tabs_setting, "Settings")
 
-        self.info_id = oasysgui.textArea(height=380, width=415, readOnly=True)
-        left_box_0.layout().addWidget(self.info_id)
+        left_box_0 = oasysgui.widgetBox(tab_util, "Advanced settings",
+                        addSpace=False, orientation="vertical", height=450)
 
-        left_box_1 = oasysgui.widgetBox(tab_util, "Auto Setting of Undulator", addSpace=False, orientation="vertical", height=120)
+        oasysgui.lineEdit(left_box_0, self, "gap_max",  "maximum gap (for plots)",
+                          labelWidth=260, valueType=float, orientation="horizontal",
+                          callback=self.update)
 
-        oasysgui.lineEdit(left_box_1, self, "auto_energy", "Set Undulator at Energy [eV]",
-                          labelWidth=250, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(left_box_1, self, "auto_harmonic_number", "As Harmonic #",  labelWidth=250, valueType=int, orientation="horizontal")
+        oasysgui.lineEdit(left_box_0, self, "harmonic_max",  "maximum harmonic (for plots)",
+                          labelWidth=260, valueType=int, orientation="horizontal",
+                          callback=self.update)
 
-        button_box = oasysgui.widgetBox(left_box_1, "", addSpace=False, orientation="horizontal")
 
-        gui.button(button_box, self, "Set Kv value", callback=self.auto_set_undulator_V)
-        gui.button(button_box, self, "Set Kh value", callback=self.auto_set_undulator_H)
-        gui.button(button_box, self, "Set Both K values", callback=self.auto_set_undulator_B)
+        self.initializeTabs()
 
+        self.populate_electron_beam()
+        self.populate_magnetic_structure()
+        self.populate_settings_after_setting_K()
+        self.set_visible()
+        self.update()
+
+    def titles(self):
+        return ["K vs Gap", "B vs Gap", "Gap vs resonance energy", "Power vs Gap"]
+
+    def xtitles(self):
+        return ['Gap [mm]'] * len(self.titles())
+
+    def ytitles(self):
+        return ['K', 'B [T]', 'Photon energy [eV]', 'Power [W]']
+
+    def initializeTabs(self):
+        self.tabs = oasysgui.tabWidget(self.mainArea)
+
+        self.tab = [oasysgui.createTabPage(self.tabs, "Info",),
+                    oasysgui.createTabPage(self.tabs, "K vs Gap"),
+                    oasysgui.createTabPage(self.tabs, "B vs Gap"),
+                    oasysgui.createTabPage(self.tabs, "Resonance vs Gap"),
+                    oasysgui.createTabPage(self.tabs, "Power vs Gap"),
+                    ]
+
+        for tab in self.tab:
+            tab.setFixedHeight(self.IMAGE_HEIGHT)
+            tab.setFixedWidth(self.IMAGE_WIDTH)
+
+
+        self.info_id = oasysgui.textArea(height=self.IMAGE_HEIGHT-5, width=self.IMAGE_WIDTH-5)
+        profile_box = oasysgui.widgetBox(self.tab[0], "", addSpace=True, orientation="horizontal",
+                                         height = self.IMAGE_HEIGHT, width=self.IMAGE_WIDTH-5)
+        profile_box.layout().addWidget(self.info_id)
+
+
+        n_plots = len(self.titles())
+        self.plot_canvas = [None] * (1 + n_plots)
+
+
+        for i in range(n_plots):
+            self.plot_canvas[i] = oasysgui.plotWindow(roi=False, control=False, position=True)
+            self.plot_canvas[i].setDefaultPlotLines(True)
+            self.plot_canvas[i].setActiveCurveColor(color='blue')
+            self.plot_canvas[i].setGraphXLabel(self.xtitles()[i])
+            self.plot_canvas[i].setGraphYLabel(self.ytitles()[i])
+            self.plot_canvas[i].setGraphTitle(self.titles()[i])
+            self.plot_canvas[i].setInteractiveMode(mode='zoom')
+
+
+        for index in range(0, 4):
+            self.tab[index + 1].layout().addWidget(self.plot_canvas[index])
+
+        self.tabs.setCurrentIndex(1)
 
     def check_magnetic_structure(self):
         congruence.checkPositiveNumber(self.K_horizontal, "Horizontal K")
@@ -295,6 +329,10 @@ class OWEBS(OWWidget):
                                                 K_vertical=self.K_vertical,
                                                 period_length=self.period_length,
                                                 number_of_periods=self.number_of_periods)
+
+    def update(self):
+        self.update_info()
+        self.update_plots()
 
     def update_info(self):
 
@@ -342,6 +380,7 @@ class OWEBS(OWWidget):
             }
 
         self.info_id.setText(self.info_template().format_map(info_parameters))
+        # self.tabs[0].setText(self.info_template().format_map(info_parameters))
 
 
     def info_template(self):
@@ -370,7 +409,7 @@ Resonances:
 Photon energy [eV]: 
        for harmonic 1 : {resonance_energy}
        for harmonic 3 : {resonance_energy3}
-       for harmonic 3 : {resonance_energy5}
+       for harmonic 5 : {resonance_energy5}
 
 Central cone (RMS urad):
        for harmonic 1 : {cc_1}
@@ -410,22 +449,61 @@ Approximated coherent fraction at 1st harmonic:
         if not isinstance(magnetic_structure, Undulator):
             raise ValueError("Magnetic Structure is not a Undulator")
 
-    def populate_magnetic_structure(self, magnetic_structure):
-        self.K_horizontal = magnetic_structure._K_horizontal
-        self.K_vertical = magnetic_structure._K_vertical
-        self.period_length = magnetic_structure._period_length
-        self.number_of_periods = magnetic_structure._number_of_periods
+    def populate_magnetic_structure(self):
+        # if magnetic_structure is None:
+        index = self.ebs_id_index
+        self.K_horizontal = 0.0
+        self.K_vertical = numpy.round(self.data_dict["Kmax"][index],3)
+        self.period_length = numpy.round(self.data_dict["id_period"][index],3)
+        self.number_of_periods = numpy.round(self.data_dict["id_length"][index] / self.period_length,3)
+
+    def populate_settings_after_setting_K(self):
+
+        index = self.ebs_id_index
+        syned_undulator = self.get_light_source().get_magnetic_structure()
+        self.auto_energy = numpy.round(syned_undulator.resonance_energy(self.gamma(),
+                                            harmonic=self.auto_harmonic_number),3)
+
+        self.gap_mm = numpy.round(self.calculate_gap_from_K(), 3)
+
+    def set_gap(self, which=VERTICAL):
+        K = numpy.round(self.calculate_K_from_gap(), 3)
+
+        if which == VERTICAL:
+            self.K_vertical = K
+            self.K_horizontal = 0.0
+
+        if which == BOTH:
+            Kboth = round(K / numpy.sqrt(2), 6)
+            self.K_vertical =  Kboth
+            self.K_horizontal = Kboth
+
+        if which == HORIZONTAL:
+            self.K_horizontal = K
+            self.K_vertical = 0.0
+
+        self.populate_settings_after_setting_K()
+        self.update()
+
+    def set_id(self):
+        self.populate_magnetic_structure()
+        self.populate_settings_after_setting_K()
+        self.update()
+
+    def set_K(self):
+        self.populate_settings_after_setting_K()
+        self.update()
 
     def auto_set_undulator_V(self):
-        self.auto_set_undulator(VERTICAL)
+        self.set_resonance_energy(VERTICAL)
 
     def auto_set_undulator_H(self):
-        self.auto_set_undulator(HORIZONTAL)
+        self.set_resonance_energy(HORIZONTAL)
 
     def auto_set_undulator_B(self):
-        self.auto_set_undulator(BOTH)
+        self.set_resonance_energy(BOTH)
 
-    def auto_set_undulator(self, which=VERTICAL):
+    def set_resonance_energy(self, which=VERTICAL):
         congruence.checkStrictlyPositiveNumber(self.auto_energy, "Set Undulator at Energy")
         congruence.checkStrictlyPositiveNumber(self.auto_harmonic_number, "As Harmonic #")
         congruence.checkStrictlyPositiveNumber(self.electron_energy_in_GeV, "Energy")
@@ -447,7 +525,124 @@ Approximated coherent fraction at 1st harmonic:
             self.K_horizontal = K
             self.K_vertical = 0.0
 
-        self.update_info()
+        self.populate_settings_after_setting_K()
+        self.update()
+
+    def plot_graph(self, plot_canvas_index, curve_name, x_values, y_values, xtitle="", ytitle="",
+                   color='blue', replace=True):
+        self.plot_canvas[plot_canvas_index].addCurve(x_values, y_values, curve_name, symbol='', color=color, replace=replace) #'+', '^', ','
+        self.plot_canvas[plot_canvas_index].setGraphXLabel(xtitle)
+        self.plot_canvas[plot_canvas_index].setGraphYLabel(ytitle)
+        self.plot_canvas[plot_canvas_index].replot()
+
+    def update_plots(self):
+        gap_min = numpy.min((self.gap_mm, self.data_dict["id_minimum_gap_mm"][self.ebs_id_index]))
+        gap_min *= 0.5
+        gap_mm = numpy.linspace(gap_min, self.gap_max, 1000)
+
+        Karray = self.calculate_K_from_gap(gap_mm)
+        Karray_horizontal = numpy.zeros_like(Karray)
+
+        Bfield = Karray / (self.period_length * codata.e / (2 * numpy.pi * codata.m_e * codata.c))
+
+        E1_array = self.calculate_resonance_energy(Karray)
+
+        ptot = (self.number_of_periods /6) * codata.value('characteristic impedance of vacuum') * \
+               self.ring_current * codata.e * 2 * numpy.pi * codata.c * self.gamma()**2 * \
+               (Karray**2 + Karray_horizontal**2) / self.period_length
+
+
+
+        self.plot_graph(0, self.titles()[0], gap_mm, Karray, xtitle=self.xtitles()[0], ytitle=self.ytitles()[0])
+        self.plot_graph(1, self.titles()[1], gap_mm, Bfield, xtitle=self.xtitles()[1], ytitle=self.ytitles()[1])
+        #
+        #
+        #
+        xtitle = "Photon energy [keV]"
+        ytitle = "Gap [mm]"
+        colors = ['green', 'black', 'red', 'brown', 'orange', 'pink'] * self.harmonic_max
+        for i in range(1, self.harmonic_max+1):
+            self.plot_canvas[2].addCurve(E1_array * i* 1e-3, gap_mm,
+                                         "harmonic %d" % i,
+                                         xlabel=xtitle, ylabel=ytitle,
+                                         symbol='', color=colors[i-1])
+
+
+
+        self.plot_canvas[2].getLegendsDockWidget().setFixedHeight(150)
+        self.plot_canvas[2].getLegendsDockWidget().setVisible(True)
+        self.plot_canvas[2].setActiveCurve("harmonic 1")
+        self.plot_canvas[2].replot()
+        #
+        #
+        #
+        self.plot_graph(3, self.titles()[3], gap_mm, ptot, xtitle=self.xtitles()[3], ytitle=self.ytitles()[3])
+
+
+
+    def calculate_resonance_energy(self, Karray):
+
+        theta_x = 0.0
+        theta_z = 0.0
+        K_vertical = Karray
+        K_horizontal = numpy.zeros_like(K_vertical)
+
+        wavelength = (self.period_length / (2.0 * self.gamma() ** 2)) * \
+                         (1 + K_vertical ** 2 / 2.0 + K_horizontal ** 2 / 2.0 + \
+                          self.gamma() ** 2 * (theta_x ** 2 + theta_z ** 2))
+
+        wavelength /= self.auto_harmonic_number
+
+        frequency = codata.c / wavelength * self.auto_harmonic_number
+
+        energy_in_ev = codata.h * frequency / codata.e
+
+        return energy_in_ev * self.auto_harmonic_number
+
+
+
+    def calculate_K_from_gap(self, gap_mm=None):
+
+        if gap_mm is None: gap_mm = self.gap_mm
+
+        index = self.ebs_id_index
+        a0 = self.data_dict["a0"][index]
+        a1 = self.data_dict["a1"][index]
+        a2 = self.data_dict["a2"][index]
+        a3 = self.data_dict["a3"][index]
+        a4 = self.data_dict["a4"][index]
+        a5 = self.data_dict["a5"][index]
+        a6 = self.data_dict["a6"][index]
+        id_period_mm  = self.data_dict["id_period_mm"][index]
+
+        Bmax = numpy.zeros_like(gap_mm)
+        Bmax += a1 * numpy.exp(-1 * numpy.pi * (gap_mm - a0) / id_period_mm)
+        Bmax += a2 * numpy.exp(-2 * numpy.pi * (gap_mm - a0) / id_period_mm)
+        Bmax += a3 * numpy.exp(-3 * numpy.pi * (gap_mm - a0) / id_period_mm)
+        Bmax += a4 * numpy.exp(-4 * numpy.pi * (gap_mm - a0) / id_period_mm)
+        Bmax += a5 * numpy.exp(-5 * numpy.pi * (gap_mm - a0) / id_period_mm)
+        Bmax += a6 * numpy.exp(-6 * numpy.pi * (gap_mm - a0) / id_period_mm)
+
+        Kmax = Bmax * (id_period_mm * 1e-3) * codata.e / (2 * numpy.pi * codata.m_e * codata.c)
+
+        return Kmax
+
+    def calculate_gap_from_K(self, Kvalue=None):
+        if Kvalue is None: Kvalue = self.K_vertical
+
+        gap_min = numpy.min((self.gap_mm, self.data_dict["id_minimum_gap_mm"][self.ebs_id_index]))
+        gap_min *= 0.5
+
+        gap_mm_array = numpy.linspace( gap_min, self.gap_max, 1000)
+        K_array = self.calculate_K_from_gap(gap_mm_array)
+
+        if ((Kvalue < K_array.min()) or (Kvalue > K_array.max())):
+            raise Exception("Cannot interpolate...")
+
+        gap_interpolated = numpy.interp(Kvalue, numpy.flip(K_array), numpy.flip(gap_mm_array))
+
+        return gap_interpolated
+
 
     def gamma(self):
         return 1e9*self.electron_energy_in_GeV / (codata.m_e *  codata.c**2 / codata.e)
@@ -455,7 +650,7 @@ Approximated coherent fraction at 1st harmonic:
 
 
 
-    def set_TypeOfProperties(self):
+    def set_visible(self):
         self.left_box_2_1.setVisible(self.type_of_properties == 0)
         self.left_box_2_2.setVisible(self.type_of_properties == 1)
         self.left_box_2_3.setVisible(self.type_of_properties == 2)
@@ -536,7 +731,7 @@ Approximated coherent fraction at 1st harmonic:
         elif self.type_of_properties == 3:
             electron_beam.set_moments_all(0,0,0,0,0,0)
 
-        return LightSource(name=self.source_name,
+        return LightSource(name="EBS lightsource",
                            electron_beam = electron_beam,
                            magnetic_structure = self.get_magnetic_structure())
 
@@ -548,53 +743,28 @@ Approximated coherent fraction at 1st harmonic:
             except:
                 pass
 
-    def select_syned_file(self):
-        self.le_syned_file_name.setText(oasysgui.selectFileFromDialog(self, self.syned_file_name, "Open Syned File"))
+    def populate_electron_beam(self, electron_beam=None):
 
-    def read_syned_file(self):
-        try:
-            congruence.checkEmptyString(self.syned_file_name, "Syned File Name/Url")
-
-            if (len(self.syned_file_name) > 7 and self.syned_file_name[:7] == "http://") or \
-                (len(self.syned_file_name) > 8 and self.syned_file_name[:8] == "https://"):
-                congruence.checkUrl(self.syned_file_name)
-                is_remote = True
-            else:
-                congruence.checkFile(self.syned_file_name)
-                is_remote = False
-
-            try:
-                if is_remote:
-                    content = load_from_json_url(self.syned_file_name)
-                else:
-                    content = load_from_json_file(self.syned_file_name)
-
-                if isinstance(content, LightSource):
-                    self.populate_fields(content)
-                elif isinstance(content, Beamline) and not content._light_source is None:
-                    self.populate_fields(content._light_source)
-                else:
-                    raise Exception("json file must contain a SYNED LightSource")
-            except Exception as e:
-                raise Exception("Error reading SYNED LightSource from file: " + str(e))
-        except Exception as e:
-            QMessageBox.critical(self, "Error", str(e.args[0]), QMessageBox.Ok)
-
-
-    def populate_fields(self, light_source):
-        electron_beam = light_source._electron_beam
-        magnetic_structure = light_source._magnetic_structure
-
-        self.check_magnetic_structure_instance(magnetic_structure)
-
-        self.source_name = light_source._name
+        if electron_beam is None:
+            electron_beam = ElectronBeam(
+                                        energy_in_GeV = 6.0,
+                                        energy_spread = 0.001,
+                                        current = 0.2,
+                                        number_of_bunches = 1,
+                                        moment_xx   = (3.01836e-05)**2,
+                                        moment_xxp  = (0.0)**2,
+                                        moment_xpxp = (4.36821e-06)**2,
+                                        moment_yy   = (3.63641e-06)**2,
+                                        moment_yyp  = (0.0)**2,
+                                        moment_ypyp = (1.37498e-06)**2,
+                                        )
 
         self.electron_energy_in_GeV = electron_beam._energy_in_GeV
         self.electron_energy_spread = electron_beam._energy_spread
         self.ring_current = electron_beam._current
         self.number_of_bunches = electron_beam._number_of_bunches
 
-        self.type_of_properties = 0
+        self.type_of_properties = 1
 
         self.moment_xx   = electron_beam._moment_xx
         self.moment_xxp  = electron_beam._moment_xxp
@@ -610,31 +780,33 @@ Approximated coherent fraction at 1st harmonic:
         self.electron_beam_divergence_h = xp
         self.electron_beam_divergence_v = yp
 
-        self.populate_magnetic_structure(magnetic_structure)
 
-        self.set_TypeOfProperties()
+def get_data_dictionary():
+    import json
+    from urllib.request import urlopen
 
-    def check_magnetic_structure_instance(self, magnetic_structure):
-        raise NotImplementedError()
+    file_url = "https://raw.githubusercontent.com/srio/shadow3-scripts/master/ESRF-LIGHTSOURCES-EBS/ebs_ids.json"
 
-    def populate_magnetic_structure(self, magnetic_structure):
-        raise NotImplementedError()
+    u = urlopen(file_url)
+    ur = u.read()
+    url = ur.decode(encoding='UTF-8')
 
-    def write_syned_file(self):
-        try:
-            congruence.checkDir(self.syned_file_name)
+    dictionary = json.loads(url)
+    for key in dictionary.keys():
+        print("   >>>", key) #, dictionary[key])
 
-            self.get_light_source().to_json(self.syned_file_name)
+    return dictionary
 
-            QMessageBox.information(self, "File Read", "JSON file correctly written to disk", QMessageBox.Ok)
-        except Exception as e:
-            QMessageBox.critical(self, "Error", str(e.args[0]), QMessageBox.Ok)
-
-
-from PyQt5.QtWidgets import QApplication
 
 if __name__ == "__main__":
+    from PyQt5.QtWidgets import QApplication
+
     a = QApplication(sys.argv)
     ow = OWEBS()
     ow.show()
     a.exec_()
+
+    # data_dict = get_data_dictionary()
+    # out_list = [("ID%02d %s" % (data_dict["straight_section"][i],data_dict["id_name"][i])) for i in range(len(data_dict["id_name"]))]
+    #
+    # print(out_list)

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <scheme description="" title="ID18" version="2.0" working_directory="/home/srio/Oasys" workspace_units="0">
 	<nodes>
-		<node id="0" name="Undulator Light Source" position="(107.0, 141.0)" project_name="OASYS1-SYNED" qualified_name="orangecontrib.syned.widgets.light_sources.ow_undulator_light_source.OWUndulatorLightSource" title="Undulator Light Source U20" version="" />
+		<node id="0" name="Undulator Light Source" position="(106.0, 141.0)" project_name="OASYS1-SYNED" qualified_name="orangecontrib.syned.widgets.light_sources.ow_undulator_light_source.OWUndulatorLightSource" title="Undulator Light Source U20" version="" />
 		<node id="1" name="Screen 1D" position="(525.0, 210.0)" project_name="OASYS1-WOFRY" qualified_name="orangecontrib.wofry.widgets.beamline_elements.ow_screen_1d.OWWOScreen1D" title="Screen 1D" version="" />
 		<node id="2" name=" Generic Wavefront Viewer 1D" position="(775.0, 114.0)" project_name="OASYS1-WOFRY" qualified_name="orangecontrib.wofry.widgets.tools.generic_wavefront_viewer_1D.GenericWavefrontViewer1D" title=" Generic Wavefront Viewer 1D" version="" />
 		<node id="3" name="Screen 1D" position="(511.0, 478.0)" project_name="OASYS1-WOFRY" qualified_name="orangecontrib.wofry.widgets.beamline_elements.ow_screen_1d.OWWOScreen1D" title="Screen 1D" version="" />
@@ -56,6 +56,8 @@
 		<node id="52" name="Python Script" position="(328.0, 622.0)" project_name="OASYS1" qualified_name="oasys.widgets.tools.ow_python_script.OWPythonScript" title="Python Script" version="" />
 		<node id="53" name="Generic Wavefront 1D" position="(102.0, 608.0)" project_name="OASYS1-WOFRY" qualified_name="orangecontrib.wofry.widgets.wavefront_propagation.ow_generic_wavefront_1D.OWGenericWavefront1D" title="Generic Wavefront 1D" version="" />
 		<node id="54" name="Generic Wavefront 1D" position="(129.0, 1085.0)" project_name="OASYS1-WOFRY" qualified_name="orangecontrib.wofry.widgets.wavefront_propagation.ow_generic_wavefront_1D.OWGenericWavefront1D" title="Generic Wavefront 1D (Marco)" version="" />
+		<node id="55" name="ESRF-EBS ID Light Source" position="(113.0, 455.0)" project_name="OASYS1-ESRF-Extensions" qualified_name="orangecontrib.esrf.syned.widgets.extension.ow_ebs.OWEBS" title="ESRF-EBS ID Light Source" version="" />
+		<node id="56" name="Undulator Gaussian Shell-model 1D" position="(253.0, 499.0)" project_name="OASYS1-ESRF-Extensions" qualified_name="orangecontrib.esrf.wofry.widgets.extension.ow_undulator_gaussian_shell_model_1D.OWUndulatorGaussianShellModel1D" title="Undulator Gaussian Shell-model 1D" version="" />
 	</nodes>
 	<links>
 		<link enabled="true" id="0" sink_channel="WofryData" sink_node_id="7" source_channel="WofryData" source_node_id="1" />
@@ -108,6 +110,7 @@
 		<link enabled="true" id="47" sink_channel="in_object_1" sink_node_id="52" source_channel="WofryData" source_node_id="53" />
 		<link enabled="true" id="48" sink_channel="WofryData" sink_node_id="16" source_channel="WofryData" source_node_id="54" />
 		<link enabled="true" id="49" sink_channel="Trigger" sink_node_id="54" source_channel="Trigger" source_node_id="28" />
+		<link enabled="true" id="50" sink_channel="SynedData" sink_node_id="56" source_channel="SynedData" source_node_id="55" />
 	</links>
 	<annotations>
 		<text font-family="Helvetica" font-size="16" id="0" rect="(271.0, 38.0, 150.0, 35.0)">Horizontal</text>
@@ -134,8 +137,8 @@ bWVudF95eXBxGkcAAAAAAAAAAFgRAAAAbnVtYmVyX29mX2J1bmNoZXNxG0sBWBEAAABudW1iZXJf
 b2ZfcGVyaW9kc3EcR0BZAAAAAAAAWA0AAABwZXJpb2RfbGVuZ3RocR1HP5R64UeuFHtYDAAAAHJp
 bmdfY3VycmVudHEeRz/JmZmZmZmaWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cR9jc2lwCl91bnBp
 Y2tsZV90eXBlCnEgWAwAAABQeVF0NS5RdENvcmVxIVgKAAAAUUJ5dGVBcnJheXEiQ0IB2dDLAAMA
-AAAAAFwAAABAAAACJwAAAvsAAABcAAAAQAAAAicAAAL7AAAAAAAAAAAGkAAAAFwAAABAAAACJwAA
-AvtxI4VxJIdxJVJxJlgLAAAAc291cmNlX25hbWVxJ1gVAAAARVNSRl9JRDE4X0VCU19wcHUyMF8x
+AAAAA9AAAAAtAAAFmwAAAw0AAAPQAAAAUgAABZsAAAMNAAAAAAAAAAAGkAAAA9AAAABSAAAFmwAA
+Aw1xI4VxJIdxJVJxJlgLAAAAc291cmNlX25hbWVxJ1gVAAAARVNSRl9JRDE4X0VCU19wcHUyMF8x
 cShYDwAAAHN5bmVkX2ZpbGVfbmFtZXEpWEwAAABodHRwOi8vZnRwLmVzcmYuZXUvcHViL3NjaXNv
 ZnQvc3luZWQvbGlnaHRzb3VyY2VzL0VTUkZfSUQxOF9FQlNfcHB1MjBfMS5qc29ucSpYEgAAAHR5
 cGVfb2ZfcHJvcGVydGllc3ErSwB1Lg==
@@ -1820,6 +1823,48 @@ dDUuUXRDb3JlcRhYCgAAAFFCeXRlQXJyYXlxGUNCAdnQywADAAAAAABQAAAAGwAABXcAAAMAAAAA
 UAAAAEAAAAV3AAADAAAAAAAAAAAABpAAAABQAAAAQAAABXcAAAMAcRqFcRuHcRxScR1YCwAAAHN0
 ZXBzX3N0YXJ0cR5Hv0BiTdLxqfxYCgAAAHN0ZXBzX3N0ZXBxH0c+sMb3oLXtjVgFAAAAdW5pdHNx
 IEsAWAkAAAB2aWV3X3R5cGVxIUsAWAoAAAB3YXZlbGVuZ3RocSJHPdt839nXvbt1Lg==
+</properties>
+		<properties format="pickle" node_id="55">gAN9cQAoWAwAAABLX2hvcml6b250YWxxAUcAAAAAAAAAAFgKAAAAS192ZXJ0aWNhbHECR0ACsi0O
+VgQZWAsAAABhdXRvX2VuZXJneXEDR0ChC4tDlYEGWBQAAABhdXRvX2hhcm1vbmljX251bWJlcnEE
+SwFYDAAAAGVic19pZF9pbmRleHEFSzNYFQAAAGVsZWN0cm9uX2JlYW1fYWxwaGFfaHEGRwAAAAAA
+AAAAWBUAAABlbGVjdHJvbl9iZWFtX2FscGhhX3ZxB0cAAAAAAAAAAFgUAAAAZWxlY3Ryb25fYmVh
+bV9iZXRhX2hxCEcAAAAAAAAAAFgUAAAAZWxlY3Ryb25fYmVhbV9iZXRhX3ZxCUcAAAAAAAAAAFga
+AAAAZWxlY3Ryb25fYmVhbV9kaXZlcmdlbmNlX2hxCmNudW1weS5jb3JlLm11bHRpYXJyYXkKc2Nh
+bGFyCnELY251bXB5CmR0eXBlCnEMWAIAAABmOHENSwBLAYdxDlJxDyhLA1gBAAAAPHEQTk5OSv//
+//9K/////0sAdHERYkMIsxoBbFRS0j5xEoZxE1JxFFgaAAAAZWxlY3Ryb25fYmVhbV9kaXZlcmdl
+bmNlX3ZxFWgLaA9DCClFen9+Ebc+cRaGcRdScRhYGQAAAGVsZWN0cm9uX2JlYW1fZW1pdHRhbmNl
+X2hxGUcAAAAAAAAAAFgZAAAAZWxlY3Ryb25fYmVhbV9lbWl0dGFuY2VfdnEaRwAAAAAAAAAAWBMA
+AABlbGVjdHJvbl9iZWFtX2V0YV9ocRtHAAAAAAAAAABYEwAAAGVsZWN0cm9uX2JlYW1fZXRhX3Zx
+HEcAAAAAAAAAAFgUAAAAZWxlY3Ryb25fYmVhbV9ldGFwX2hxHUcAAAAAAAAAAFgUAAAAZWxlY3Ry
+b25fYmVhbV9ldGFwX3ZxHkcAAAAAAAAAAFgUAAAAZWxlY3Ryb25fYmVhbV9zaXplX2hxH2gLaA9D
+CDqzsDJZpv8+cSCGcSFScSJYFAAAAGVsZWN0cm9uX2JlYW1fc2l6ZV92cSNoC2gPQwgTuweKIYHO
+PnEkhnElUnEmWBYAAABlbGVjdHJvbl9lbmVyZ3lfaW5fR2VWcSdHQBgAAAAAAABYFgAAAGVsZWN0
+cm9uX2VuZXJneV9zcHJlYWRxKEc/UGJN0vGp/FgHAAAAZ2FwX21heHEpR0A0AAAAAAAAWAYAAABn
+YXBfbW1xKkdALgCDEm6XjVgMAAAAaGFybW9uaWNfbWF4cStLA1gLAAAAbW9tZW50X3hweHBxLEc9
+tPrllhL4SVgJAAAAbW9tZW50X3h4cS1HPg9NrZCc5stYCgAAAG1vbWVudF94eHBxLkcAAAAAAAAA
+AFgLAAAAbW9tZW50X3lweXBxL0c9gKEvZ5tDM1gJAAAAbW9tZW50X3l5cTBHPa0UJ/lahBtYCgAA
+AG1vbWVudF95eXBxMUcAAAAAAAAAAFgRAAAAbnVtYmVyX29mX2J1bmNoZXNxMksBWBEAAABudW1i
+ZXJfb2ZfcGVyaW9kc3EzR0BDSRaHKwIMWA0AAABwZXJpb2RfbGVuZ3RocTRHP6WBBiTdLxtYDAAA
+AHJpbmdfY3VycmVudHE1Rz/JmZmZmZmaWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cTZjc2lwCl91
+bnBpY2tsZV90eXBlCnE3WAwAAABQeVF0NS5RdENvcmVxOFgKAAAAUUJ5dGVBcnJheXE5Q0IB2dDL
+AAMAAAAAAJAAAAByAAAFtwAAA1IAAACQAAAAlwAABbcAAANSAAAAAAAAAAAGkAAAAJAAAACXAAAF
+twAAA1JxOoVxO4dxPFJxPVgSAAAAdHlwZV9vZl9wcm9wZXJ0aWVzcT5LAXUu
+</properties>
+		<properties format="pickle" node_id="56">gAN9cQAoWBEAAABjb3JyZWN0aW9uX2ZhY3RvcnEBRz/wAAAAAAAAWA8AAABpbml0aWFsaXplX2Zy
+b21xAksAWBYAAABpc19hdXRvbWF0aWNfZXhlY3V0aW9ucQOJWAoAAABtb2RlX2luZGV4cQRLAFgQ
+AAAAbnVtYmVyX29mX3BvaW50c3EFTegDWA0AAABwaG90b25fZW5lcmd5cQZHQKELi0OVgQZYCgAA
+AHJhbmdlX2Zyb21xB0e/Gjbi6xxDLVgIAAAAcmFuZ2VfdG9xCEc/Gjbi6xxDLVgTAAAAc2F2ZWRX
+aWRnZXRHZW9tZXRyeXEJY3NpcApfdW5waWNrbGVfdHlwZQpxClgMAAAAUHlRdDUuUXRDb3JlcQtY
+CgAAAFFCeXRlQXJyYXlxDENCAdnQywADAAAAAACQAAAAnwAABbcAAANfAAAAkAAAAJ8AAAW3AAAD
+XwAAAAAAAAAABpAAAACQAAAAnwAABbcAAANfcQ2FcQ6HcQ9ScRBYEgAAAHNpZ21hX2RpdmVyZ2Vu
+Y2VfaHERY251bXB5LmNvcmUubXVsdGlhcnJheQpzY2FsYXIKcRJjbnVtcHkKZHR5cGUKcRNYAgAA
+AGY4cRRLAEsBh3EVUnEWKEsDWAEAAAA8cRdOTk5K/////0r/////SwB0cRhiQwizGgFsVFLSPnEZ
+hnEaUnEbWBIAAABzaWdtYV9kaXZlcmdlbmNlX3ZxHGgSaBZDCClFen9+Ebc+cR2GcR5ScR9YBwAA
+AHNpZ21hX2hxIGgSaBZDCDqzsDJZpv8+cSGGcSJScSNYBwAAAHNpZ21hX3ZxJGgSaBZDCBO7B4oh
+gc4+cSWGcSZScSdYGgAAAHNwZWN0cmFsX2RlbnNpdHlfdGhyZXNob2xkcShHP++uFHrhR65YCwAA
+AHN0ZXBzX3N0YXJ0cSlHvwo24uscQy1YCgAAAHN0ZXBzX3N0ZXBxKkc+etfymryvSFgQAAAAdW5k
+dWxhdG9yX2xlbmd0aHErRz/563I+4b0fWA4AAAB1c2VfZW1pdHRhbmNlc3EsSwJYCQAAAHZpZXdf
+dHlwZXEtSwF1Lg==
 </properties>
 	</node_properties>
 </scheme>
