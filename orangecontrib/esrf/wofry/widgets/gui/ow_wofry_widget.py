@@ -14,7 +14,7 @@ from oasys.widgets.widget import AutomaticWidget
 from silx.gui.plot import Plot2D
 from orangecontrib.wofry.util.wofry_util import ImageViewWithFWHM
 
-from orangecontrib.xoppy.util.python_script import PythonScript  # TODO: change import from wofry!!!
+from orangecontrib.wofry.widgets.gui.python_script import PythonScript
 
 
 class WofryWidget(AutomaticWidget):
