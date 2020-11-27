@@ -7,6 +7,7 @@ from oasys.widgets import congruence
 from orangecontrib.esrf.syned.util.lens import Lens # TODO: from syned.beamline.optical_elements....
 from orangecontrib.esrf.wofry.util.lens import WOLens
 from orangecontrib.esrf.wofry.widgets.gui.ow_optical_element import OWWOOpticalElement # TODO: from orangecontrib.wofry.widgets.gui.ow_optical_element import OWWOOpticalElement
+from orangecontrib.wofry.widgets.gui.ow_optical_element import OWWOOpticalElement
 
 from oasys.util.oasys_util import write_surface_file
 

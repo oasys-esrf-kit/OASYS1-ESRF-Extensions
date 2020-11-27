@@ -11,7 +11,7 @@
 		<node id="7" name="Corrector (refractor) 1D" position="(410.0, 574.0)" project_name="OASYS1-ESRF-Extensions" qualified_name="orangecontrib.esrf.wofry.widgets.extension.ow_refractive_corrector_1D.OWRefractiveCorrector1D" title="Corrector (refractor) 1D" version="" />
 		<node id="8" name="Screen 1D" position="(708.0, 573.0)" project_name="OASYS1-WOFRY" qualified_name="orangecontrib.wofry.widgets.beamline_elements.ow_screen_1d.OWWOScreen1D" title="Screen 1D" version="" />
 		<node id="9" name="Generic Wavefront 2D" position="(205.0, 792.0)" project_name="OASYS1-WOFRY" qualified_name="orangecontrib.wofry.widgets.wavefront_propagation.ow_generic_wavefront_2D.OWGenericWavefront2D" title="Generic Wavefront 2D" version="" />
-		<node id="10" name="Lens 2D" position="(403.0, 795.0)" project_name="OASYS1-ESRF-Extensions" qualified_name="orangecontrib.esrf.wofry.widgets.extension.ow_real_lens_2d.OWWORealLens2D" title="Lens" version="" />
+		<node id="10" name="Lens 2D" position="(404.0, 795.0)" project_name="OASYS1-ESRF-Extensions" qualified_name="orangecontrib.esrf.wofry.widgets.extension.ow_real_lens_2d.OWWORealLens2D" title="Lens" version="" />
 		<node id="11" name="Screen" position="(710.0, 797.0)" project_name="OASYS1-WOFRY" qualified_name="orangecontrib.wofry.widgets.beamline_elements.ow_screen.OWWOScreen" title="Screen" version="" />
 		<node id="12" name="Lens 2D" position="(416.0, 922.0)" project_name="OASYS1-ESRF-Extensions" qualified_name="orangecontrib.esrf.wofry.widgets.extension.ow_real_lens_2d.OWWORealLens2D" title="Lens" version="" />
 		<node id="13" name="ThinObject" position="(562.0, 1195.0)" project_name="OASYS1-ESRF-Extensions" qualified_name="orangecontrib.esrf.wofry.widgets.extension.ow_thin_object_2d.OWWOThinObject2D" title="ThinObject" version="" />
@@ -193,7 +193,7 @@ aWZpY2F0aW9uX3lxCkc/8AAAAAAAAFgIAAAAbWF0ZXJpYWxxC0sBWBkAAABudW1iZXJfb2ZfY3Vy
 dmVkX3N1cmZhY2VzcQxLAlgHAAAAb2VfbmFtZXENWAAAAABxDlgBAAAAcHEPRwAAAAAAAAAAWAoA
 AABwcm9wYWdhdG9ycRBLBFgBAAAAcXERRwAAAAAAAAAAWAYAAAByYWRpdXNxEkc/QGJN0vGp/FgT
 AAAAc2F2ZWRXaWRnZXRHZW9tZXRyeXETY3NpcApfdW5waWNrbGVfdHlwZQpxFFgMAAAAUHlRdDUu
-UXRDb3JlcRVYCgAAAFFCeXRlQXJyYXlxFkNCAdnQywADAAAAAAFoAAAAYgAABo8AAANHAAABaAAA
+UXRDb3JlcRVYCgAAAFFCeXRlQXJyYXlxFkNCAdnQywADAAAAAAFoAAAAhwAABo8AAANHAAABaAAA
 AIcAAAaPAAADRwAAAAAAAAAABpAAAAFoAAAAhwAABo8AAANHcReFcRiHcRlScRpYBQAAAHNoYXBl
 cRtLAVgQAAAAc2hpZnRfaGFsZl9waXhlbHEcSwFYEAAAAHNodWZmbGVfaW50ZXJ2YWxxHUsAWA0A
 AABzdXJmYWNlX3NoYXBlcR5LAFgKAAAAdHdvX2RfbGVuc3EfSwBYCQAAAHZpZXdfdHlwZXEgSwFY
@@ -259,10 +259,10 @@ X2RpbWVuc2lvbl92cQRHPxo24uscQy1YDgAAAGFwZXJ0dXJlX3NoYXBlcQVLAFgTAAAAY2FsY3Vs
 YXRlX2dyaWRfb25seXEGSwFYGAAAAGZpbGVfd2l0aF90aGlja25lc3NfbWVzaHEHWBIAAABsZW5z
 X3Byb2ZpbGVfMkQuaDVxCFgWAAAAaXNfYXV0b21hdGljX2V4ZWN1dGlvbnEJiFgPAAAAbWFnbmlm
 aWNhdGlvbl94cQpHP/AAAAAAAABYDwAAAG1hZ25pZmljYXRpb25feXELRz/wAAAAAAAAWAgAAABt
-YXRlcmlhbHEMSwBYBwAAAG9lX25hbWVxDVgAAAAAcQ5YAQAAAHBxD0cAAAAAAAAAAFgKAAAAcHJv
+YXRlcmlhbHEMSwFYBwAAAG9lX25hbWVxDVgAAAAAcQ5YAQAAAHBxD0cAAAAAAAAAAFgKAAAAcHJv
 cGFnYXRvcnEQSwRYAQAAAHFxEUcAAAAAAAAAAFgTAAAAc2F2ZWRXaWRnZXRHZW9tZXRyeXESY3Np
 cApfdW5waWNrbGVfdHlwZQpxE1gMAAAAUHlRdDUuUXRDb3JlcRRYCgAAAFFCeXRlQXJyYXlxFUNC
-AdnQywADAAAAAACzAAAAggAABdoAAANnAAAAswAAAKcAAAXaAAADZwAAAAAAAAAABpAAAACzAAAA
+AdnQywADAAAAAACzAAAApwAABdoAAANnAAAAswAAAKcAAAXaAAADZwAAAAAAAAAABpAAAACzAAAA
 pwAABdoAAANncRaFcReHcRhScRlYBQAAAHNoYXBlcRpLAFgQAAAAc2hpZnRfaGFsZl9waXhlbHEb
 SwFYEAAAAHNodWZmbGVfaW50ZXJ2YWxxHEsAWA0AAABzdXJmYWNlX3NoYXBlcR1LAFgJAAAAdmll
 d190eXBlcR5LAVgVAAAAd3JpdGVfaW5wdXRfd2F2ZWZyb250cR9LAFgNAAAAd3JpdGVfcHJvZmls
@@ -292,7 +292,7 @@ AAAAAAAAWA8AAABtYWduaWZpY2F0aW9uX3lxC0c/8AAAAAAAAFgIAAAAbWF0ZXJpYWxxDEsBWAcA
 AABvZV9uYW1lcQ1YAAAAAHEOWAEAAABwcQ9HAAAAAAAAAABYCgAAAHByb3BhZ2F0b3JxEEsEWAEA
 AABxcRFHAAAAAAAAAABYEwAAAHNhdmVkV2lkZ2V0R2VvbWV0cnlxEmNzaXAKX3VucGlja2xlX3R5
 cGUKcRNYDAAAAFB5UXQ1LlF0Q29yZXEUWAoAAABRQnl0ZUFycmF5cRVDQgHZ0MsAAwAAAAAA9gAA
-AIUAAAYdAAADRQAAAPYAAACFAAAGHQAAA0UAAAAAAAAAAAaQAAAA9gAAAIUAAAYdAAADRXEWhXEX
+AGAAAAYdAAADRQAAAPYAAACFAAAGHQAAA0UAAAAAAAAAAAaQAAAA9gAAAIUAAAYdAAADRXEWhXEX
 h3EYUnEZWAUAAABzaGFwZXEaSwBYEAAAAHNoaWZ0X2hhbGZfcGl4ZWxxG0sBWBAAAABzaHVmZmxl
 X2ludGVydmFscRxLAFgNAAAAc3VyZmFjZV9zaGFwZXEdSwBYCQAAAHZpZXdfdHlwZXEeSwFYFQAA
 AHdyaXRlX2lucHV0X3dhdmVmcm9udHEfSwBYDQAAAHdyaXRlX3Byb2ZpbGVxIFgZAAAAdGhpbl9v
@@ -366,7 +366,7 @@ Y2F0aW9uX3hxDkc/hHrhR64Ue1gPAAAAbWFnbmlmaWNhdGlvbl95cQ9HP4R64UeuFHtYCAAAAG1h
 dGVyaWFscRBLAVgHAAAAb2VfbmFtZXERWAAAAABxElgBAAAAcHETRwAAAAAAAAAAWAoAAABwcm9w
 YWdhdG9ycRRLBFgBAAAAcXEVR0AkAAAAAAAAWBYAAAByZWZyYWN0aW9uX2luZGV4X2RlbHRhcRZH
 PqHIqlNQNCBYEwAAAHNhdmVkV2lkZ2V0R2VvbWV0cnlxF2NzaXAKX3VucGlja2xlX3R5cGUKcRhY
-DAAAAFB5UXQ1LlF0Q29yZXEZWAoAAABRQnl0ZUFycmF5cRpDQgHZ0MsAAwAAAAAAUAAAABsAAAV3
+DAAAAFB5UXQ1LlF0Q29yZXEZWAoAAABRQnl0ZUFycmF5cRpDQgHZ0MsAAwAAAAAAUAAAAEAAAAV3
 AAADAAAAAFAAAABAAAAFdwAAAwAAAAAAAAAAAAaQAAAAUAAAAEAAAAV3AAADAHEbhXEch3EdUnEe
 WAUAAABzaGFwZXEfSwBYEAAAAHNoaWZ0X2hhbGZfcGl4ZWxxIEsBWBAAAABzaHVmZmxlX2ludGVy
 dmFscSFLAFgNAAAAc3VyZmFjZV9zaGFwZXEiSwBYCQAAAHZpZXdfdHlwZXEjSwFYDgAAAHdhbGxf
