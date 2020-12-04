@@ -23,6 +23,7 @@ from oasys.widgets.gui import ConfirmDialog
 from syned.storage_ring.light_source import LightSource, ElectronBeam
 from syned.beamline.beamline import Beamline
 
+from oasys.widgets.gui import ConfirmDialog
 
 m2ev = codata.c * codata.h / codata.e
 
@@ -30,8 +31,110 @@ VERTICAL = 1
 HORIZONTAL = 2
 BOTH = 3
 
-class OWEBS(OWWidget):
+def get_data_dictionary_csv(url=""):
+    import numpy
+    import scipy.constants as codata
 
+
+    tofloat = lambda s: numpy.array(['0.0' if v == '' else v for v in s]).astype(float)
+
+    try:
+        filename = url # 'ftp://ftp.esrf.eu/pub/scisoft/syned/resources/jsrund.csv'
+        ishift = 1
+        a = numpy.genfromtxt(filename, dtype=str, delimiter=',', skip_header=3, skip_footer=1, converters=None, \
+                             missing_values={0: "11.000"}, filling_values={0: "XXX"}, usecols=None, names=None,
+                             excludelist=None, \
+                             deletechars=" !#$%&'()*+, -./:;<=>?@[\]^{|}~", replace_space='', autostrip=True, \
+                             case_sensitive=True, defaultfmt='f%i', unpack=None, usemask=False, loose=True, \
+                             invalid_raise=True, max_rows=None, encoding='bytes')
+
+        straight_section = a[:, 0].astype(int)
+        id_name = a[:, 1]
+        # for i in range(straight_section.size):
+        #     id_name[i] = "ID%02d %s" % (straight_section[i], id_name[i])
+        id_period = 1e-3 * a[:, 2 + ishift].astype(float)
+        id_period_mm = a[:, 2 + ishift].astype(float)
+        id_length = 1e-3 * a[:, 3 + ishift].astype(float)
+
+        id_minimum_gap_mm = tofloat(a[:, 4 + ishift])
+
+        a0 = tofloat(a[:, 5 + ishift])
+        a1 = tofloat(a[:, 6 + ishift])
+        a2 = tofloat(a[:, 7 + ishift])
+        a3 = tofloat(a[:, 8 + ishift])
+        a4 = tofloat(a[:, 9 + ishift])
+        a5 = tofloat(a[:, 10 + ishift])
+        a6 = tofloat(a[:, 11 + ishift])
+
+        Bmax = numpy.zeros_like(a0)
+        Bmax += a1 * numpy.exp(-1 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
+        Bmax += a2 * numpy.exp(-2 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
+        Bmax += a3 * numpy.exp(-3 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
+        Bmax += a4 * numpy.exp(-4 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
+        Bmax += a5 * numpy.exp(-5 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
+        Bmax += a6 * numpy.exp(-6 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
+
+        Kmax = Bmax * id_period * codata.e / (2 * numpy.pi * codata.m_e * codata.c)
+
+        print("\n\n%5s  %10s  %15s %15s %15s %15s" % ("sect", "name", "Gmin", "Bmax", "Kmax", "a0"))
+        print("%5s  %10s  %15s %15s %15s %15s" % ("====", "====", "====", "====", "====", "===="))
+        for i in range(Bmax.size):
+            print("%5d  %10s  %15.3f %15.3f %15.3f %15.3f" % (
+            straight_section[i], id_name[i], id_minimum_gap_mm[i], Bmax[i], Kmax[i], a0[i]))
+
+        out_dict = {}
+        out_dict["straight_section"] = straight_section.tolist()
+        out_dict["id_name"] = id_name.tolist()
+        out_dict["id_minimum_gap_mm"] = id_minimum_gap_mm.tolist()
+        out_dict["Bmax"] = Bmax.tolist()
+        out_dict["Kmax"] = Kmax.tolist()
+        out_dict["straight_section"] = straight_section.tolist()
+        out_dict["id_period"] = id_period.tolist()
+        out_dict["id_period_mm"] = id_period_mm.tolist()
+        out_dict["id_length"] = id_length.tolist()
+        out_dict["a0"] = a0.tolist()
+        out_dict["a1"] = a1.tolist()
+        out_dict["a2"] = a2.tolist()
+        out_dict["a3"] = a3.tolist()
+        out_dict["a4"] = a4.tolist()
+        out_dict["a5"] = a5.tolist()
+        out_dict["a6"] = a6.tolist()
+        return out_dict
+    except:
+        out_dict = {}
+        out_dict["straight_section"]  = []
+        out_dict["id_name"]           = []
+        out_dict["id_minimum_gap_mm"] = []
+        out_dict["Bmax"]              = []
+        out_dict["Kmax"]              = []
+        out_dict["straight_section"]  = []
+        out_dict["id_period"]         = []
+        out_dict["id_period_mm"]      = []
+        out_dict["id_length"]         = []
+        out_dict["a0"]                = []
+        out_dict["a1"]                = []
+        out_dict["a2"]                = []
+        out_dict["a3"]                = []
+        out_dict["a4"]                = []
+        out_dict["a5"]                = []
+        out_dict["a6"]                = []
+        return out_dict
+
+# OLD data format...
+def get_data_dictionary():
+    import json
+    from urllib.request import urlopen
+
+    file_url = "https://raw.githubusercontent.com/srio/shadow3-scripts/master/ESRF-LIGHTSOURCES-EBS/ebs_ids.json"
+
+    u = urlopen(file_url)
+    ur = u.read()
+    url = ur.decode(encoding='UTF-8')
+
+    dictionary = json.loads(url)
+    return dictionary
+
+class OWEBS(OWWidget):
 
     name = "ESRF-EBS ID Light Source"
     description = "Syned: ESRF-EBS ID Light Source"
@@ -66,9 +169,9 @@ class OWEBS(OWWidget):
     CONTROL_AREA_WIDTH = 450
 
 
-    electron_energy_in_GeV = Setting(0.0)
-    electron_energy_spread = Setting(0.0)
-    ring_current           = Setting(0.0)
+    electron_energy_in_GeV = Setting(6.0)
+    electron_energy_spread = Setting(0.001)
+    ring_current           = Setting(0.2)
     number_of_bunches      = Setting(0.0)
 
     moment_xx           = Setting(0.0)
@@ -94,8 +197,7 @@ class OWEBS(OWWidget):
     electron_beam_etap_h = Setting(0.0)
     electron_beam_etap_v = Setting(0.0)
 
-
-    type_of_properties = Setting(0)
+    type_of_properties = Setting(1)
 
     auto_energy = Setting(0.0)
     auto_harmonic_number = Setting(1)
@@ -108,12 +210,24 @@ class OWEBS(OWWidget):
     ebs_id_index = Setting(0)
     gap_mm = Setting(0.0)
 
+    gap_min = Setting(5.0)
     gap_max = Setting(20.0)
     harmonic_max = Setting(3)
 
-    def __init__(self):
+    a0 = Setting(20.0)
+    a1 = Setting(0.2)
+    a2 = Setting(0.0)
+    a3 = Setting(0.0)
+    a4 = Setting(0.0)
+    a5 = Setting(0.0)
+    a6 = Setting(0.0)
 
-        self.data_dict = get_data_dictionary()
+    # data_dict = get_data_dictionary() # OLD FORMAT
+    data_url = 'ftp://ftp.esrf.eu/pub/scisoft/syned/resources/jsrund.csv'
+    data_dict = get_data_dictionary_csv(data_url)
+
+
+    def __init__(self):
 
         self.runaction = widget.OWAction("Send Data", self)
         self.runaction.triggered.connect(self.send_data)
@@ -157,14 +271,24 @@ class OWEBS(OWWidget):
         self.tabs_setting.setFixedHeight(self.TABS_AREA_HEIGHT)
         self.tabs_setting.setFixedWidth(self.CONTROL_AREA_WIDTH-5)
 
+
+
+
         self.tab_sou = oasysgui.createTabPage(self.tabs_setting, "Light Source Setting")
 
+        out_list = [("ID%02d %s" % (self.data_dict["straight_section"][i], self.data_dict["id_name"][i])) for i in
+                    range(len(self.data_dict["id_name"]))]
+
+        out_list.insert(0,"<None>") # We add None at the beginning: ebs_id_index is the dict index plus one
+
+        gui.comboBox(self.tab_sou, self, "ebs_id_index", label="Load ID parameters from database list: ", labelWidth=350,
+                     items=out_list, callback=self.set_id, sendSelectedValue=False, orientation="horizontal")
 
         self.electron_beam_box = oasysgui.widgetBox(self.tab_sou, "Electron Beam/Machine Parameters", addSpace=False, orientation="vertical")
 
-        oasysgui.lineEdit(self.electron_beam_box, self, "electron_energy_in_GeV", "Energy [GeV]", labelWidth=260, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.electron_beam_box, self, "electron_energy_spread", "Energy Spread", labelWidth=260, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.electron_beam_box, self, "ring_current", "Ring Current [A]", labelWidth=260, valueType=float, orientation="horizontal")
+        oasysgui.lineEdit(self.electron_beam_box, self, "electron_energy_in_GeV", "Energy [GeV]",  labelWidth=260, valueType=float, orientation="horizontal", callback=self.update)
+        oasysgui.lineEdit(self.electron_beam_box, self, "electron_energy_spread", "Energy Spread", labelWidth=260, valueType=float, orientation="horizontal", callback=self.update)
+        oasysgui.lineEdit(self.electron_beam_box, self, "ring_current", "Ring Current [A]",        labelWidth=260, valueType=float, orientation="horizontal", callback=self.update)
 
         gui.comboBox(self.electron_beam_box, self, "type_of_properties", label="Electron Beam Properties", labelWidth=350,
                      items=["From 2nd Moments", "From Size/Divergence", "From Twiss papameters","Zero emittance"],
@@ -173,49 +297,42 @@ class OWEBS(OWWidget):
 
         self.left_box_2_1 = oasysgui.widgetBox(self.electron_beam_box, "", addSpace=False, orientation="vertical", height=150)
 
-        oasysgui.lineEdit(self.left_box_2_1, self, "moment_xx",   "<x x>   [m^2]", labelWidth=260, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.left_box_2_1, self, "moment_xxp",  "<x x'>  [m.rad]", labelWidth=260, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.left_box_2_1, self, "moment_xpxp", "<x' x'> [rad^2]", labelWidth=260, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.left_box_2_1, self, "moment_yy",   "<y y>   [m^2]", labelWidth=260, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.left_box_2_1, self, "moment_yyp",  "<y y'>  [m.rad]", labelWidth=260, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.left_box_2_1, self, "moment_ypyp", "<y' y'> [rad^2]", labelWidth=260, valueType=float, orientation="horizontal")
+        oasysgui.lineEdit(self.left_box_2_1, self, "moment_xx",   "<x x>   [m^2]",   labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(self.left_box_2_1, self, "moment_xxp",  "<x x'>  [m.rad]", labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(self.left_box_2_1, self, "moment_xpxp", "<x' x'> [rad^2]", labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(self.left_box_2_1, self, "moment_yy",   "<y y>   [m^2]",   labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(self.left_box_2_1, self, "moment_yyp",  "<y y'>  [m.rad]", labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(self.left_box_2_1, self, "moment_ypyp", "<y' y'> [rad^2]", labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
 
 
         self.left_box_2_2 = oasysgui.widgetBox(self.electron_beam_box, "", addSpace=False, orientation="vertical", height=150)
 
-        oasysgui.lineEdit(self.left_box_2_2, self, "electron_beam_size_h",       "Horizontal Beam Size \u03c3x [m]", labelWidth=260, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.left_box_2_2, self, "electron_beam_size_v",       "Vertical Beam Size \u03c3y [m]",  labelWidth=260, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.left_box_2_2, self, "electron_beam_divergence_h", "Horizontal Beam Divergence \u03c3'x [rad]", labelWidth=260, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.left_box_2_2, self, "electron_beam_divergence_v", "Vertical Beam Divergence \u03c3'y [rad]", labelWidth=260, valueType=float, orientation="horizontal")
+        oasysgui.lineEdit(self.left_box_2_2, self, "electron_beam_size_h",       "Horizontal Beam Size \u03c3x [m]",          labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(self.left_box_2_2, self, "electron_beam_size_v",       "Vertical Beam Size \u03c3y [m]",            labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(self.left_box_2_2, self, "electron_beam_divergence_h", "Horizontal Beam Divergence \u03c3'x [rad]", labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(self.left_box_2_2, self, "electron_beam_divergence_v", "Vertical Beam Divergence \u03c3'y [rad]",   labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
 
         self.left_box_2_3 = oasysgui.widgetBox(self.electron_beam_box, "", addSpace=False, orientation="horizontal",height=150)
         self.left_box_2_3_l = oasysgui.widgetBox(self.left_box_2_3, "", addSpace=False, orientation="vertical")
         self.left_box_2_3_r = oasysgui.widgetBox(self.left_box_2_3, "", addSpace=False, orientation="vertical")
-        oasysgui.lineEdit(self.left_box_2_3_l, self, "electron_beam_emittance_h", "\u03B5x [m.rad]",labelWidth=75, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.left_box_2_3_l, self, "electron_beam_alpha_h",     "\u03B1x",        labelWidth=75, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.left_box_2_3_l, self, "electron_beam_beta_h",      "\u03B2x [m]",    labelWidth=75, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.left_box_2_3_l, self, "electron_beam_eta_h",       "\u03B7x",        labelWidth=75, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.left_box_2_3_l, self, "electron_beam_etap_h",      "\u03B7'x",       labelWidth=75, valueType=float, orientation="horizontal")
+        oasysgui.lineEdit(self.left_box_2_3_l, self, "electron_beam_emittance_h", "\u03B5x [m.rad]",labelWidth=75, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(self.left_box_2_3_l, self, "electron_beam_alpha_h",     "\u03B1x",        labelWidth=75, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(self.left_box_2_3_l, self, "electron_beam_beta_h",      "\u03B2x [m]",    labelWidth=75, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(self.left_box_2_3_l, self, "electron_beam_eta_h",       "\u03B7x",        labelWidth=75, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(self.left_box_2_3_l, self, "electron_beam_etap_h",      "\u03B7'x",       labelWidth=75, valueType=float, orientation="horizontal",  callback=self.update)
 
 
-        oasysgui.lineEdit(self.left_box_2_3_r, self, "electron_beam_emittance_v", "\u03B5y [m.rad]",labelWidth=75, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.left_box_2_3_r, self, "electron_beam_alpha_v",     "\u03B1y",        labelWidth=75,valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.left_box_2_3_r, self, "electron_beam_beta_v",      "\u03B2y [m]",    labelWidth=75, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.left_box_2_3_r, self, "electron_beam_eta_v",       "\u03B7y",        labelWidth=75, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.left_box_2_3_r, self, "electron_beam_etap_v",      "\u03B7'y",       labelWidth=75, valueType=float, orientation="horizontal")
+        oasysgui.lineEdit(self.left_box_2_3_r, self, "electron_beam_emittance_v", "\u03B5y [m.rad]",labelWidth=75, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(self.left_box_2_3_r, self, "electron_beam_alpha_v",     "\u03B1y",        labelWidth=75, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(self.left_box_2_3_r, self, "electron_beam_beta_v",      "\u03B2y [m]",    labelWidth=75, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(self.left_box_2_3_r, self, "electron_beam_eta_v",       "\u03B7y",        labelWidth=75, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(self.left_box_2_3_r, self, "electron_beam_etap_v",      "\u03B7'y",       labelWidth=75, valueType=float, orientation="horizontal",  callback=self.update)
 
         gui.rubber(self.controlArea)
 
         ###################
 
         left_box_1 = oasysgui.widgetBox(self.tab_sou, "ID Parameters", addSpace=True, orientation="vertical")
-
-        out_list = [("ID%02d %s" % (self.data_dict["straight_section"][i], self.data_dict["id_name"][i])) for i in
-                    range(len(self.data_dict["id_name"]))]
-
-        gui.comboBox(left_box_1, self, "ebs_id_index", label="ID: ", labelWidth=350,
-                     items=out_list, callback=self.set_id,
-                     sendSelectedValue=False, orientation="horizontal")
 
         oasysgui.lineEdit(left_box_1, self, "period_length", "Period Length [m]", labelWidth=260,
                           valueType=float, orientation="horizontal", callback=self.update)
@@ -252,6 +369,10 @@ class OWEBS(OWWidget):
         left_box_0 = oasysgui.widgetBox(tab_util, "Advanced settings",
                         addSpace=False, orientation="vertical", height=450)
 
+        oasysgui.lineEdit(left_box_0, self, "gap_min",  "minimum gap",
+                          labelWidth=260, valueType=float, orientation="horizontal",
+                          callback=self.update)
+
         oasysgui.lineEdit(left_box_0, self, "gap_max",  "maximum gap (for plots)",
                           labelWidth=260, valueType=float, orientation="horizontal",
                           callback=self.update)
@@ -260,11 +381,20 @@ class OWEBS(OWWidget):
                           labelWidth=260, valueType=int, orientation="horizontal",
                           callback=self.update)
 
+        left_box_00 = oasysgui.widgetBox(left_box_0, "Gap parametrization", addSpace=False, orientation="vertical")
+        oasysgui.lineEdit(left_box_00, self, "a0", "a0", labelWidth=260, valueType=float, orientation="horizontal", callback=self.set_K)
+        oasysgui.lineEdit(left_box_00, self, "a1", "a1", labelWidth=260, valueType=float, orientation="horizontal", callback=self.set_K)
+        oasysgui.lineEdit(left_box_00, self, "a2", "a2", labelWidth=260, valueType=float, orientation="horizontal", callback=self.set_K)
+        oasysgui.lineEdit(left_box_00, self, "a3", "a3", labelWidth=260, valueType=float, orientation="horizontal", callback=self.set_K)
+        oasysgui.lineEdit(left_box_00, self, "a4", "a4", labelWidth=260, valueType=float, orientation="horizontal", callback=self.set_K)
+        oasysgui.lineEdit(left_box_00, self, "a5", "a5", labelWidth=260, valueType=float, orientation="horizontal", callback=self.set_K)
+        oasysgui.lineEdit(left_box_00, self, "a6", "a6", labelWidth=260, valueType=float, orientation="horizontal", callback=self.set_K)
 
         self.initializeTabs()
 
-        self.populate_electron_beam()
-        self.populate_magnetic_structure()
+        # self.populate_gap_parametrization()
+        # self.populate_electron_beam()
+        # self.populate_magnetic_structure()
         self.populate_settings_after_setting_K()
         self.set_visible()
         self.update()
@@ -342,6 +472,11 @@ class OWEBS(OWWidget):
 
         gamma = self.gamma()
 
+        if self.ebs_id_index == 0:
+            id = "<None>"
+        else:
+            id = "ID%02d %s" % (self.data_dict["straight_section"][self.ebs_id_index-1], self.data_dict["id_name"][self.ebs_id_index-1])
+
         info_parameters = {
             "electron_energy_in_GeV":self.electron_energy_in_GeV,
             "gamma":"%8.3f"%self.gamma(),
@@ -377,6 +512,16 @@ class OWEBS(OWWidget):
             "CF_h": "%4.3f" % syned_undulator.approximated_coherent_fraction_horizontal(syned_electron_beam,harmonic=1),
             "CF_v": "%4.3f" % syned_undulator.approximated_coherent_fraction_vertical(syned_electron_beam,harmonic=1),
             "CF": "%4.3f" % syned_undulator.approximated_coherent_fraction(syned_electron_beam,harmonic=1),
+            "url": self.data_url,
+            "id": id,
+            "gap": "%4.3f" % self.calculate_gap_from_K(),
+            "a0": "%4.3f" % self.a0,
+            "a1": "%4.3f" % self.a1,
+            "a2": "%4.3f" % self.a2,
+            "a3": "%4.3f" % self.a3,
+            "a4": "%4.3f" % self.a4,
+            "a5": "%4.3f" % self.a5,
+            "a6": "%4.3f" % self.a6,
             }
 
         self.info_id.setText(self.info_template().format_map(info_parameters))
@@ -386,6 +531,8 @@ class OWEBS(OWWidget):
     def info_template(self):
         return \
 """
+data url: {url}
+id_name: {id}
 
 ================ input parameters ===========
 Electron beam energy [GeV]: {electron_energy_in_GeV}
@@ -403,6 +550,16 @@ Horizontal Peak Magnetic field [T]: {B_horizontal}
 Vertical Peak Magnetic field [T]:   {B_vertical}
 
 Total power radiated by the undulator [W]: {und_power}
+
+Gap in use: {gap} mm
+Using gap parametrization: 
+    a0: {a0}
+    a1: {a1}
+    a2: {a2}
+    a3: {a3}
+    a4: {a4}
+    a5: {a5}
+    a6: {a6}
 
 Resonances:
 
@@ -433,7 +590,8 @@ Sizes and divergences of photon source (convolution) at resonance (1st harmonic)
     Sy': {Syp} urad
     
 Approximated coherent fraction at 1st harmonic: 
-    Horizontal: {CF_h}  Vertical: {CF_v} 
+    Horizontal: {CF_h}
+    Vertical: {CF_v} 
     Coherent fraction 2D (HxV): {CF} 
 
 """
@@ -451,15 +609,24 @@ Approximated coherent fraction at 1st harmonic:
 
     def populate_magnetic_structure(self):
         # if magnetic_structure is None:
-        index = self.ebs_id_index
+        index = self.ebs_id_index - 1
         self.K_horizontal = 0.0
         self.K_vertical = numpy.round(self.data_dict["Kmax"][index],3)
         self.period_length = numpy.round(self.data_dict["id_period"][index],3)
         self.number_of_periods = numpy.round(self.data_dict["id_length"][index] / self.period_length,3)
 
+    def populate_gap_parametrization(self):
+        index = self.ebs_id_index - 1
+        self.a0 = self.data_dict["a0"][index]
+        self.a1 = self.data_dict["a1"][index]
+        self.a2 = self.data_dict["a2"][index]
+        self.a3 = self.data_dict["a3"][index]
+        self.a4 = self.data_dict["a4"][index]
+        self.a5 = self.data_dict["a5"][index]
+        self.a6 = self.data_dict["a6"][index]
+
     def populate_settings_after_setting_K(self):
 
-        index = self.ebs_id_index
         syned_undulator = self.get_light_source().get_magnetic_structure()
         self.auto_energy = numpy.round(syned_undulator.resonance_energy(self.gamma(),
                                             harmonic=self.auto_harmonic_number),3)
@@ -467,6 +634,20 @@ Approximated coherent fraction at 1st harmonic:
         self.gap_mm = numpy.round(self.calculate_gap_from_K(), 3)
 
     def set_gap(self, which=VERTICAL):
+        if self.gap_mm < self.gap_min:
+            if ConfirmDialog.confirmed(self, message="Gap is smaller than minimum. Set to minimum?"):
+                self.gap_mm = self.gap_min
+
+        if self.gap_mm > self.gap_max:
+            if ConfirmDialog.confirmed(self, message="Gap is larger than maximum. Set to maximum?"):
+                self.gap_mm = self.gap_max
+
+        if self.gap_mm < self.gap_min:
+            raise Exception("Gap is smaller than minimum")
+
+        if self.gap_mm > self.gap_max:
+            raise Exception("Gap is larger than maximum")
+
         K = numpy.round(self.calculate_K_from_gap(), 3)
 
         if which == VERTICAL:
@@ -486,7 +667,11 @@ Approximated coherent fraction at 1st harmonic:
         self.update()
 
     def set_id(self):
-        self.populate_magnetic_structure()
+        if self.ebs_id_index !=0:
+            self.populate_gap_parametrization()
+            self.populate_magnetic_structure()
+            self.gap_min = self.data_dict["id_minimum_gap_mm"][self.ebs_id_index-1]
+
         self.populate_settings_after_setting_K()
         self.update()
 
@@ -512,6 +697,21 @@ Approximated coherent fraction at 1st harmonic:
         wavelength = self.auto_harmonic_number*m2ev/self.auto_energy
         K = round(numpy.sqrt(2*(((wavelength*2*self.gamma()**2)/self.period_length)-1)), 6)
 
+        Kmax = self.calculate_K_from_gap(self.gap_min)
+        Kmin = self.calculate_K_from_gap(self.gap_max)
+
+        if numpy.isnan(K):
+            if ConfirmDialog.confirmed(self, message="Impossible configuration. Set to Kmin=%f?" % (Kmin)):
+                K = numpy.round(Kmin,4)
+
+        if (K > Kmax):
+            if ConfirmDialog.confirmed(self, message="Needed K (%f) > Kmax (%f). Reset to Kmax?" % (K, Kmax)):
+                K = numpy.round(Kmax,4)
+
+        if (K < Kmin):
+            if ConfirmDialog.confirmed(self, message="Needed K (%f) < Kmin (%f). Reset to Kmin?" % (K, Kmin)):
+                K = numpy.round(Kmin,4)
+
         if which == VERTICAL:
             self.K_vertical = K
             self.K_horizontal = 0.0
@@ -536,9 +736,8 @@ Approximated coherent fraction at 1st harmonic:
         self.plot_canvas[plot_canvas_index].replot()
 
     def update_plots(self):
-        gap_min = numpy.min((self.gap_mm, self.data_dict["id_minimum_gap_mm"][self.ebs_id_index]))
-        gap_min *= 0.5
-        gap_mm = numpy.linspace(gap_min, self.gap_max, 1000)
+
+        gap_mm = numpy.linspace(self.gap_min * 0.9, self.gap_max * 1.1, 1000)
 
         Karray = self.calculate_K_from_gap(gap_mm)
         Karray_horizontal = numpy.zeros_like(Karray)
@@ -605,23 +804,16 @@ Approximated coherent fraction at 1st harmonic:
 
         if gap_mm is None: gap_mm = self.gap_mm
 
-        index = self.ebs_id_index
-        a0 = self.data_dict["a0"][index]
-        a1 = self.data_dict["a1"][index]
-        a2 = self.data_dict["a2"][index]
-        a3 = self.data_dict["a3"][index]
-        a4 = self.data_dict["a4"][index]
-        a5 = self.data_dict["a5"][index]
-        a6 = self.data_dict["a6"][index]
-        id_period_mm  = self.data_dict["id_period_mm"][index]
+        # index = self.ebs_id_index - 1
+        id_period_mm  = self.period_length * 1e3 # xxxx data_dict["id_period_mm"][index]
 
         Bmax = numpy.zeros_like(gap_mm)
-        Bmax += a1 * numpy.exp(-1 * numpy.pi * (gap_mm - a0) / id_period_mm)
-        Bmax += a2 * numpy.exp(-2 * numpy.pi * (gap_mm - a0) / id_period_mm)
-        Bmax += a3 * numpy.exp(-3 * numpy.pi * (gap_mm - a0) / id_period_mm)
-        Bmax += a4 * numpy.exp(-4 * numpy.pi * (gap_mm - a0) / id_period_mm)
-        Bmax += a5 * numpy.exp(-5 * numpy.pi * (gap_mm - a0) / id_period_mm)
-        Bmax += a6 * numpy.exp(-6 * numpy.pi * (gap_mm - a0) / id_period_mm)
+        Bmax += self.a1 * numpy.exp(-1 * numpy.pi * (gap_mm - self.a0) / id_period_mm)
+        Bmax += self.a2 * numpy.exp(-2 * numpy.pi * (gap_mm - self.a0) / id_period_mm)
+        Bmax += self.a3 * numpy.exp(-3 * numpy.pi * (gap_mm - self.a0) / id_period_mm)
+        Bmax += self.a4 * numpy.exp(-4 * numpy.pi * (gap_mm - self.a0) / id_period_mm)
+        Bmax += self.a5 * numpy.exp(-5 * numpy.pi * (gap_mm - self.a0) / id_period_mm)
+        Bmax += self.a6 * numpy.exp(-6 * numpy.pi * (gap_mm - self.a0) / id_period_mm)
 
         Kmax = Bmax * (id_period_mm * 1e-3) * codata.e / (2 * numpy.pi * codata.m_e * codata.c)
 
@@ -630,10 +822,7 @@ Approximated coherent fraction at 1st harmonic:
     def calculate_gap_from_K(self, Kvalue=None):
         if Kvalue is None: Kvalue = self.K_vertical
 
-        gap_min = numpy.min((self.gap_mm, self.data_dict["id_minimum_gap_mm"][self.ebs_id_index]))
-        gap_min *= 0.5
-
-        gap_mm_array = numpy.linspace( gap_min, self.gap_max, 1000)
+        gap_mm_array = numpy.linspace( self.gap_min * 0.9, self.gap_max * 1.1, 1000)
         K_array = self.calculate_K_from_gap(gap_mm_array)
 
         if ((Kvalue < K_array.min()) or (Kvalue > K_array.max())):
@@ -643,20 +832,13 @@ Approximated coherent fraction at 1st harmonic:
 
         return gap_interpolated
 
-
     def gamma(self):
         return 1e9*self.electron_energy_in_GeV / (codata.m_e *  codata.c**2 / codata.e)
-
-
-
 
     def set_visible(self):
         self.left_box_2_1.setVisible(self.type_of_properties == 0)
         self.left_box_2_2.setVisible(self.type_of_properties == 1)
         self.left_box_2_3.setVisible(self.type_of_properties == 2)
-
-
-
 
     def check_data(self):
         congruence.checkStrictlyPositiveNumber(self.electron_energy_in_GeV , "Energy")
@@ -687,7 +869,6 @@ Approximated coherent fraction at 1st harmonic:
 
         self.check_magnetic_structure()
 
-
     def send_data(self):
         try:
             self.check_data()
@@ -698,7 +879,6 @@ Approximated coherent fraction at 1st harmonic:
 
             self.setStatusMessage("")
             self.progressBarFinished()
-
 
     def get_light_source(self):
         electron_beam = ElectronBeam(energy_in_GeV=self.electron_energy_in_GeV,
@@ -744,7 +924,6 @@ Approximated coherent fraction at 1st harmonic:
                 pass
 
     def populate_electron_beam(self, electron_beam=None):
-
         if electron_beam is None:
             electron_beam = ElectronBeam(
                                         energy_in_GeV = 6.0,
@@ -781,23 +960,6 @@ Approximated coherent fraction at 1st harmonic:
         self.electron_beam_divergence_v = yp
 
 
-def get_data_dictionary():
-    import json
-    from urllib.request import urlopen
-
-    file_url = "https://raw.githubusercontent.com/srio/shadow3-scripts/master/ESRF-LIGHTSOURCES-EBS/ebs_ids.json"
-
-    u = urlopen(file_url)
-    ur = u.read()
-    url = ur.decode(encoding='UTF-8')
-
-    dictionary = json.loads(url)
-    for key in dictionary.keys():
-        print("   >>>", key) #, dictionary[key])
-
-    return dictionary
-
-
 if __name__ == "__main__":
     from PyQt5.QtWidgets import QApplication
 
@@ -808,5 +970,16 @@ if __name__ == "__main__":
 
     # data_dict = get_data_dictionary()
     # out_list = [("ID%02d %s" % (data_dict["straight_section"][i],data_dict["id_name"][i])) for i in range(len(data_dict["id_name"]))]
-    #
     # print(out_list)
+
+    # data_dict_old = data_dict
+    # data_dict = get_data_dictionary_csv()
+    # out_list = [("ID%02d %s" % (data_dict["straight_section"][i],data_dict["id_name"][i])) for i in range(len(data_dict["id_name"]))]
+    # print(out_list)
+
+    # for key in data_dict.keys():
+    #     if key != "id_name":
+    #         print(numpy.array(data_dict[key]) - numpy.array(data_dict_old[key]))
+
+    # print(data_dict["id_name"])
+    # print(data_dict_old["id_name"])
