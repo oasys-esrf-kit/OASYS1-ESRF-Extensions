@@ -83,7 +83,8 @@ class WOLens(Lens, OpticalElementDecorator):
         print(">>> _axis_x : from, to, n = ", _axis_x.min(), _axis_x.max(), _axis_x.size)
         print(">>> _axis_y : from, to, n = ", _axis_y.min(), _axis_y.max(), _axis_y.size)
 
-        try:
+        # try:
+        if True:
             x, y, lens_thickness = proj_thick_2D_crl(_foc_plane, _shape, _apert_h, _apert_v, _r_min, _n,
                          _wall_thick=_wall_thickness, _aperture=_aperture,
                          _nx=_axis_x.size, _ny=_axis_y.size,
@@ -102,8 +103,8 @@ class WOLens(Lens, OpticalElementDecorator):
             # plot_image(1e6 * lens_thickness.T, 1e6 * x, 1e6 * y, title="Lens surface profile / um",
             #            xtitle="X / um", ytitle="Y / um")
 
-        except:
-            raise Exception("Error running barc4ro.proj_thick_2D_crl")
+        # except:
+        #     raise Exception("Error running barc4ro.proj_thick_2D_crl")
 
         return x, y, lens_thickness.T
 

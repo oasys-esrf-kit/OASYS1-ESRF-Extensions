@@ -27,7 +27,7 @@ from wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D
 from orangecontrib.wofry.util.wofry_objects import WofryData
 from orangecontrib.esrf.wofry.widgets.gui.ow_wofry_widget import WofryWidget # TODO: from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
 
-from orangecontrib.esrf.wofry.util.wofry_beamline import WOBeamline
+from wofryimpl.beamline.beamline import WOBeamline
 
 def initialize_default_propagator_2D():
     propagator = PropagationManager.Instance()

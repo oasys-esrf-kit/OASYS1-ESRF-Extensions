@@ -1,15 +1,15 @@
-import numpy
 from orangewidget.settings import Setting
 from orangewidget import gui
+
 from oasys.widgets import gui as oasysgui
 from oasys.widgets import congruence
+from oasys.util.oasys_util import write_surface_file
 
 from orangecontrib.esrf.syned.util.lens import Lens # TODO: from syned.beamline.optical_elements....
-from orangecontrib.esrf.wofry.util.lens import WOLens
-from orangecontrib.esrf.wofry.widgets.gui.ow_optical_element import OWWOOpticalElement # TODO: from orangecontrib.wofry.widgets.gui.ow_optical_element import OWWOOpticalElement
+from orangecontrib.esrf.wofry.util.lens import WOLens # from wofryimpl...
+
 from orangecontrib.wofry.widgets.gui.ow_optical_element import OWWOOpticalElement
 
-from oasys.util.oasys_util import write_surface_file
 
 class OWWORealLens2D(OWWOOpticalElement):
 
@@ -35,7 +35,6 @@ class OWWORealLens2D(OWWOOpticalElement):
     shape = Setting(1)
     radius = Setting(100e-6)
 
-    write_input_wavefront = Setting(0)
     write_profile_flag = Setting(0)
     write_profile = Setting("lens_profile_2D.h5")
 
@@ -95,13 +94,10 @@ class OWWORealLens2D(OWWOOpticalElement):
                           valueType=float, orientation="horizontal",)
 
 
-
         # files i/o tab
         self.tab_files = oasysgui.createTabPage(self.tabs_setting, "File I/O")
         files_box = oasysgui.widgetBox(self.tab_files, "Files", addSpace=True, orientation="vertical")
 
-        gui.comboBox(files_box, self, "write_input_wavefront", label="Input wf to file (for script)",
-                     items=["No", "Yes [wavefront2D_input.h5]"], sendSelectedValue=False, orientation="horizontal")
 
         gui.comboBox(files_box, self, "write_profile_flag", label="Dump profile to file",
                      items=["No", "Yes"], sendSelectedValue=False, orientation="horizontal",
@@ -129,9 +125,6 @@ class OWWORealLens2D(OWWOOpticalElement):
             aperture_dimension_v=self.aperture_dimension_v,
         )
 
-    def get_optical_element_python_code(self):
-        return self.get_optical_element().to_python_code()
-
     def check_data(self):
         super().check_data()
         # congruence.checkStrictlyPositiveNumber(numpy.abs(self.focal_x), "Horizontal Focal Length")
@@ -148,27 +141,64 @@ class OWWORealLens2D(OWWOOpticalElement):
         else:
             raise Exception("Syned Data not correct: Empty Optical Element")
 
+    # overwrite this method to add tab with thickness profile
+
+    def initializeTabs(self): # OVERWRITTEN
+        size = len(self.tab)
+        indexes = range(0, size)
+
+        for index in indexes:
+            self.tabs.removeTab(size-1-index)
+
+        titles = ["Intensity","Phase","Thickness profile"]
+        self.tab = []
+        self.plot_canvas = []
+
+        for index in range(0, len(titles)):
+            self.tab.append(gui.createTabPage(self.tabs, titles[index]))
+            self.plot_canvas.append(None)
+
+        for tab in self.tab:
+            tab.setFixedHeight(self.IMAGE_HEIGHT)
+            tab.setFixedWidth(self.IMAGE_WIDTH)
+
     def propagate_wavefront(self):
         super().propagate_wavefront()
-
-        if self.write_input_wavefront == 1:
-            self.input_data.get_wavefront().save_h5_file("wavefront2D_input.h5",subgroupname="wfr",
-                                         intensity=True,phase=False,overwrite=True,verbose=False)
-            print("\nFile with input wavefront wavefront2D_input.h5 written to disk.")
 
         if self.write_profile_flag == 1:
             xx, yy, s = self.get_optical_element().get_surface_thickness_mesh(self.input_data.get_wavefront())
             write_surface_file(s.T, xx, yy, self.write_profile, overwrite=True)
             print("\nFile for OASYS " + self.write_profile + " written to disk.")
 
+    def do_plot_results(self, progressBarValue=80): # OVERWRITTEN
+
+        super().do_plot_results(progressBarValue)
+        if not self.view_type == 0:
+            if not self.wavefront_to_plot is None:
+
+                self.progressBarSet(progressBarValue)
+
+                wo_lens = self.get_optical_element()
+                x, y, lens_thickness = wo_lens.get_surface_thickness_mesh(self.wavefront_to_plot)
+                self.plot_data2D(data2D=1e6*lens_thickness,
+                             dataX=1e6*x,
+                             dataY=1e6*y,
+                             progressBarValue=progressBarValue,
+                             tabs_canvas_index=2,
+                             plot_canvas_index=2,
+                             title="O.E. Thickness profile in $\mu$m",
+                             xtitle="Horizontal [$\mu$m] ( %d pixels)"%(self.wavefront_to_plot.get_coordinate_x().size),
+                             ytitle="Vertical [$\mu$m] ( %d pixels)"%(self.wavefront_to_plot.get_coordinate_y().size))
+
+                self.progressBarFinished()
 
 if __name__ == "__main__":
     import sys
     from PyQt5.QtWidgets import QApplication
 
     def get_example_wofry_data():
-        from orangecontrib.esrf.wofry.util.wofry_light_source import WOLightSource
-        from orangecontrib.esrf.wofry.util.wofry_beamline import WOBeamline
+        from wofryimpl.propagator.light_source import WOLightSource
+        from wofryimpl.beamline.beamline import WOBeamline
         from orangecontrib.wofry.util.wofry_objects import WofryData
 
         light_source = WOLightSource(dimension=2,
