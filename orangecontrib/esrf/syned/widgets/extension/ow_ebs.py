@@ -31,108 +31,7 @@ VERTICAL = 1
 HORIZONTAL = 2
 BOTH = 3
 
-def get_data_dictionary_csv(url=""):
-    import numpy
-    import scipy.constants as codata
 
-
-    tofloat = lambda s: numpy.array(['0.0' if v == '' else v for v in s]).astype(float)
-
-    try:
-        filename = url # 'ftp://ftp.esrf.eu/pub/scisoft/syned/resources/jsrund.csv'
-        ishift = 1
-        a = numpy.genfromtxt(filename, dtype=str, delimiter=',', skip_header=3, skip_footer=1, converters=None, \
-                             missing_values={0: "11.000"}, filling_values={0: "XXX"}, usecols=None, names=None,
-                             excludelist=None, \
-                             deletechars=" !#$%&'()*+, -./:;<=>?@[\]^{|}~", replace_space='', autostrip=True, \
-                             case_sensitive=True, defaultfmt='f%i', unpack=None, usemask=False, loose=True, \
-                             invalid_raise=True, max_rows=None, encoding='bytes')
-
-        straight_section = a[:, 0].astype(int)
-        id_name = a[:, 1]
-        # for i in range(straight_section.size):
-        #     id_name[i] = "ID%02d %s" % (straight_section[i], id_name[i])
-        id_period = 1e-3 * a[:, 2 + ishift].astype(float)
-        id_period_mm = a[:, 2 + ishift].astype(float)
-        id_length = 1e-3 * a[:, 3 + ishift].astype(float)
-
-        id_minimum_gap_mm = tofloat(a[:, 4 + ishift])
-
-        a0 = tofloat(a[:, 5 + ishift])
-        a1 = tofloat(a[:, 6 + ishift])
-        a2 = tofloat(a[:, 7 + ishift])
-        a3 = tofloat(a[:, 8 + ishift])
-        a4 = tofloat(a[:, 9 + ishift])
-        a5 = tofloat(a[:, 10 + ishift])
-        a6 = tofloat(a[:, 11 + ishift])
-
-        Bmax = numpy.zeros_like(a0)
-        Bmax += a1 * numpy.exp(-1 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
-        Bmax += a2 * numpy.exp(-2 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
-        Bmax += a3 * numpy.exp(-3 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
-        Bmax += a4 * numpy.exp(-4 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
-        Bmax += a5 * numpy.exp(-5 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
-        Bmax += a6 * numpy.exp(-6 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
-
-        Kmax = Bmax * id_period * codata.e / (2 * numpy.pi * codata.m_e * codata.c)
-
-        print("\n\n%5s  %10s  %15s %15s %15s %15s" % ("sect", "name", "Gmin", "Bmax", "Kmax", "a0"))
-        print("%5s  %10s  %15s %15s %15s %15s" % ("====", "====", "====", "====", "====", "===="))
-        for i in range(Bmax.size):
-            print("%5d  %10s  %15.3f %15.3f %15.3f %15.3f" % (
-            straight_section[i], id_name[i], id_minimum_gap_mm[i], Bmax[i], Kmax[i], a0[i]))
-
-        out_dict = {}
-        out_dict["straight_section"] = straight_section.tolist()
-        out_dict["id_name"] = id_name.tolist()
-        out_dict["id_minimum_gap_mm"] = id_minimum_gap_mm.tolist()
-        out_dict["Bmax"] = Bmax.tolist()
-        out_dict["Kmax"] = Kmax.tolist()
-        out_dict["straight_section"] = straight_section.tolist()
-        out_dict["id_period"] = id_period.tolist()
-        out_dict["id_period_mm"] = id_period_mm.tolist()
-        out_dict["id_length"] = id_length.tolist()
-        out_dict["a0"] = a0.tolist()
-        out_dict["a1"] = a1.tolist()
-        out_dict["a2"] = a2.tolist()
-        out_dict["a3"] = a3.tolist()
-        out_dict["a4"] = a4.tolist()
-        out_dict["a5"] = a5.tolist()
-        out_dict["a6"] = a6.tolist()
-        return out_dict
-    except:
-        out_dict = {}
-        out_dict["straight_section"]  = []
-        out_dict["id_name"]           = []
-        out_dict["id_minimum_gap_mm"] = []
-        out_dict["Bmax"]              = []
-        out_dict["Kmax"]              = []
-        out_dict["straight_section"]  = []
-        out_dict["id_period"]         = []
-        out_dict["id_period_mm"]      = []
-        out_dict["id_length"]         = []
-        out_dict["a0"]                = []
-        out_dict["a1"]                = []
-        out_dict["a2"]                = []
-        out_dict["a3"]                = []
-        out_dict["a4"]                = []
-        out_dict["a5"]                = []
-        out_dict["a6"]                = []
-        return out_dict
-
-# OLD data format...
-def get_data_dictionary():
-    import json
-    from urllib.request import urlopen
-
-    file_url = "https://raw.githubusercontent.com/srio/shadow3-scripts/master/ESRF-LIGHTSOURCES-EBS/ebs_ids.json"
-
-    u = urlopen(file_url)
-    ur = u.read()
-    url = ur.decode(encoding='UTF-8')
-
-    dictionary = json.loads(url)
-    return dictionary
 
 class OWEBS(OWWidget):
 
@@ -222,12 +121,16 @@ class OWEBS(OWWidget):
     a5 = Setting(0.0)
     a6 = Setting(0.0)
 
-    # data_dict = get_data_dictionary() # OLD FORMAT
     data_url = 'ftp://ftp.esrf.eu/pub/scisoft/syned/resources/jsrund.csv'
-    data_dict = get_data_dictionary_csv(data_url)
-
+    data_dict = None
 
     def __init__(self):
+
+        self.get_data_dictionary_csv()
+
+        # OLD FORMAT
+        # self.data_url = "https://raw.githubusercontent.com/srio/shadow3-scripts/master/ESRF-LIGHTSOURCES-EBS/ebs_ids.json"
+        # self.get_data_dictionary()
 
         self.runaction = widget.OWAction("Send Data", self)
         self.runaction.triggered.connect(self.send_data)
@@ -291,8 +194,8 @@ class OWEBS(OWWidget):
         oasysgui.lineEdit(self.electron_beam_box, self, "ring_current", "Ring Current [A]",        labelWidth=260, valueType=float, orientation="horizontal", callback=self.update)
 
         gui.comboBox(self.electron_beam_box, self, "type_of_properties", label="Electron Beam Properties", labelWidth=350,
-                     items=["From 2nd Moments", "From Size/Divergence", "From Twiss papameters","Zero emittance"],
-                     callback=self.set_visible,
+                     items=["From 2nd Moments", "From Size/Divergence", "From Twiss papameters","Zero emittance", "EBS (S28D)"],
+                     callback=self.update_electron_beam,
                      sendSelectedValue=False, orientation="horizontal")
 
         self.left_box_2_1 = oasysgui.widgetBox(self.electron_beam_box, "", addSpace=False, orientation="vertical", height=150)
@@ -395,9 +298,12 @@ class OWEBS(OWWidget):
         # self.populate_gap_parametrization()
         # self.populate_electron_beam()
         # self.populate_magnetic_structure()
+        # self.set_ebs_electron_beam()
+
         self.populate_settings_after_setting_K()
         self.set_visible()
         self.update()
+
 
     def titles(self):
         return ["K vs Gap", "B vs Gap", "Gap vs resonance energy", "Power vs Gap"]
@@ -459,6 +365,42 @@ class OWEBS(OWWidget):
                                                 K_vertical=self.K_vertical,
                                                 period_length=self.period_length,
                                                 number_of_periods=self.number_of_periods)
+
+    def set_ebs_electron_beam(self):
+        self.type_of_properties = 1
+        self.electron_beam_size_h = 30.1836e-6
+        self.electron_beam_size_v = 3.63641e-6
+        self.electron_beam_divergence_h = 4.36821e-6
+        self.electron_beam_divergence_v = 1.37498e-6
+
+        #
+        eb = self.get_light_source().get_electron_beam()
+
+        moment_xx, moment_xxp, moment_xpxp, moment_yy, moment_yyp, moment_ypyp = eb.get_moments_all()
+        self.moment_xx   = moment_xx
+        self.moment_yy   = moment_yy
+        self.moment_xxp  = moment_xxp
+        self.moment_yyp  = moment_yyp
+        self.moment_xpxp = moment_xpxp
+        self.moment_ypyp = moment_ypyp
+
+        ex, ax, bx, ey, ay, by = eb.get_twiss_no_dispersion_all()
+        self.electron_beam_beta_h = bx
+        self.electron_beam_beta_v = by
+        self.electron_beam_alpha_h = ax
+        self.electron_beam_alpha_v = ay
+        self.electron_beam_eta_h = ex
+        self.electron_beam_eta_v = ey
+        self.electron_beam_etap_h = 0.0
+        self.electron_beam_etap_v = 0.0
+        self.electron_beam_emittance_h = 1.3166e-10
+        self.electron_beam_emittance_v = 5e-12
+
+    def update_electron_beam(self):
+        if self.type_of_properties == 4:
+            self.set_ebs_electron_beam()
+        self.set_visible()
+        self.update()
 
     def update(self):
         self.update_info()
@@ -959,6 +901,109 @@ Approximated coherent fraction at 1st harmonic:
         self.electron_beam_divergence_h = xp
         self.electron_beam_divergence_v = yp
 
+
+    def get_data_dictionary_csv(self):
+        url = self.data_url
+
+        tofloat = lambda s: numpy.array(['0.0' if v == '' else v for v in s]).astype(float)
+
+        try:
+            filename = url # 'ftp://ftp.esrf.eu/pub/scisoft/syned/resources/jsrund.csv'
+            ishift = 1
+            a = numpy.genfromtxt(filename, dtype=str, delimiter=',', skip_header=3, skip_footer=1, converters=None, \
+                                 missing_values={0: "11.000"}, filling_values={0: "XXX"}, usecols=None, names=None,
+                                 excludelist=None, \
+                                 deletechars=" !#$%&'()*+, -./:;<=>?@[\]^{|}~", replace_space='', autostrip=True, \
+                                 case_sensitive=True, defaultfmt='f%i', unpack=None, usemask=False, loose=True, \
+                                 invalid_raise=True, max_rows=None, encoding='bytes')
+
+            straight_section = a[:, 0].astype(int)
+            id_name = a[:, 1]
+            # for i in range(straight_section.size):
+            #     id_name[i] = "ID%02d %s" % (straight_section[i], id_name[i])
+            id_period = 1e-3 * a[:, 2 + ishift].astype(float)
+            id_period_mm = a[:, 2 + ishift].astype(float)
+            id_length = 1e-3 * a[:, 3 + ishift].astype(float)
+
+            id_minimum_gap_mm = tofloat(a[:, 4 + ishift])
+
+            a0 = tofloat(a[:, 5 + ishift])
+            a1 = tofloat(a[:, 6 + ishift])
+            a2 = tofloat(a[:, 7 + ishift])
+            a3 = tofloat(a[:, 8 + ishift])
+            a4 = tofloat(a[:, 9 + ishift])
+            a5 = tofloat(a[:, 10 + ishift])
+            a6 = tofloat(a[:, 11 + ishift])
+
+            Bmax = numpy.zeros_like(a0)
+            Bmax += a1 * numpy.exp(-1 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
+            Bmax += a2 * numpy.exp(-2 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
+            Bmax += a3 * numpy.exp(-3 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
+            Bmax += a4 * numpy.exp(-4 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
+            Bmax += a5 * numpy.exp(-5 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
+            Bmax += a6 * numpy.exp(-6 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
+
+            Kmax = Bmax * id_period * codata.e / (2 * numpy.pi * codata.m_e * codata.c)
+
+            print("\n\n%5s  %10s  %15s %15s %15s %15s" % ("sect", "name", "Gmin", "Bmax", "Kmax", "a0"))
+            print("%5s  %10s  %15s %15s %15s %15s" % ("====", "====", "====", "====", "====", "===="))
+            for i in range(Bmax.size):
+                print("%5d  %10s  %15.3f %15.3f %15.3f %15.3f" % (
+                straight_section[i], id_name[i], id_minimum_gap_mm[i], Bmax[i], Kmax[i], a0[i]))
+
+            out_dict = {}
+            out_dict["straight_section"] = straight_section.tolist()
+            out_dict["id_name"] = id_name.tolist()
+            out_dict["id_minimum_gap_mm"] = id_minimum_gap_mm.tolist()
+            out_dict["Bmax"] = Bmax.tolist()
+            out_dict["Kmax"] = Kmax.tolist()
+            out_dict["straight_section"] = straight_section.tolist()
+            out_dict["id_period"] = id_period.tolist()
+            out_dict["id_period_mm"] = id_period_mm.tolist()
+            out_dict["id_length"] = id_length.tolist()
+            out_dict["a0"] = a0.tolist()
+            out_dict["a1"] = a1.tolist()
+            out_dict["a2"] = a2.tolist()
+            out_dict["a3"] = a3.tolist()
+            out_dict["a4"] = a4.tolist()
+            out_dict["a5"] = a5.tolist()
+            out_dict["a6"] = a6.tolist()
+
+        except:
+            out_dict = {}
+            out_dict["straight_section"]  = []
+            out_dict["id_name"]           = []
+            out_dict["id_minimum_gap_mm"] = []
+            out_dict["Bmax"]              = []
+            out_dict["Kmax"]              = []
+            out_dict["straight_section"]  = []
+            out_dict["id_period"]         = []
+            out_dict["id_period_mm"]      = []
+            out_dict["id_length"]         = []
+            out_dict["a0"]                = []
+            out_dict["a1"]                = []
+            out_dict["a2"]                = []
+            out_dict["a3"]                = []
+            out_dict["a4"]                = []
+            out_dict["a5"]                = []
+            out_dict["a6"]                = []
+
+        self.data_dict = out_dict
+
+    # OLD data format...
+    def get_data_dictionary(self):
+        import json
+        from urllib.request import urlopen
+
+        file_url = self.data_url # "https://raw.githubusercontent.com/srio/shadow3-scripts/master/ESRF-LIGHTSOURCES-EBS/ebs_ids.json"
+
+        u = urlopen(file_url)
+        ur = u.read()
+        url = ur.decode(encoding='UTF-8')
+
+        dictionary = json.loads(url)
+
+        self.data_dict = dictionary
 
 if __name__ == "__main__":
     from PyQt5.QtWidgets import QApplication
