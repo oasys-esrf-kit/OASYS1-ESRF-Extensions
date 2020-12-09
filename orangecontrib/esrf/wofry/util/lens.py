@@ -8,7 +8,8 @@ from syned.beamline.shape import BoundaryShape, Rectangle, Circle, Ellipse, Mult
 
 from wofry.beamline.decorators import OpticalElementDecorator
 
-from barc4ro.projected_thickness import proj_thick_2D_crl
+from barc4ro.projected_thickness import proj_thick_2D_crl, proj_thick_1D_crl
+from scipy import interpolate
 import xraylib
 
 class WOLens(Lens, OpticalElementDecorator):
@@ -267,6 +268,263 @@ class WOLens(Lens, OpticalElementDecorator):
         txt += "\n"
         return txt
 
+#
+#
+#
+
+
+class WOLens1D(WOLens):
+    def __init__(self,
+                 name="Undefined",
+                 surface_shape1=None,
+                 surface_shape2=None,
+                 boundary_shape=None,
+                 material="",
+                 thickness=0.0):
+        WOLens.__init__(self, name=name,
+                      surface_shape1=surface_shape1, surface_shape2=surface_shape2,
+                      boundary_shape=boundary_shape, material=material, thickness=thickness)
+
+        self._keywords_at_creation = None
+
+
+    def get_surface_thickness_mesh(self, input_wavefront):
+
+        shape = self._keywords_at_creation["shape"                         ]
+        radius = self._keywords_at_creation["radius"                        ]
+        lens_aperture = self._keywords_at_creation["lens_aperture"                 ]
+        wall_thickness = self._keywords_at_creation["wall_thickness"                ]
+        number_of_refractive_surfaces  = self._keywords_at_creation["number_of_refractive_surfaces" ]
+        n_lenses = self._keywords_at_creation["n_lenses"                      ] # TODO: use this here
+        error_flag = self._keywords_at_creation["error_flag"                    ]
+        error_file = self._keywords_at_creation["error_file"                    ]
+        error_edge_management = self._keywords_at_creation["error_edge_management"         ]
+        write_profile = self._keywords_at_creation["write_profile"                 ]
+        xc = self._keywords_at_creation["xc"                            ]
+        ang_rot = self._keywords_at_creation["ang_rot"                       ]
+        wt_offset_ffs = self._keywords_at_creation["wt_offset_ffs"                 ]
+        offset_ffs = self._keywords_at_creation["offset_ffs"                    ]
+        tilt_ffs = self._keywords_at_creation["tilt_ffs"                      ]
+        wt_offset_bfs = self._keywords_at_creation["wt_offset_bfs"                 ]
+        offset_bfs = self._keywords_at_creation["offset_bfs"                    ]
+        tilt_bfs = self._keywords_at_creation["tilt_bfs"                      ]
+
+
+        abscissas = input_wavefront.get_abscissas().copy()
+        abscissas_on_lens = abscissas
+
+        if number_of_refractive_surfaces == 0:
+            n_ref_lens = 1
+        elif number_of_refractive_surfaces == 1:
+            n_ref_lens = 2
+        else:
+            raise Exception("Error while reading the number of refractive lenses")
+
+        if shape == 0:  # Flat
+            lens_thickness = numpy.full_like(abscissas_on_lens, wall_thickness)
+
+        elif shape == 1:  # Parabolic
+
+            # focus_length = radius / (n_lenses * n_ref_lens * refraction_index_delta)
+
+            # Implementation of barc4ro
+            x_2, lens_thickness = proj_thick_1D_crl(shape, lens_aperture, radius,
+                                                    _n=n_ref_lens,
+                                                    _wall_thick=wall_thickness,
+                                                    _xc=xc,
+                                                    _nx=100,
+                                                    _ang_rot_ex=ang_rot,
+                                                    _offst_ffs_x=offset_ffs,
+                                                    _tilt_ffs_x=tilt_ffs,
+                                                    _wt_offst_ffs=wt_offset_ffs,
+                                                    _offst_bfs_x=offset_bfs,
+                                                    _tilt_bfs_x=tilt_bfs,
+                                                    _wt_offst_bfs=wt_offset_bfs,
+                                                    isdgr=False,
+                                                    project=True,
+                                                    _axis=abscissas)
+
+
+        elif shape == 2:  # Circular
+            lens_thickness = n_ref_lens * (
+                        numpy.abs(radius) - numpy.sqrt(radius ** 2 - abscissas_on_lens ** 2)) + wall_thickness
+            bound = 0.5 * lens_aperture
+            if radius < bound: bound = radius
+            for i, x in enumerate(abscissas_on_lens):
+                if (x < -bound) or (x > bound):
+                    lens_thickness[i] = 0
+            for i, x in enumerate(abscissas_on_lens):
+                if (x < -bound) or (x > bound):
+                    lens_thickness[i] = lens_thickness.max()
+
+        if error_flag:
+            a = numpy.loadtxt(error_file)  # extrapolation
+            if error_edge_management == 0:
+                finterpolate = interpolate.interp1d(a[:, 0], a[:, 1],
+                                                    fill_value="extrapolate")  # fill_value=(0,0),bounds_error=False)
+            elif error_edge_management == 1:
+                finterpolate = interpolate.interp1d(a[:, 0], a[:, 1], fill_value=(0, 0), bounds_error=False)
+            else:  # crop
+                raise Exception("Bad value of error_edge_management")
+            thickness_interpolated = finterpolate(abscissas_on_lens)
+            lens_thickness += thickness_interpolated
+
+        # output files
+        if write_profile != "":
+            f = open(write_profile, "w")
+            for i in range(lens_thickness.size):
+                f.write("%g %g\n" % (abscissas_on_lens[i], lens_thickness[i]))
+            f.close()
+            print("File %s written to disk." % write_profile)
+
+        return abscissas_on_lens, lens_thickness
+
+    def applyOpticalElement(self, input_wavefront, parameters=None, element_index=None):
+
+        # TODO: n_lenses
+        refraction_index_delta  = self._keywords_at_creation["refraction_index_delta"        ]
+        att_coefficient = self._keywords_at_creation["att_coefficient"               ]
+        n_lenses = self._keywords_at_creation["n_lenses"                      ]
+        error_flag = self._keywords_at_creation["error_flag"                    ]
+        error_file = self._keywords_at_creation["error_file"                    ]
+        error_edge_management = self._keywords_at_creation["error_edge_management"         ]
+
+        output_wavefront = input_wavefront.duplicate()
+        abscissas_on_lens, lens_thickness = self.get_surface_thickness_mesh(input_wavefront=input_wavefront)
+
+        amp_factors = (numpy.exp(-1.0 * att_coefficient * lens_thickness)) ** n_lenses / 2
+        phase_shifts = -1.0 * output_wavefront.get_wavenumber() * refraction_index_delta * lens_thickness * n_lenses
+
+        output_wavefront.rescale_amplitudes(amp_factors)
+        output_wavefront.add_phase_shifts(phase_shifts)
+
+        if error_flag:
+            a = numpy.loadtxt(error_file)  # extrapolation
+            # profile_limits = a[-1, 0] - a[0, 0]
+            profile_limits_projected = a[-1, 0] - a[0, 0]
+            wavefront_dimension = output_wavefront.get_abscissas()[-1] - output_wavefront.get_abscissas()[0]
+            # print("profile deformation dimension: %f m"%(profile_limits))
+            print("profile deformation dimension: %f um" % (1e6 * profile_limits_projected))
+            print("wavefront window dimension: %f um" % (1e6 * wavefront_dimension))
+
+            if wavefront_dimension <= profile_limits_projected:
+                print("Wavefront window inside error profile domain: no action needed")
+            else:
+                if error_edge_management == 0:
+                    print("Profile deformation extrapolated to fit wavefront dimensions")
+                else:
+                    output_wavefront.clip(a[0, 0], a[-1, 0])
+                    print("Wavefront clipped to limits of deformation profile")
+
+        return output_wavefront
+
+
+
+    @classmethod
+    def create_from_keywords(cls,
+                             shape                          =1,
+                             radius                         =0.0005,
+                             lens_aperture                  =0.001,
+                             wall_thickness                 =5e-5,
+                             refraction_index_delta         =5.3e-07,
+                             att_coefficient                =0.00357382,
+                             number_of_refractive_surfaces  =1, # index of wodget!!!
+                             n_lenses                       =1,
+                             error_flag                     =0,
+                             error_file                     ="",
+                             error_edge_management          =0,
+                             write_profile                  ="",
+                             xc                             =0,
+                             ang_rot                        =0,
+                             wt_offset_ffs                  =0,
+                             offset_ffs                     =0,
+                             tilt_ffs                       =0,
+                             wt_offset_bfs                  =0,
+                             offset_bfs                     =0,
+                             tilt_bfs                       =0
+                             ):
+
+
+        keywords_at_creation = {}
+
+        keywords_at_creation["shape"                         ] = shape
+        keywords_at_creation["radius"                        ] = radius
+        keywords_at_creation["lens_aperture"                 ] = lens_aperture
+        keywords_at_creation["wall_thickness"                ] = wall_thickness
+        keywords_at_creation["refraction_index_delta"        ] = refraction_index_delta
+        keywords_at_creation["att_coefficient"               ] = att_coefficient
+        keywords_at_creation["number_of_refractive_surfaces" ] = number_of_refractive_surfaces
+        keywords_at_creation["n_lenses"                      ] = n_lenses
+        keywords_at_creation["error_flag"                    ] = error_flag
+        keywords_at_creation["error_file"                    ] = error_file
+        keywords_at_creation["error_edge_management"         ] = error_edge_management
+        keywords_at_creation["write_profile"                 ] = write_profile
+        keywords_at_creation["xc"                            ] = xc
+        keywords_at_creation["ang_rot"                       ] = ang_rot
+        keywords_at_creation["wt_offset_ffs"                 ] = wt_offset_ffs
+        keywords_at_creation["offset_ffs"                    ] = offset_ffs
+        keywords_at_creation["tilt_ffs"                      ] = tilt_ffs
+        keywords_at_creation["wt_offset_bfs"                 ] = wt_offset_bfs
+        keywords_at_creation["offset_bfs"                    ] = offset_bfs
+        keywords_at_creation["tilt_bfs"                      ] = tilt_bfs
+
+        out = WOLens1D()
+
+        out._keywords_at_creation = keywords_at_creation
+
+        return out
+
+    def to_python_code(self, do_plot=False):
+        if self._keywords_at_creation is None:
+            raise Exception("Python code autogenerated only if created with WOLens.create_from_keywords()")
+
+        txt = ""
+        txt += "\nfrom orangecontrib.esrf.wofry.util.lens import WOLens1D"
+        txt += "\n"
+        txt += "\noptical_element = WOLens1D.create_from_keywords("
+        txt += "\n    shape=%d," % self._keywords_at_creation["shape"]
+        txt += "\n    radius=%g," % self._keywords_at_creation["radius"]
+        txt += "\n    lens_aperture=%g," % self._keywords_at_creation["lens_aperture"]
+        txt += "\n    wall_thickness=%g," % self._keywords_at_creation["wall_thickness"]
+        txt += "\n    refraction_index_delta=%g," % self._keywords_at_creation["refraction_index_delta"]
+        txt += "\n    att_coefficient=%g," % self._keywords_at_creation["att_coefficient"]
+        txt += "\n    number_of_refractive_surfaces=%d," % self._keywords_at_creation["number_of_refractive_surfaces"]
+        txt += "\n    n_lenses=%d," % self._keywords_at_creation["n_lenses"]
+        txt += "\n    error_flag=%d," % self._keywords_at_creation["error_flag"]
+        txt += "\n    error_file='%s'," % self._keywords_at_creation["error_file"]
+        txt += "\n    error_edge_management=%d," % self._keywords_at_creation["error_edge_management"]
+        txt += "\n    write_profile='%s'," % self._keywords_at_creation["write_profile"]
+        txt += "\n    xc=%g," % self._keywords_at_creation["xc"]
+        txt += "\n    ang_rot=%g," % self._keywords_at_creation["ang_rot"]
+        txt += "\n    wt_offset_ffs=%g," % self._keywords_at_creation["wt_offset_ffs"]
+        txt += "\n    offset_ffs=%g," % self._keywords_at_creation["offset_ffs"]
+        txt += "\n    tilt_ffs=%g," % self._keywords_at_creation["tilt_ffs"]
+        txt += "\n    wt_offset_bfs=%g," % self._keywords_at_creation["wt_offset_bfs"]
+        txt += "\n    offset_bfs=%g," % self._keywords_at_creation["offset_bfs"]
+        txt += "\n    tilt_bfs=%g)" % self._keywords_at_creation["tilt_bfs"]
+        txt += "\n"
+        return txt
 
 if __name__ == "__main__":
-    pass
+
+
+    # wolens = WOLens.create_from_keywords()
+    wolens = WOLens1D.create_from_keywords()
+    print(wolens.info())
+    for key in wolens._keywords_at_creation.keys():
+        print(key, wolens._keywords_at_creation[key])
+
+
+    from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
+    input_wavefront = GenericWavefront1D.initialize_wavefront_from_range(x_min=-0.0005, x_max=0.0005,
+                                                                         number_of_points=1000)
+    input_wavefront.set_photon_energy(10000)
+    input_wavefront.set_spherical_wave(radius=13.73, center=0, complex_amplitude=complex(1, 0))
+
+    output_wavefront = wolens.applyOpticalElement(input_wavefront=input_wavefront)
+
+    from srxraylib.plot.gol import plot
+
+    print(">>>>",output_wavefront.get_intensity().max())
+    plot(input_wavefront.get_abscissas(), input_wavefront.get_intensity())
+    plot(output_wavefront.get_abscissas(),output_wavefront.get_intensity())

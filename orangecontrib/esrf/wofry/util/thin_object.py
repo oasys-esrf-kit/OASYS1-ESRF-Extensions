@@ -140,6 +140,7 @@ class WOThinObject1D(WOThinObject):
         a = numpy.loadtxt(self.get_file_with_thickness_mesh())
         xx = a[:,0].copy()
         zz = a[:,1].copy()
+        plot(xx,zz)
         # xx, yy, zz = read_surface_file(self.get_file_with_thickness_mesh())
         if zz.min() < 0: zz -= zz.min()
         #
@@ -162,27 +163,68 @@ if __name__ == "__main__":
 
     import numpy
     from wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D
+    from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
     from srxraylib.plot.gol import plot, plot_image
 
 
-    input_wavefront = GenericWavefront2D.initialize_wavefront_from_range(x_min=-0.0003, x_max=0.0003, y_min=-0.0003,
-                                                                          y_max=0.0003, number_of_points=(400, 200))
-    input_wavefront.set_photon_energy(10000)
-    input_wavefront.set_plane_wave_from_complex_amplitude(complex_amplitude=complex(1, 0))
+    #
+    # 2D
+    #
+    if False:
+        input_wavefront = GenericWavefront2D.initialize_wavefront_from_range(x_min=-0.0003, x_max=0.0003, y_min=-0.0003,
+                                                                              y_max=0.0003, number_of_points=(400, 200))
+        input_wavefront.set_photon_energy(10000)
+        input_wavefront.set_plane_wave_from_complex_amplitude(complex_amplitude=complex(1, 0))
 
-    optical_element = WOThinObject(name='ThinObject',
-                                   file_with_thickness_mesh='/home/srio/Downloads/SRW_M_thk_res_workflow_a_FC_CDn01.dat.h5',
-                                   material='Be')
+        optical_element = WOThinObject(name='ThinObject',
+                                       file_with_thickness_mesh='/home/srio/Downloads/SRW_M_thk_res_workflow_a_FC_CDn01.dat.h5',
+                                       material='Be')
 
-    # no drift in this element
-    output_wavefront = optical_element.applyOpticalElement(input_wavefront)
+        # no drift in this element
+        output_wavefront = optical_element.applyOpticalElement(input_wavefront)
+
+        #
+        # ---- plots -----
+        #
+        plot_image(output_wavefront.get_intensity(), output_wavefront.get_coordinate_x(),
+                   output_wavefront.get_coordinate_y(), aspect='auto', title='OPTICAL ELEMENT NR 1')
+
 
     #
-    # ---- plots -----
+    # 1D
     #
-    plot_image(output_wavefront.get_intensity(), output_wavefront.get_coordinate_x(),
-               output_wavefront.get_coordinate_y(), aspect='auto', title='OPTICAL ELEMENT NR 1')
+
+    if True:
+        input_wavefront = GenericWavefront1D.initialize_wavefront_from_range(x_min=-0.0003, x_max=0.0003,
+                                                                             number_of_points=400)
+        input_wavefront.set_photon_energy(10000)
+        input_wavefront.set_plane_wave_from_complex_amplitude(complex_amplitude=complex(1, 0))
+
+        xx, yy, zz = read_surface_file('/home/srio/Downloads/SRW_M_thk_res_workflow_a_FC_CDn01.dat.h5')
+        if zz.min() < 0: zz -= zz.min()
+        nx, ny = zz.shape
+        x = yy
+        z = zz[nx//2,:]
+        plot(x,z,title="x,z")
+
+        f = open('profile.dat', 'w')
+        for i in range(ny):
+            f.write("%g %g\n" % (x[i], z[i]))
+        f.close()
+        print("File profile.dat written to disk.")
+
+        optical_element = WOThinObject1D(name='ThinObject1D',
+                                       file_with_thickness_mesh='profile.dat',
+                                       material='Be')
 
 
-    o1d = WOThinObject1D()
-    print(o1d.info())
+        print(optical_element.info())
+
+        # no drift in this element
+        output_wavefront = optical_element.applyOpticalElement(input_wavefront)
+
+        #
+        # ---- plots -----
+        #
+        plot(output_wavefront.get_abscissas(), output_wavefront.get_intensity(),
+                   title='OPTICAL ELEMENT NR 1')

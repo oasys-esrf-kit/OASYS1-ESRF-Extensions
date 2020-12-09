@@ -18,14 +18,19 @@ from oasys.util.oasys_util import TriggerIn, TriggerOut, EmittingStream
 from syned.widget.widget_decorator import WidgetDecorator
 
 from orangecontrib.wofry.util.wofry_objects import WofryData
-from orangecontrib.esrf.wofry.widgets.gui.ow_wofry_widget import WofryWidget # TODO: from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
 
 from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
 
 from barc4ro.projected_thickness import proj_thick_1D_crl
 import xraylib
 
-class OWWORealLens1D(WofryWidget):
+from orangecontrib.esrf.wofry.widgets.gui.ow_wofry_widget import WofryWidget # TODO: from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
+from orangecontrib.esrf.wofry.widgets.gui.ow_optical_element_1d import OWWOOpticalElement1D # TODO rom orangecontrib.wofry.widgets.gui.ow_optical_element_1d
+
+from orangecontrib.esrf.wofry.util.lens import WOLens1D
+
+# class OWWORealLens1D(WofryWidget):
+class OWWORealLens1D(OWWOOpticalElement1D):
 
     name = "Lens 1D"
     id = "WofryLens1D"
@@ -67,7 +72,6 @@ class OWWORealLens1D(WofryWidget):
     error_edge_management = Setting(0)
     write_profile_flag = Setting(0)
     write_profile = Setting("profile1D.dat")
-    write_input_wavefront = Setting(0)
 
     image1_path = os.path.join(resources.package_dirname("orangecontrib.esrf.wofry.widgets.gui"), "misc", "Refractor_parameters.png")
 
@@ -91,39 +95,12 @@ class OWWORealLens1D(WofryWidget):
     def __init__(self):
         super().__init__(is_automatic=True, show_view_options=True, show_script_tab=True)
 
+    def draw_specific_box(self):
 
-        #
-        # build control panel
-        #
+        box_refractor = oasysgui.widgetBox(self.tab_bas, "Real Lens Setting", addSpace=False, orientation="vertical",
+                                           height=350)
 
-        button_box = oasysgui.widgetBox(self.controlArea, "", addSpace=False, orientation="horizontal")
 
-        button = gui.button(button_box, self, "Propagate Wavefront", callback=self.propagate_wavefront)
-        font = QFont(button.font())
-        font.setBold(True)
-        button.setFont(font)
-        palette = QPalette(button.palette()) # make a copy of the palette
-        palette.setColor(QPalette.ButtonText, QColor('Dark Blue'))
-        button.setPalette(palette) # assign new palette
-        button.setFixedHeight(45)
-
-        gui.separator(self.controlArea)
-
-        self.controlArea.setFixedWidth(self.CONTROL_AREA_WIDTH)
-
-        tabs_setting = oasysgui.tabWidget(self.controlArea)
-        tabs_setting.setFixedHeight(self.TABS_AREA_HEIGHT + 50)
-        tabs_setting.setFixedWidth(self.CONTROL_AREA_WIDTH-5)
-
-        self.tab_sou = oasysgui.createTabPage(tabs_setting, "Settings")
-        self.tab_err = oasysgui.createTabPage(tabs_setting, "Errors")
-        self.tab_mis = oasysgui.createTabPage(tabs_setting, "Misalignments")
-
-        box_refractor = oasysgui.widgetBox(self.tab_sou, "1D Lens Settings", addSpace=False, orientation="vertical")
-        box_errors = oasysgui.widgetBox(self.tab_err, "1D Lens error profile", addSpace=False, orientation="vertical")
-        box_misaligments = oasysgui.widgetBox(self.tab_mis, "Typical lens misalignments (only for parabolic shape)", addSpace=False, orientation="vertical")
-
-        # Tab refractor: basic lens properties _________________________________________________________________________
 
         gui.comboBox(box_refractor, self, "shape", label="Lens shape", labelWidth=350,
                      items=["Flat", "Parabolic", "Circular"],
@@ -178,9 +155,6 @@ class OWWORealLens1D(WofryWidget):
         oasysgui.lineEdit(self.box_file_out, self, "write_profile", "File name",
                             labelWidth=200, valueType=str, orientation="horizontal")
 
-        gui.comboBox(box_refractor, self, "write_input_wavefront", label="Input wf to file (for script)",
-                     items=["No", "Yes [wavefront_input.h5]"], sendSelectedValue=False, orientation="horizontal")
-
         # Help figure
         self.figure_box1 = oasysgui.widgetBox(box_refractor, "Principal parabolic lens parameters", addSpace=False, orientation="horizontal")
         label1 = QLabel("")
@@ -188,6 +162,14 @@ class OWWORealLens1D(WofryWidget):
         label1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         label1.setPixmap(QPixmap(self.image1_path))
         self.figure_box1.layout().addWidget(label1)
+
+
+        #
+        #
+        #
+
+        self.tab_err = oasysgui.createTabPage(self.tabs_setting, "Errors")
+        box_errors = oasysgui.widgetBox(self.tab_err, "1D Lens error profile", addSpace=False, orientation="vertical")
 
         # Tab errors: error profile _________________________________________________________________________
 
@@ -209,6 +191,14 @@ class OWWORealLens1D(WofryWidget):
                      callback=self.set_visible,
                      sendSelectedValue=False, orientation="horizontal")
 
+
+        #
+        #
+        #
+        self.tab_mis = oasysgui.createTabPage(self.tabs_setting, "Misalignments")
+
+        box_misaligments = oasysgui.widgetBox(self.tab_mis, "Typical lens misalignments (only for parabolic shape)",
+                                              addSpace=False, orientation="vertical")
 
         # Tab Misalignments: Typical lens misalignments for Barc4ro_temporarily_only_for_parabolic______________________
 
@@ -267,6 +257,7 @@ class OWWORealLens1D(WofryWidget):
         self.figure_box2.layout().addWidget(label2)
 
         self.set_visible()
+
 
     def set_visible(self):
         self.error_profile.setVisible(self.error_flag)
@@ -350,18 +341,18 @@ class OWWORealLens1D(WofryWidget):
     def receive_syned_data(self):
         raise Exception(NotImplementedError)
 
-    def set_input(self, wofry_data):
-
-        if not wofry_data is None:
-            if isinstance(wofry_data, WofryData):
-                self.input_data = wofry_data
-            else:
-                self.input_data = WofryData(wavefront=wofry_data)
-
-            if self.is_automatic_execution:
-                self.propagate_wavefront()
-        else:
-            self.input_data = None
+    # def set_input(self, wofry_data):
+    #
+    #     if not wofry_data is None:
+    #         if isinstance(wofry_data, WofryData):
+    #             self.input_data = wofry_data
+    #         else:
+    #             self.input_data = WofryData(wavefront=wofry_data)
+    #
+    #         if self.is_automatic_execution:
+    #             self.propagate_wavefront()
+    #     else:
+    #         self.input_data = None
 
 
 
@@ -387,16 +378,7 @@ class OWWORealLens1D(WofryWidget):
 
                 if self.IS_DEVELOP: raise exception
 
-    def propagate_wavefront(self):
-        self.progressBarInit()
-
-        self.wofry_output.setText("")
-        sys.stdout = EmittingStream(textWritten=self.writeStdOut)
-
-        self.check_fields()
-
-        if self.input_data is None: raise Exception("No Input Wavefront")
-
+    def get_optical_element(self):
         if self.error_flag == 0:
             error_file = ""
         else:
@@ -454,9 +436,7 @@ class OWWORealLens1D(WofryWidget):
         print("Refracion index delta = %g " % (refraction_index_delta))
         print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
 
-
-        output_wavefront, abscissas_on_lens, lens_thickness = self.calculate_output_wavefront_after_lens1D(
-                    self.input_data.get_wavefront(),
+        return WOLens1D.create_from_keywords(
                     shape=self.shape,
                     radius=self.radius,
                     lens_aperture = self.lens_aperture,
@@ -478,379 +458,132 @@ class OWWORealLens1D(WofryWidget):
                     offset_bfs=offset_bfs,
                     tilt_bfs=tilt_bfs)
 
-        self.progressBarSet(50)
-        if self.write_input_wavefront:
-            self.input_data.get_wavefront().save_h5_file("wavefront_input.h5", subgroupname="wfr", intensity=True,
-                                                         phase=True, overwrite=True, verbose=True)
 
-        # script #TODO Add all the new variables to the dictionary
+    # def propagate_wavefront(self):
+    #     self.progressBarInit()
+    #
+    #     self.wofry_output.setText("")
+    #     sys.stdout = EmittingStream(textWritten=self.writeStdOut)
+    #
+    #     self.check_fields()
+    #
+    #     if self.input_data is None: raise Exception("No Input Wavefront")
+    #
+    #     wolens = self.get_optical_element()
+    #
+    #     input_wavefront = self.input_data.get_wavefront()
+    #     output_wavefront = wolens.applyOpticalElement(input_wavefront)
+    #
+    #
+    #     self.progressBarSet(50)
+    #
+    #     # script #TODO Add all the new variables to the dictionary
+    #
+    #
+    #     if self.view_type > 0:
+    #         abscissas_on_lens, lens_thickness = wolens.get_surface_thickness_mesh(output_wavefront)
+    #         self.do_plot_wavefront(output_wavefront, abscissas_on_lens=abscissas_on_lens, lens_thickness=lens_thickness)
+    #
+    #     beamline = self.input_data.get_beamline().duplicate()
+    #
+    #     self.progressBarFinished()
+    #
+    #     self.send("WofryData", WofryData(beamline=beamline, wavefront=output_wavefront))
+    #     self.send("Trigger", TriggerIn(new_object=True))
 
-        dict_parameters = {"shape": self.shape,
-                           "radius": self.radius,
-                           "wall_thickness": self.wall_thickness,
-                           "lens_aperture": self.lens_aperture,
-                           "number_of_refractive_surfaces": self.number_of_refractive_surfaces,
-                           "n_lenses": self.n_lenses,
-                           "refraction_index_delta": refraction_index_delta,
-                           "att_coefficient": att_coefficient,
-                           "error_flag": self.error_flag,
-                           "error_file": error_file,
-                           "error_edge_management": self.error_edge_management,
-                           "write_profile": '"' + write_profile + '"',
-                           "xc": xc,
-                           "ang_rot": ang_rot,
-                           "wt_offset_ffs": wt_offset_ffs,
-                           "offset_ffs": offset_ffs,
-                           "tilt_ffs": tilt_ffs,
-                           "wt_offset_bfs": wt_offset_bfs,
-                           "offset_bfs": offset_bfs,
-                           "tilt_bfs": tilt_bfs}
+    #
+    # def do_plot_results(self, progressBarValue): # required by parent
+    #     pass
 
-        script_template = self.script_template_output_wavefront_from_radius()
-        self.wofry_script.set_code(script_template.format_map(dict_parameters))
+    # def do_plot_wavefront(self, wavefront1D, abscissas_on_lens=None, lens_thickness=None, progressBarValue=80):
+    #
+    #     if abscissas_on_lens is None:
+    #         abscissas_on_lens = wavefront1D.get_abscissas()
+    #
+    #     if lens_thickness is None:
+    #         lens_thickness = wavefront1D.get_abscissas() * 0
+    #
+    #     if not self.input_data is None:
+    #
+    #         self.plot_data1D(x=1e6*wavefront1D.get_abscissas(),
+    #                          y=wavefront1D.get_intensity(),
+    #                          progressBarValue=progressBarValue,
+    #                          tabs_canvas_index=0,
+    #                          plot_canvas_index=0,
+    #                          calculate_fwhm=True,
+    #                          title=self.titles[0],
+    #                          xtitle="Spatial Coordinate [$\mu$m]",
+    #                          ytitle="Intensity")
+    #
+    #         self.plot_data1D(x=1e6*wavefront1D.get_abscissas(),
+    #                          y=wavefront1D.get_phase(from_minimum_intensity=0.1,unwrap=1),
+    #                          progressBarValue=progressBarValue + 10,
+    #                          tabs_canvas_index=1,
+    #                          plot_canvas_index=1,
+    #                          calculate_fwhm=False,
+    #                          title=self.titles[1],
+    #                          xtitle="Spatial Coordinate [$\mu$m]",
+    #                          ytitle="Phase [unwrapped, for intensity > 10% of peak] (rad)")
+    #
+    #         self.plot_data1D(x=1e6*wavefront1D.get_abscissas(),
+    #                          y=numpy.real(wavefront1D.get_complex_amplitude()),
+    #                          progressBarValue=progressBarValue + 10,
+    #                          tabs_canvas_index=2,
+    #                          plot_canvas_index=2,
+    #                          calculate_fwhm=False,
+    #                          title=self.titles[2],
+    #                          xtitle="Spatial Coordinate [$\mu$m]",
+    #                          ytitle="Real(Amplitude)")
+    #
+    #         self.plot_data1D(x=1e6*wavefront1D.get_abscissas(),
+    #                          y=numpy.imag(wavefront1D.get_complex_amplitude()),
+    #                          progressBarValue=progressBarValue + 10,
+    #                          tabs_canvas_index=3,
+    #                          plot_canvas_index=3,
+    #                          calculate_fwhm=False,
+    #                          title=self.titles[3],
+    #                          xtitle="Spatial Coordinate [$\mu$m]",
+    #                          ytitle="Imag(Amplitude)")
+    #
+    #         self.plot_data1D(x=abscissas_on_lens, #TODO check how is possible to plot both refractive surfaces
+    #                          y=lens_thickness*1e6, # in microns
+    #                          progressBarValue=progressBarValue + 10,
+    #                          tabs_canvas_index=4,
+    #                          plot_canvas_index=4,
+    #                          calculate_fwhm=False,
+    #                          title=self.titles[4],
+    #                          xtitle="Spatial Coordinate along o.e. [m]",
+    #                          ytitle="Total lens thickness [$\mu$m]")
+    #
+    #         self.plot_canvas[0].resetZoom()
 
-        if self.view_type > 0:
-            self.do_plot_wavefront(output_wavefront, abscissas_on_lens, lens_thickness)
+    def do_plot_results(self, progressBarValue=80): # OVERWRITTEN
 
-        beamline = self.input_data.get_beamline().duplicate()
+        super().do_plot_results(progressBarValue)
+        if not self.view_type == 0:
+            if not self.wavefront_to_plot is None:
 
-        self.progressBarFinished()
+                self.progressBarSet(progressBarValue)
 
-        self.send("WofryData", WofryData(beamline=beamline, wavefront=output_wavefront))
-        self.send("Trigger", TriggerIn(new_object=True))
+                wo_lens = self.get_optical_element()
+                abscissas_on_lens, lens_thickness = wo_lens.get_surface_thickness_mesh(self.wavefront_to_plot)
 
-    @classmethod
-    def calculate_output_wavefront_after_lens1D(cls,
-                                                input_wavefront,
-                                                shape=1,
-                                                radius=0.0005,
-                                                lens_aperture=0.001,
-                                                wall_thickness=0.0002,
-                                                refraction_index_delta=0.99999947,
-                                                att_coefficient=0.00357382,
-                                                number_of_refractive_surfaces=2,
-                                                n_lenses=1,
-                                                error_flag=0,
-                                                error_file="",
-                                                error_edge_management=0,
-                                                write_profile="",
-                                                xc=0,
-                                                ang_rot=0,
-                                                wt_offset_ffs=0,
-                                                offset_ffs=0,
-                                                tilt_ffs=0,
-                                                wt_offset_bfs=0,
-                                                offset_bfs=0,
-                                                tilt_bfs=0):
+                self.plot_data1D(x=abscissas_on_lens, #TODO check how is possible to plot both refractive surfaces
+                                 y=lens_thickness*1e6, # in microns
+                                 progressBarValue=progressBarValue + 10,
+                                 tabs_canvas_index=4,
+                                 plot_canvas_index=4,
+                                 calculate_fwhm=False,
+                                 title=self.titles[4],
+                                 xtitle="Spatial Coordinate along o.e. [m]",
+                                 ytitle="Total lens thickness [$\mu$m]")
 
-        photon_energy = input_wavefront.get_photon_energy()
-        abscissas = input_wavefront.get_abscissas().copy()
-        output_wavefront = input_wavefront.duplicate()
-
-
-        abscissas_on_lens = abscissas
-
-        if number_of_refractive_surfaces == 0:
-            n_ref_lens = 1
-        elif number_of_refractive_surfaces == 1:
-            n_ref_lens = 2
-        else:
-            raise Exception("Error while reading the number of refractive lenses")
-
-        if shape == 0: # Flat
-            lens_thickness = numpy.full_like(abscissas_on_lens, wall_thickness)
-
-        elif shape == 1: # Parabolic
-
-            focus_length = radius / (n_lenses * n_ref_lens * refraction_index_delta)
-
-            print(f"Ideal focal length of {n_lenses} paraboloidal lenses: {round(focus_length, 2)} m for {photon_energy} eV photon energy")
-
-            # Implementation of barc4ro
-            x_2, lens_thickness = proj_thick_1D_crl(shape, lens_aperture, radius, _n=n_ref_lens,
-                                                _wall_thick=wall_thickness, _xc=xc, _nx=100, _ang_rot_ex=ang_rot,
-                                                _offst_ffs_x=offset_ffs, _tilt_ffs_x=tilt_ffs, _wt_offst_ffs=wt_offset_ffs,
-                                                _offst_bfs_x=offset_bfs, _tilt_bfs_x=tilt_bfs, _wt_offst_bfs=wt_offset_bfs,
-                                                isdgr=False, project=True, _axis=abscissas)
-
-        elif shape == 2: # Circular
-            lens_thickness = (numpy.abs(radius) - numpy.sqrt(radius ** 2 - abscissas_on_lens ** 2)) + wall_thickness
-            bound = 0.5 * lens_aperture
-            if radius < bound: bound = radius
-            for i, x in enumerate(abscissas_on_lens):
-                if (x < -bound) or (x > bound):
-                    lens_thickness[i] = 0
-            for i, x in enumerate(abscissas_on_lens):
-                if (x < -bound) or (x > bound):
-                    lens_thickness[i] = lens_thickness.max()
-
-
-        if error_flag:
-            a = numpy.loadtxt(error_file) # extrapolation
-            if error_edge_management == 0:
-                finterpolate = interpolate.interp1d(a[:, 0], a[:, 1], fill_value="extrapolate")  # fill_value=(0,0),bounds_error=False)
-            elif error_edge_management == 1:
-                finterpolate = interpolate.interp1d(a[:, 0], a[:, 1], fill_value=(0,0), bounds_error=False)
-            else: # crop
-                raise Exception("Bad value of error_edge_management")
-            thickness_interpolated = finterpolate(abscissas_on_lens)
-            lens_thickness += thickness_interpolated
-
-
-        amp_factors = (numpy.exp(-1.0 * att_coefficient * lens_thickness)) ** n_lenses/2
-        phase_shifts = -1.0 * output_wavefront.get_wavenumber() * refraction_index_delta * lens_thickness * n_lenses
-
-        output_wavefront.rescale_amplitudes(amp_factors)
-        output_wavefront.add_phase_shifts(phase_shifts)
-
-        if error_flag:
-            profile_limits_projected = a[-1,0] - a[0,0]
-            wavefront_dimension = output_wavefront.get_abscissas()[-1] - output_wavefront.get_abscissas()[0]
-            print("profile deformation dimension: %f um"%(1e6 * profile_limits_projected))
-            print("wavefront window dimension: %f um" % (1e6 * wavefront_dimension))
-
-            if wavefront_dimension <= profile_limits_projected:
-                print("\nWavefront window inside error profile domain: no action needed")
-            else:
-                if error_edge_management == 0:
-                    print("\nProfile deformation extrapolated to fit wavefront dimensions")
-                else:
-                    output_wavefront.clip(a[0,0] ,a[-1,0])
-                    print("\nWavefront clipped to limits of deformation profile")
-
-        # output files
-        if write_profile != "":
-            f = open(write_profile, "w")
-            for i in range(lens_thickness.size):
-                f.write("%g %g\n"%(abscissas_on_lens[i], lens_thickness[i]))
-            f.close()
-            print("File %s written to disk." % write_profile)
-
-        return output_wavefront, abscissas_on_lens, lens_thickness
-
-    # TODO Rewrite all the output Python script
-    # warning: pay attention to the double backslash in \\n
-    def script_template_output_wavefront_from_radius(self):
-        return \
-"""import numpy
-from scipy import interpolate
-from barc4ro.projected_thickness import proj_thick_1D_crl
-
-def calculate_output_wavefront_after_lens1D(input_wavefront,
-                                            shape=1,
-                                            radius=0.0005,
-                                            lens_aperture=0.001,
-                                            wall_thickness=0.0002,
-                                            refraction_index_delta=0.99999947,
-                                            att_coefficient=0.00357382,
-                                            number_of_refractive_surfaces=2,
-                                            n_lenses=1,
-                                            error_flag=0,
-                                            error_file="",
-                                            error_edge_management=0,
-                                            write_profile="",
-                                            xc=0,
-                                            ang_rot=0,
-                                            wt_offset_ffs=0,
-                                            offset_ffs=0,
-                                            tilt_ffs=0,
-                                            wt_offset_bfs=0,
-                                            offset_bfs=0,
-                                            tilt_bfs=0):
-
-
-    photon_energy = input_wavefront.get_photon_energy()
-    abscissas = input_wavefront.get_abscissas().copy()
-    output_wavefront = input_wavefront.duplicate()
-
-
-    abscissas_on_lens = abscissas
-
-    if number_of_refractive_surfaces == 0:
-        n_ref_lens = 1
-    elif number_of_refractive_surfaces == 1:
-        n_ref_lens = 2
-    else:
-        raise Exception("Error while reading the number of refractive lenses")
-
-    if shape == 0: # Flat
-        lens_thickness = numpy.full_like(abscissas_on_lens, wall_thickness)
-
-    elif shape == 1: # Parabolic
-
-        focus_length = radius / (n_lenses * n_ref_lens * refraction_index_delta)
-
-
-        # Implementation of barc4ro
-        x_2, lens_thickness = proj_thick_1D_crl(shape, lens_aperture, radius,
-                                            _n=n_ref_lens,
-                                            _wall_thick=wall_thickness,
-                                            _xc=xc,
-                                            _nx=100,
-                                            _ang_rot_ex=ang_rot,
-                                            _offst_ffs_x=offset_ffs,
-                                            _tilt_ffs_x=tilt_ffs,
-                                            _wt_offst_ffs=wt_offset_ffs,
-                                            _offst_bfs_x=offset_bfs,
-                                            _tilt_bfs_x=tilt_bfs,
-                                            _wt_offst_bfs=wt_offset_bfs,
-                                            isdgr=False,
-                                            project=True,
-                                            _axis=abscissas)
-        
-
-    elif shape == 2: # Circular
-        lens_thickness = n_ref_lens * (numpy.abs(radius) - numpy.sqrt(radius ** 2 - abscissas_on_lens ** 2)) + wall_thickness
-        bound = 0.5 * lens_aperture
-        if radius < bound: bound = radius
-        for i, x in enumerate(abscissas_on_lens):
-            if (x < -bound) or (x > bound):
-                lens_thickness[i] = 0
-        for i, x in enumerate(abscissas_on_lens):
-            if (x < -bound) or (x > bound):
-                lens_thickness[i] = lens_thickness.max()
-
-
-    if error_flag:
-        a = numpy.loadtxt(error_file) # extrapolation
-        if error_edge_management == 0:
-            finterpolate = interpolate.interp1d(a[:, 0], a[:, 1], fill_value="extrapolate")  # fill_value=(0,0),bounds_error=False)
-        elif error_edge_management == 1:
-            finterpolate = interpolate.interp1d(a[:, 0], a[:, 1], fill_value=(0,0), bounds_error=False)
-        else: # crop
-            raise Exception("Bad value of error_edge_management")
-        thickness_interpolated = finterpolate(abscissas_on_lens)
-        lens_thickness += thickness_interpolated
-
-
-    amp_factors = (numpy.exp(-1.0 * att_coefficient * lens_thickness)) ** n_lenses/2
-    phase_shifts = -1.0 * output_wavefront.get_wavenumber() * refraction_index_delta * lens_thickness * n_lenses
-
-    output_wavefront.rescale_amplitudes(amp_factors)
-    output_wavefront.add_phase_shifts(phase_shifts)
-
-    if error_flag:
-        # profile_limits = a[-1, 0] - a[0, 0]
-        profile_limits_projected = a[-1,0] - a[0,0]
-        wavefront_dimension = output_wavefront.get_abscissas()[-1] - output_wavefront.get_abscissas()[0]
-        # print("profile deformation dimension: %f m"%(profile_limits))
-        print("profile deformation dimension: %f um"%(1e6 * profile_limits_projected))
-        print("wavefront window dimension: %f um" % (1e6 * wavefront_dimension))
-
-        if wavefront_dimension <= profile_limits_projected:
-            print("Wavefront window inside error profile domain: no action needed")
-        else:
-            if error_edge_management == 0:
-                print("Profile deformation extrapolated to fit wavefront dimensions")
-            else:
-                output_wavefront.clip(a[0,0] ,a[-1,0])
-                print("Wavefront clipped to limits of deformation profile")
-
-    # output files
-    if write_profile != "":
-        f = open(write_profile, "w")
-        for i in range(lens_thickness.size):
-            f.write("%g %g\\n"%(abscissas_on_lens[i], lens_thickness[i]))
-        f.close()
-        print("File %s written to disk." % write_profile)
-
-    return output_wavefront, abscissas_on_lens, lens_thickness
-#
-# main
-#
-from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
-input_wavefront = GenericWavefront1D.load_h5_file("wavefront_input.h5","wfr")
-output_wavefront, abscissas_on_lens, lens_thickness = calculate_output_wavefront_after_lens1D(input_wavefront,
-                        shape={shape},
-                        radius={radius},
-                        lens_aperture={lens_aperture},
-                        wall_thickness={wall_thickness},
-                        refraction_index_delta={refraction_index_delta},
-                        att_coefficient={att_coefficient},
-                        number_of_refractive_surfaces={number_of_refractive_surfaces},
-                        n_lenses = {n_lenses},
-                        error_flag= {error_flag},
-                        error_file="{error_file}",
-                        error_edge_management={error_edge_management},
-                        write_profile={write_profile},
-                        xc={xc},
-                        ang_rot={ang_rot},
-                        wt_offset_ffs={wt_offset_ffs},
-                        offset_ffs={offset_ffs},
-                        tilt_ffs={tilt_ffs},
-                        wt_offset_bfs={wt_offset_bfs},
-                        offset_bfs={offset_bfs},
-                        tilt_bfs={tilt_bfs})
-
-                    
-from srxraylib.plot.gol import plot
-plot(output_wavefront.get_abscissas(),output_wavefront.get_intensity())
-"""
-    def do_plot_results(self, progressBarValue): # required by parent
-        pass
-
-    def do_plot_wavefront(self, wavefront1D, abscissas_on_lens, lens_thickness, progressBarValue=80):
-
-        if not self.input_data is None:
-
-            self.plot_data1D(x=1e6*wavefront1D.get_abscissas(),
-                             y=wavefront1D.get_intensity(),
-                             progressBarValue=progressBarValue,
-                             tabs_canvas_index=0,
-                             plot_canvas_index=0,
-                             calculate_fwhm=True,
-                             title=self.titles[0],
-                             xtitle="Spatial Coordinate [$\mu$m]",
-                             ytitle="Intensity")
-
-            self.plot_data1D(x=1e6*wavefront1D.get_abscissas(),
-                             y=wavefront1D.get_phase(from_minimum_intensity=0.1,unwrap=1),
-                             progressBarValue=progressBarValue + 10,
-                             tabs_canvas_index=1,
-                             plot_canvas_index=1,
-                             calculate_fwhm=False,
-                             title=self.titles[1],
-                             xtitle="Spatial Coordinate [$\mu$m]",
-                             ytitle="Phase [unwrapped, for intensity > 10% of peak] (rad)")
-
-            self.plot_data1D(x=1e6*wavefront1D.get_abscissas(),
-                             y=numpy.real(wavefront1D.get_complex_amplitude()),
-                             progressBarValue=progressBarValue + 10,
-                             tabs_canvas_index=2,
-                             plot_canvas_index=2,
-                             calculate_fwhm=False,
-                             title=self.titles[2],
-                             xtitle="Spatial Coordinate [$\mu$m]",
-                             ytitle="Real(Amplitude)")
-
-            self.plot_data1D(x=1e6*wavefront1D.get_abscissas(),
-                             y=numpy.imag(wavefront1D.get_complex_amplitude()),
-                             progressBarValue=progressBarValue + 10,
-                             tabs_canvas_index=3,
-                             plot_canvas_index=3,
-                             calculate_fwhm=False,
-                             title=self.titles[3],
-                             xtitle="Spatial Coordinate [$\mu$m]",
-                             ytitle="Imag(Amplitude)")
-
-            self.plot_data1D(x=abscissas_on_lens, #TODO check how is possible to plot both refractive surfaces
-                             y=lens_thickness*1e6, # in microns
-                             progressBarValue=progressBarValue + 10,
-                             tabs_canvas_index=4,
-                             plot_canvas_index=4,
-                             calculate_fwhm=False,
-                             title=self.titles[4],
-                             xtitle="Spatial Coordinate along o.e. [m]",
-                             ytitle="Total lens thickness [$\mu$m]")
-
-            self.plot_canvas[0].resetZoom()
-
+                self.progressBarFinished()
 
 
 if __name__ == '__main__':
 
     from PyQt5.QtWidgets import QApplication
-
 
     def create_wavefront():
         #
@@ -863,10 +596,30 @@ if __name__ == '__main__':
         input_wavefront.set_spherical_wave(radius=13.73, center=0, complex_amplitude=complex(1, 0))
         return input_wavefront
 
+    def get_example_wofry_data():
+        from wofryimpl.propagator.light_source import WOLightSource
+        from wofryimpl.beamline.beamline import WOBeamline
+        from orangecontrib.wofry.util.wofry_objects import WofryData
+
+        light_source = WOLightSource(dimension=1,
+                                     kind_of_wave=1,
+                                     initialize_from=0,
+                                     range_from_h=-0.0005,
+                                     range_to_h=0.0005,
+                                     range_from_v=-0.0005,
+                                     range_to_v=0.0005,
+                                     number_of_points_h=1000,
+                                     number_of_points_v=1,
+                                     energy=10000.0,
+                                     radius=13.73,
+                                     )
+        return WofryData(wavefront=light_source.get_wavefront(),
+                           beamline=WOBeamline(light_source=light_source))
+
     app = QApplication([])
     ow = OWWORealLens1D()
-    ow.set_input(create_wavefront())
-
+    # ow.set_input(create_wavefront())
+    ow.set_input(get_example_wofry_data())
     # ow.receive_dabam_profile(numpy.array([[-1.50,0],[1.50,0]]))
 
     ow.propagate_wavefront()

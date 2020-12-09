@@ -1,6 +1,6 @@
 #from syned.beamline.optical_element_with_two_surface_shapes import OpticalElementsWithTwoSurfaceShapes
 from orangecontrib.esrf.syned.util.optical_element_with_two_surface_shapes import OpticalElementsWithTwoSurfaceShapes
-
+from syned.beamline.shape import Plane
 
 class Lens(OpticalElementsWithTwoSurfaceShapes):
     def __init__(self,
@@ -33,3 +33,12 @@ class Lens(OpticalElementsWithTwoSurfaceShapes):
 
     def get_material(self):
         return self._material
+
+    def get_boundary_shape(self):
+        return self._boundary_shape
+
+    def get_surface_shape1(self):
+        return self.get_surface_shape(index=1)
+
+    def get_surface_shape2(self):
+        return self.get_surface_shape(index=2)
