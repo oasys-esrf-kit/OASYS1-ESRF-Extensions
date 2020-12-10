@@ -20,7 +20,7 @@ from orangecontrib.wofry.widgets.gui.ow_optical_element import OWWOOpticalElemen
 
 class OWWOThinObjectCorrector2D(OWWOOpticalElement):
 
-    name = "ThinObjectCorrector"
+    name = "ThinObjectCorrector2D"
     description = "Wofry: Thin Object Corrector 2D"
     icon = "icons/lenscorrector2d.png"
     priority = 35

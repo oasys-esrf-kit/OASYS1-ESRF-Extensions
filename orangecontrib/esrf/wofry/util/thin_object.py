@@ -80,6 +80,17 @@ class WOThinObject(ThinObject, OpticalElementDecorator):
 
         return refraction_index_delta, att_coefficient
 
+    def get_surface_thickness_mesh(self, wavefront):
+        xx, yy, zz = read_surface_file(self.get_file_with_thickness_mesh())
+
+        if zz.min() < 0: zz -= zz.min()
+
+        f = interp2d(xx, yy, zz, kind='linear', bounds_error=False, fill_value=0)
+        x = wavefront.get_coordinate_x()
+        y = wavefront.get_coordinate_y()
+        interpolated_profile = f(x, y)
+        return x, y, interpolated_profile
+
     def applyOpticalElement(self, wavefront, parameters=None, element_index=None):
         # return wavefront
 
@@ -90,13 +101,16 @@ class WOThinObject(ThinObject, OpticalElementDecorator):
 
         refraction_index_delta, att_coefficient = self.get_refraction_index(photon_energy)
 
-        xx, yy, zz = read_surface_file(self.get_file_with_thickness_mesh())
-        if zz.min() < 0: zz -= zz.min()
+        # xx, yy, zz = read_surface_file(self.get_file_with_thickness_mesh())
+        # xx, yy, zz = self.get_surface_thickness_mesh()
+        # if zz.min() < 0: zz -= zz.min()
+        #
+        # f = interp2d(xx, yy, zz, kind='linear', bounds_error=False, fill_value=0)
+        # x = wavefront.get_coordinate_x()
+        # y = wavefront.get_coordinate_y()
+        # interpolated_profile = f(x, y)
 
-        f = interp2d(xx, yy, zz, kind='linear', bounds_error=False, fill_value=0)
-        x = wavefront.get_coordinate_x()
-        y = wavefront.get_coordinate_y()
-        interpolated_profile = f(x, y)
+        x, y, interpolated_profile = self.get_surface_thickness_mesh(wavefront)
 
         amp_factors = numpy.sqrt(numpy.exp(-1.0 * att_coefficient * interpolated_profile))
         phase_shifts = -1.0 * wavefront.get_wavenumber() * refraction_index_delta * interpolated_profile
@@ -117,15 +131,64 @@ class WOThinObject(ThinObject, OpticalElementDecorator):
         return txt
 
 
-class WOThinObject1D(WOThinObject):
+class WOThinObject1D(ThinObject):
     def __init__(self,
                  name="Undefined",
                  file_with_thickness_mesh="",
-                 material=""):
+                 material="",
+                 refraction_index_delta=1e-07,
+                 att_coefficient=0.0,
+                 ):
         super().__init__(
                       name=name,
                       file_with_thickness_mesh=file_with_thickness_mesh,
                       material=material)
+
+        self._refraction_index_delta = refraction_index_delta
+        self._att_coefficient = att_coefficient
+
+    def get_surface_thickness_mesh(self, wavefront):
+        a = numpy.loadtxt(self.get_file_with_thickness_mesh())
+        xx = a[:,0].copy()
+        zz = a[:,1].copy()
+
+        if zz.min() < 0: zz -= zz.min()
+        x = wavefront.get_abscissas()
+        interpolated_profile = numpy.interp(x, xx, zz)
+        return x, interpolated_profile
+
+    def get_refraction_index(self, photon_energy=10000.0):
+
+        wave_length = codata.h * codata.c / codata.e / photon_energy
+
+        if self.get_material() == "External": # Be
+             return self._refraction_index_delta, \
+                    self._att_coefficient
+
+        if self.get_material() == "Be": # Be
+            element = "Be"
+            density = xraylib.ElementDensity(4)
+        elif self.get_material() == "Al": # Al
+            element = "Al"
+            density = xraylib.ElementDensity(13)
+        elif self.get_material() == "Diamond": # Diamond
+            element = "C"
+            density = 3.51
+        else:
+            raise Exception("Bad material: " + self.get_material())
+
+        refraction_index = xraylib.Refractive_Index(element, photon_energy/1000, density)
+        refraction_index_delta = 1 - refraction_index.real
+        att_coefficient = 4*numpy.pi * (xraylib.Refractive_Index(element, photon_energy/1000, density)).imag / wave_length
+
+        print("\n\n\n ==========  parameters recovered from xraylib : ")
+        print("Element: %s" % element)
+        print("        density = %g " % density)
+        print("Photon energy = %g eV" % (photon_energy))
+        print("Refracion index delta = %g " % (refraction_index_delta))
+        print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
+
+        return refraction_index_delta, att_coefficient
 
     def applyOpticalElement(self, wavefront, parameters=None, element_index=None):
         # return wavefront
@@ -137,18 +200,7 @@ class WOThinObject1D(WOThinObject):
 
         refraction_index_delta, att_coefficient = self.get_refraction_index(photon_energy)
 
-        a = numpy.loadtxt(self.get_file_with_thickness_mesh())
-        xx = a[:,0].copy()
-        zz = a[:,1].copy()
-        plot(xx,zz)
-        # xx, yy, zz = read_surface_file(self.get_file_with_thickness_mesh())
-        if zz.min() < 0: zz -= zz.min()
-        #
-        # f = interp2d(xx, yy, zz, kind='linear', bounds_error=False, fill_value=0)
-        x = wavefront.get_abscissas()
-
-        interpolated_profile = numpy.interp(x, xx, zz)
-        
+        x, interpolated_profile = self.get_surface_thickness_mesh(wavefront)
         #
         amp_factors = numpy.sqrt(numpy.exp(-1.0 * att_coefficient * interpolated_profile))
         phase_shifts = -1.0 * wavefront.get_wavenumber() * refraction_index_delta * interpolated_profile
@@ -158,6 +210,20 @@ class WOThinObject1D(WOThinObject):
         output_wavefront.add_phase_shifts(phase_shifts)
 
         return output_wavefront
+
+    def to_python_code(self, data=None):
+        txt  = ""
+        txt += "\nfrom orangecontrib.esrf.wofry.util.thin_object import WOThinObject1D #TODO update"
+        txt += "\n"
+        if self.get_material() == "External":
+            txt += "\noptical_element = WOThinObject1D(name='%s',file_with_thickness_mesh='%s',material='%s',refraction_index_delta=%g,att_coefficient=%g)" % \
+                   (self.get_name(), self.get_file_with_thickness_mesh(), self.get_material(), self._refraction_index_delta, self._att_coefficient)
+        else:
+            txt += "\noptical_element = WOThinObject1D(name='%s',file_with_thickness_mesh='%s',material='%s')" % \
+                   (self.get_name(), self.get_file_with_thickness_mesh(), self.get_material())
+
+        txt += "\n"
+        return txt
 
 if __name__ == "__main__":
 

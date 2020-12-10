@@ -75,7 +75,7 @@ class OWWOOpticalElement1D(WofryWidget, WidgetDecorator):
     wavefront_to_plot = None
 
     propagators_list = ["Fresnel", "Fresnel (Convolution)", "Fraunhofer", "Integral", "Fresnel Zoom","Fresnel Zoom Scaled"]
-    plot_titles = ["Wavefront 1D Intensity", "Wavefront 1D Phase","Wavefront Real(Amplitude)","Wavefront Imag(Amplitude)"]
+    # plot_titles = ["Wavefront 1D Intensity", "Wavefront 1D Phase","Wavefront Real(Amplitude)","Wavefront Imag(Amplitude)"]
 
     propagator = Setting(4)
     magnification_x = Setting(1.0) # For Fresnel Zoom & Integral
@@ -372,6 +372,12 @@ class OWWOOpticalElement1D(WofryWidget, WidgetDecorator):
             if self.is_automatic_execution:
                 self.propagate_wavefront()
 
+    def get_titles(self):
+        return ["Wavefront 1D Intensity",
+                "Wavefront 1D Phase",
+                "Wavefront Real(Amplitude)",
+                "Wavefront Imag(Amplitude)"]
+
     def initializeTabs(self):
         size = len(self.tab)
         indexes = range(0, size)
@@ -382,8 +388,8 @@ class OWWOOpticalElement1D(WofryWidget, WidgetDecorator):
         self.tab = []
         self.plot_canvas = []
 
-        for index in range(0, len(self.plot_titles)):
-            self.tab.append(gui.createTabPage(self.tabs, self.plot_titles[index]))
+        for index in range(0, len(self.get_titles())):
+            self.tab.append(gui.createTabPage(self.tabs, self.get_titles()[index]))
             self.plot_canvas.append(None)
 
         for tab in self.tab:
@@ -401,7 +407,7 @@ class OWWOOpticalElement1D(WofryWidget, WidgetDecorator):
                              progressBarValue=progressBarValue,
                              tabs_canvas_index=0,
                              plot_canvas_index=0,
-                             title=self.plot_titles[0],
+                             title=self.get_titles()[0],
                              xtitle="Spatial Coordinate [$\mu$m]",
                              ytitle="Intensity")
 
@@ -411,7 +417,7 @@ class OWWOOpticalElement1D(WofryWidget, WidgetDecorator):
                              progressBarValue=progressBarValue + 10,
                              tabs_canvas_index=1,
                              plot_canvas_index=1,
-                             title=self.plot_titles[1],
+                             title=self.get_titles()[1],
                              xtitle="Spatial Coordinate [$\mu$m]",
                              ytitle="Phase [unwrapped, for intensity > 10% of peak] (rad)")
 
@@ -420,7 +426,7 @@ class OWWOOpticalElement1D(WofryWidget, WidgetDecorator):
                              progressBarValue=progressBarValue + 10,
                              tabs_canvas_index=2,
                              plot_canvas_index=2,
-                             title=self.plot_titles[2],
+                             title=self.get_titles()[2],
                              xtitle="Spatial Coordinate [$\mu$m]",
                              ytitle="Real(Amplitude)")
 
@@ -429,13 +435,13 @@ class OWWOOpticalElement1D(WofryWidget, WidgetDecorator):
                              progressBarValue=progressBarValue + 10,
                              tabs_canvas_index=3,
                              plot_canvas_index=3,
-                             title=self.plot_titles[3],
+                             title=self.get_titles()[3],
                              xtitle="Spatial Coordinate [$\mu$m]",
                              ytitle="Imag(Amplitude)")
 
 
-            for i in range(len(self.plot_titles)):
-                self.plot_canvas[i].resetZoom()
+            # for i in range(len(self.get_titles())):
+            #     self.plot_canvas[i].resetZoom()
 
             self.progressBarFinished()
 

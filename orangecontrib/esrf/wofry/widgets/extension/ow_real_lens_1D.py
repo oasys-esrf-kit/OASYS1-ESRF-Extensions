@@ -1,6 +1,5 @@
 import numpy
 import os, sys
-from scipy import interpolate
 
 import orangecanvas.resources as resources
 
@@ -21,15 +20,13 @@ from orangecontrib.wofry.util.wofry_objects import WofryData
 
 from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
 
-from barc4ro.projected_thickness import proj_thick_1D_crl
-import xraylib
 
 from orangecontrib.esrf.wofry.widgets.gui.ow_wofry_widget import WofryWidget # TODO: from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
 from orangecontrib.esrf.wofry.widgets.gui.ow_optical_element_1d import OWWOOpticalElement1D # TODO rom orangecontrib.wofry.widgets.gui.ow_optical_element_1d
 
 from orangecontrib.esrf.wofry.util.lens import WOLens1D
 
-# class OWWORealLens1D(WofryWidget):
+
 class OWWORealLens1D(OWWOOpticalElement1D):
 
     name = "Lens 1D"
@@ -90,16 +87,14 @@ class OWWORealLens1D(OWWOOpticalElement1D):
     image2_path = os.path.join(resources.package_dirname("orangecontrib.esrf.wofry.widgets.gui"), "misc", "Refractor_misalignments.png")
 
     input_data = None
-    titles = ["Wavefront 1D Intensity", "Wavefront 1D Phase","Wavefront Real(Amplitude)","Wavefront Imag(Amplitude)","O.E. Profile"]
 
     def __init__(self):
         super().__init__(is_automatic=True, show_view_options=True, show_script_tab=True)
 
     def draw_specific_box(self):
 
-        box_refractor = oasysgui.widgetBox(self.tab_bas, "Real Lens Setting", addSpace=False, orientation="vertical",
+        box_refractor = oasysgui.widgetBox(self.tab_bas, "1D Lens Geometry", addSpace=False, orientation="vertical",
                                            height=350)
-
 
 
         gui.comboBox(box_refractor, self, "shape", label="Lens shape", labelWidth=350,
@@ -121,40 +116,6 @@ class OWWORealLens1D(OWWOOpticalElement1D):
                           labelWidth=300, valueType=float, orientation="horizontal")
         tmp.setToolTip("wall_thickness")
 
-        gui.comboBox(box_refractor, self, "number_of_refractive_surfaces", label="Number of refractive surfaces", labelWidth=350,
-                     items=["1", "2"],
-                     sendSelectedValue=False, orientation="horizontal")
-
-        self.box_n_lenses_id = oasysgui.widgetBox(box_refractor, "", addSpace=False, orientation="horizontal")
-        tmp = oasysgui.lineEdit(self.box_n_lenses_id, self, "n_lenses", "Number of lenses",
-                          labelWidth=300, valueType=int, orientation="horizontal")
-        tmp.setToolTip("n_lenses")
-
-        gui.comboBox(box_refractor, self, "material", label="Lens material",
-                     items=["External", "Be", "Al", "Diamond"],
-                     callback=self.set_visible,
-                     sendSelectedValue=False, orientation="horizontal")
-
-        self.box_refraction_index_id = oasysgui.widgetBox(box_refractor, "", addSpace=False, orientation="horizontal")
-        tmp = oasysgui.lineEdit(self.box_refraction_index_id, self, "refraction_index_delta", "Refraction index delta",
-                          labelWidth=300, valueType=float, orientation="horizontal")
-        tmp.setToolTip("refraction_index_delta")
-
-        self.box_att_coefficient_id = oasysgui.widgetBox(box_refractor, "", addSpace=False, orientation="horizontal")
-        tmp = oasysgui.lineEdit(self.box_att_coefficient_id, self, "att_coefficient", "Attenuation coefficient [m-1]",
-                          labelWidth=300, valueType=float, orientation="horizontal")
-        tmp.setToolTip("att_coefficient")
-
-
-
-        gui.comboBox(box_refractor, self, "write_profile_flag", label="Dump profile to file",
-                     items=["No", "Yes"], sendSelectedValue=False, orientation="horizontal",
-                     callback=self.set_visible)
-
-        self.box_file_out = gui.widgetBox(box_refractor, "", addSpace=False, orientation="vertical")
-        oasysgui.lineEdit(self.box_file_out, self, "write_profile", "File name",
-                            labelWidth=200, valueType=str, orientation="horizontal")
-
         # Help figure
         self.figure_box1 = oasysgui.widgetBox(box_refractor, "Principal parabolic lens parameters", addSpace=False, orientation="horizontal")
         label1 = QLabel("")
@@ -163,15 +124,52 @@ class OWWORealLens1D(OWWOOpticalElement1D):
         label1.setPixmap(QPixmap(self.image1_path))
         self.figure_box1.layout().addWidget(label1)
 
+        #
+        # Tab Lens pars
+        #
+        self.tab_err = oasysgui.createTabPage(self.tabs_setting, "Parms")
 
-        #
-        #
-        #
+        # Box refractor:_________________________________________________________________________
 
-        self.tab_err = oasysgui.createTabPage(self.tabs_setting, "Errors")
+        box_refractor2 = oasysgui.widgetBox(self.tab_err, "1D Lens parameters", addSpace=False, orientation="vertical")
+
+
+        gui.comboBox(box_refractor2, self, "number_of_refractive_surfaces", label="Number of refractive surfaces", labelWidth=350,
+                     items=["1", "2"],
+                     sendSelectedValue=False, orientation="horizontal")
+
+        self.box_n_lenses_id = oasysgui.widgetBox(box_refractor2, "", addSpace=False, orientation="horizontal")
+        tmp = oasysgui.lineEdit(self.box_n_lenses_id, self, "n_lenses", "Number of lenses",
+                          labelWidth=300, valueType=int, orientation="horizontal")
+        tmp.setToolTip("n_lenses")
+
+        gui.comboBox(box_refractor2, self, "material", label="Lens material",
+                     items=self.get_material_name(),
+                     callback=self.set_visible,
+                     sendSelectedValue=False, orientation="horizontal")
+
+        self.box_refraction_index_id = oasysgui.widgetBox(box_refractor2, "", addSpace=False, orientation="horizontal")
+        tmp = oasysgui.lineEdit(self.box_refraction_index_id, self, "refraction_index_delta", "Refraction index delta",
+                          labelWidth=250, valueType=float, orientation="horizontal")
+        tmp.setToolTip("refraction_index_delta")
+
+        self.box_att_coefficient_id = oasysgui.widgetBox(box_refractor2, "", addSpace=False, orientation="horizontal")
+        tmp = oasysgui.lineEdit(self.box_att_coefficient_id, self, "att_coefficient", "Attenuation coefficient [m-1]",
+                          labelWidth=250, valueType=float, orientation="horizontal")
+        tmp.setToolTip("att_coefficient")
+
+
+        gui.comboBox(box_refractor2, self, "write_profile_flag", label="Dump profile to file",
+                     items=["No", "Yes"], sendSelectedValue=False, orientation="horizontal",
+                     callback=self.set_visible)
+
+        self.box_file_out = gui.widgetBox(box_refractor2, "", addSpace=False, orientation="vertical")
+        oasysgui.lineEdit(self.box_file_out, self, "write_profile", "File name",
+                            labelWidth=200, valueType=str, orientation="horizontal")
+        # error box _________________________________________________________________________
+
         box_errors = oasysgui.widgetBox(self.tab_err, "1D Lens error profile", addSpace=False, orientation="vertical")
 
-        # Tab errors: error profile _________________________________________________________________________
 
         gui.comboBox(box_errors, self, "error_flag", label="Add profile deformation",
                      items=["No", "Yes (from file)"],
@@ -191,7 +189,6 @@ class OWWORealLens1D(OWWOOpticalElement1D):
                      callback=self.set_visible,
                      sendSelectedValue=False, orientation="horizontal")
 
-
         #
         #
         #
@@ -202,7 +199,9 @@ class OWWORealLens1D(OWWOOpticalElement1D):
 
         # Tab Misalignments: Typical lens misalignments for Barc4ro_temporarily_only_for_parabolic______________________
 
-        self.mis_flag_box = gui.comboBox(box_misaligments, self, "mis_flag", label="Add misalignments", labelWidth=350,
+        self.mis_flag_box = oasysgui.widgetBox(box_misaligments, "", addSpace=False, orientation="vertical")
+
+        gui.comboBox(self.mis_flag_box, self, "mis_flag", label="Add misalignments", labelWidth=350,
                      items=["No","Yes"], sendSelectedValue=False, orientation="horizontal", callback=self.set_visible)
 
         self.box_xc_id = oasysgui.widgetBox(box_misaligments, "", addSpace=False, orientation="horizontal")
@@ -258,6 +257,12 @@ class OWWORealLens1D(OWWOOpticalElement1D):
 
         self.set_visible()
 
+    def get_material_name(self, index=None):
+        materials_list = ["External", "Be", "Al", "Diamond"]
+        if index is None:
+            return materials_list
+        else:
+            return materials_list[index]
 
     def set_visible(self):
         self.error_profile.setVisible(self.error_flag)
@@ -280,24 +285,6 @@ class OWWORealLens1D(OWWOOpticalElement1D):
 
     def set_error_file(self):
         self.error_file_id.setText(oasysgui.selectFileFromDialog(self, self.error_file, "Open file with profile error"))
-
-    def initializeTabs(self):
-        size = len(self.tab)
-        indexes = range(0, size)
-
-        for index in indexes:
-            self.tabs.removeTab(size-1-index)
-
-        self.tab = []
-        self.plot_canvas = []
-
-        for index in range(0, len(self.titles)):
-            self.tab.append(gui.createTabPage(self.tabs, self.titles[index]))
-            self.plot_canvas.append(None)
-
-        for tab in self.tab:
-            tab.setFixedHeight(self.IMAGE_HEIGHT)
-            tab.setFixedWidth(self.IMAGE_WIDTH)
 
     def check_fields(self):
 
@@ -341,19 +328,6 @@ class OWWORealLens1D(OWWOOpticalElement1D):
     def receive_syned_data(self):
         raise Exception(NotImplementedError)
 
-    # def set_input(self, wofry_data):
-    #
-    #     if not wofry_data is None:
-    #         if isinstance(wofry_data, WofryData):
-    #             self.input_data = wofry_data
-    #         else:
-    #             self.input_data = WofryData(wavefront=wofry_data)
-    #
-    #         if self.is_automatic_execution:
-    #             self.propagate_wavefront()
-    #     else:
-    #         self.input_data = None
-
 
 
     def receive_dabam_profile(self, dabam_profile):
@@ -379,183 +353,41 @@ class OWWORealLens1D(OWWOOpticalElement1D):
                 if self.IS_DEVELOP: raise exception
 
     def get_optical_element(self):
-        if self.error_flag == 0:
-            error_file = ""
-        else:
-            error_file = self.error_file
-
-        if self.write_profile_flag == 0:
-            write_profile = ""
-        else:
-            write_profile = self.write_profile
-
-        if self.mis_flag == 0:
-            xc            = self.xc
-            ang_rot       = self.ang_rot
-            wt_offset_ffs = self.wt_offset_ffs
-            offset_ffs    = self.offset_ffs
-            tilt_ffs      = self.tilt_ffs
-            wt_offset_bfs = self.wt_offset_bfs
-            offset_bfs    = self.offset_bfs
-            tilt_bfs      = self.tilt_bfs
-        elif self.mis_flag == 1:
-            xc            = 0.0
-            ang_rot       = 0.0
-            wt_offset_ffs = 0.0
-            offset_ffs    = 0.0
-            tilt_ffs      = 0.0
-            wt_offset_bfs = 0.0
-            offset_bfs    = 0.0
-            tilt_bfs      = 0.0
-
-        #Lens material ____________________________________________________________________________________
-
-        photon_energy = self.input_data.get_wavefront().get_photon_energy()
-        wave_length = self.input_data.get_wavefront().get_wavelength()
-
-        if self.material == 0: # external
-            refraction_index_delta = self.refraction_index_delta
-            att_coefficient = self.att_coefficient
-        else:
-            if self.material == 1: # Be
-                element = "Be"
-                density = xraylib.ElementDensity(4)
-            elif self.material == 2: # Al
-                element = "Al"
-                density = xraylib.ElementDensity(13)
-            elif self.material == 3: # Diamond
-                element = "C"
-                density = 3.51
-            print("Element: %s" % element)
-            print("        density = %g " % density)
-
-            refraction_index = xraylib.Refractive_Index(element, photon_energy/1000, density)
-            refraction_index_delta = 1 - refraction_index.real
-            att_coefficient = 4*numpy.pi * (xraylib.Refractive_Index(element, photon_energy/1000, density)).imag / wave_length
-
-        print("Refracion index delta = %g " % (refraction_index_delta))
-        print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
-
         return WOLens1D.create_from_keywords(
-                    shape=self.shape,
-                    radius=self.radius,
-                    lens_aperture = self.lens_aperture,
-                    wall_thickness=self.wall_thickness,
-                    refraction_index_delta=refraction_index_delta,
-                    att_coefficient=att_coefficient,
-                    number_of_refractive_surfaces=self.number_of_refractive_surfaces,
-                    n_lenses=self.n_lenses,
-                    error_flag=self.error_flag,
-                    error_file=error_file,
-                    error_edge_management=self.error_edge_management,
-                    write_profile=write_profile,
-                    xc=xc,
-                    ang_rot=ang_rot,
-                    wt_offset_ffs=wt_offset_ffs,
-                    offset_ffs=offset_ffs,
-                    tilt_ffs=tilt_ffs,
-                    wt_offset_bfs=wt_offset_bfs,
-                    offset_bfs=offset_bfs,
-                    tilt_bfs=tilt_bfs)
-
-
-    # def propagate_wavefront(self):
-    #     self.progressBarInit()
-    #
-    #     self.wofry_output.setText("")
-    #     sys.stdout = EmittingStream(textWritten=self.writeStdOut)
-    #
-    #     self.check_fields()
-    #
-    #     if self.input_data is None: raise Exception("No Input Wavefront")
-    #
-    #     wolens = self.get_optical_element()
-    #
-    #     input_wavefront = self.input_data.get_wavefront()
-    #     output_wavefront = wolens.applyOpticalElement(input_wavefront)
-    #
-    #
-    #     self.progressBarSet(50)
-    #
-    #     # script #TODO Add all the new variables to the dictionary
-    #
-    #
-    #     if self.view_type > 0:
-    #         abscissas_on_lens, lens_thickness = wolens.get_surface_thickness_mesh(output_wavefront)
-    #         self.do_plot_wavefront(output_wavefront, abscissas_on_lens=abscissas_on_lens, lens_thickness=lens_thickness)
-    #
-    #     beamline = self.input_data.get_beamline().duplicate()
-    #
-    #     self.progressBarFinished()
-    #
-    #     self.send("WofryData", WofryData(beamline=beamline, wavefront=output_wavefront))
-    #     self.send("Trigger", TriggerIn(new_object=True))
+                    name                         =self.oe_name,
+                    shape                        = self.shape,
+                    radius                       = self.radius,
+                    lens_aperture                = self.lens_aperture,
+                    wall_thickness               = self.wall_thickness,
+                    material                     = self.get_material_name(self.material),
+                    refraction_index_delta       = self.refraction_index_delta,
+                    att_coefficient              = self.att_coefficient,
+                    number_of_refractive_surfaces= self.number_of_refractive_surfaces,
+                    n_lenses                     = self.n_lenses,
+                    error_flag                   = self.error_flag,
+                    error_file                   = self.error_file,
+                    error_edge_management        = self.error_edge_management,
+                    write_profile_flag           = self.write_profile_flag,
+                    write_profile                = self.write_profile,
+                    mis_flag                     = self.mis_flag,
+                    xc                           = self.xc,
+                    ang_rot                      = self.ang_rot,
+                    wt_offset_ffs                = self.wt_offset_ffs,
+                    offset_ffs                   = self.offset_ffs,
+                    tilt_ffs                     = self.tilt_ffs,
+                    wt_offset_bfs                = self.wt_offset_bfs,
+                    offset_bfs                   = self.offset_bfs,
+                    tilt_bfs                     = self.tilt_bfs,
+                    )
 
     #
-    # def do_plot_results(self, progressBarValue): # required by parent
-    #     pass
+    # overwritten methods to append profile plot
+    #
 
-    # def do_plot_wavefront(self, wavefront1D, abscissas_on_lens=None, lens_thickness=None, progressBarValue=80):
-    #
-    #     if abscissas_on_lens is None:
-    #         abscissas_on_lens = wavefront1D.get_abscissas()
-    #
-    #     if lens_thickness is None:
-    #         lens_thickness = wavefront1D.get_abscissas() * 0
-    #
-    #     if not self.input_data is None:
-    #
-    #         self.plot_data1D(x=1e6*wavefront1D.get_abscissas(),
-    #                          y=wavefront1D.get_intensity(),
-    #                          progressBarValue=progressBarValue,
-    #                          tabs_canvas_index=0,
-    #                          plot_canvas_index=0,
-    #                          calculate_fwhm=True,
-    #                          title=self.titles[0],
-    #                          xtitle="Spatial Coordinate [$\mu$m]",
-    #                          ytitle="Intensity")
-    #
-    #         self.plot_data1D(x=1e6*wavefront1D.get_abscissas(),
-    #                          y=wavefront1D.get_phase(from_minimum_intensity=0.1,unwrap=1),
-    #                          progressBarValue=progressBarValue + 10,
-    #                          tabs_canvas_index=1,
-    #                          plot_canvas_index=1,
-    #                          calculate_fwhm=False,
-    #                          title=self.titles[1],
-    #                          xtitle="Spatial Coordinate [$\mu$m]",
-    #                          ytitle="Phase [unwrapped, for intensity > 10% of peak] (rad)")
-    #
-    #         self.plot_data1D(x=1e6*wavefront1D.get_abscissas(),
-    #                          y=numpy.real(wavefront1D.get_complex_amplitude()),
-    #                          progressBarValue=progressBarValue + 10,
-    #                          tabs_canvas_index=2,
-    #                          plot_canvas_index=2,
-    #                          calculate_fwhm=False,
-    #                          title=self.titles[2],
-    #                          xtitle="Spatial Coordinate [$\mu$m]",
-    #                          ytitle="Real(Amplitude)")
-    #
-    #         self.plot_data1D(x=1e6*wavefront1D.get_abscissas(),
-    #                          y=numpy.imag(wavefront1D.get_complex_amplitude()),
-    #                          progressBarValue=progressBarValue + 10,
-    #                          tabs_canvas_index=3,
-    #                          plot_canvas_index=3,
-    #                          calculate_fwhm=False,
-    #                          title=self.titles[3],
-    #                          xtitle="Spatial Coordinate [$\mu$m]",
-    #                          ytitle="Imag(Amplitude)")
-    #
-    #         self.plot_data1D(x=abscissas_on_lens, #TODO check how is possible to plot both refractive surfaces
-    #                          y=lens_thickness*1e6, # in microns
-    #                          progressBarValue=progressBarValue + 10,
-    #                          tabs_canvas_index=4,
-    #                          plot_canvas_index=4,
-    #                          calculate_fwhm=False,
-    #                          title=self.titles[4],
-    #                          xtitle="Spatial Coordinate along o.e. [m]",
-    #                          ytitle="Total lens thickness [$\mu$m]")
-    #
-    #         self.plot_canvas[0].resetZoom()
+    def get_titles(self):
+        titles = super().get_titles()
+        titles.append("O.E. Profile")
+        return titles
 
     def do_plot_results(self, progressBarValue=80): # OVERWRITTEN
 
@@ -574,7 +406,7 @@ class OWWORealLens1D(OWWOOpticalElement1D):
                                  tabs_canvas_index=4,
                                  plot_canvas_index=4,
                                  calculate_fwhm=False,
-                                 title=self.titles[4],
+                                 title=self.get_titles()[4],
                                  xtitle="Spatial Coordinate along o.e. [m]",
                                  ytitle="Total lens thickness [$\mu$m]")
 

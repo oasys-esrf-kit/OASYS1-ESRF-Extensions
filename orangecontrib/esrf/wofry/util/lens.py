@@ -10,6 +10,7 @@ from wofry.beamline.decorators import OpticalElementDecorator
 
 from barc4ro.projected_thickness import proj_thick_2D_crl, proj_thick_1D_crl
 from scipy import interpolate
+import scipy.constants as codata
 import xraylib
 
 class WOLens(Lens, OpticalElementDecorator):
@@ -26,12 +27,9 @@ class WOLens(Lens, OpticalElementDecorator):
 
         self._keywords_at_creation = None
 
-    def applyOpticalElement(self, wavefront, parameters=None, element_index=None):
+    def get_refraction_index(self, photon_energy=10000.0):
 
-        x, y, lens_thickness = self.get_surface_thickness_mesh(wavefront)
-
-        photon_energy = wavefront.get_photon_energy()
-        wave_length = wavefront.get_wavelength()
+        wave_length = codata.h * codata.c / codata.e / photon_energy
 
         if self.get_material() == "Be": # Be
             element = "Be"
@@ -55,6 +53,16 @@ class WOLens(Lens, OpticalElementDecorator):
         print("Photon energy = %g eV" % (photon_energy))
         print("Refracion index delta = %g " % (refraction_index_delta))
         print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
+
+        return refraction_index_delta, att_coefficient
+
+    def applyOpticalElement(self, wavefront, parameters=None, element_index=None):
+
+        x, y, lens_thickness = self.get_surface_thickness_mesh(wavefront)
+
+        photon_energy = wavefront.get_photon_energy()
+
+        refraction_index_delta, att_coefficient = self.get_refraction_index(photon_energy=photon_energy)
 
         amp_factors = numpy.sqrt(numpy.exp(-1.0 * att_coefficient * lens_thickness))
         phase_shifts = -1.0 * wavefront.get_wavenumber() * refraction_index_delta * lens_thickness
@@ -84,28 +92,18 @@ class WOLens(Lens, OpticalElementDecorator):
         print(">>> _axis_x : from, to, n = ", _axis_x.min(), _axis_x.max(), _axis_x.size)
         print(">>> _axis_y : from, to, n = ", _axis_y.min(), _axis_y.max(), _axis_y.size)
 
-        # try:
-        if True:
-            x, y, lens_thickness = proj_thick_2D_crl(_foc_plane, _shape, _apert_h, _apert_v, _r_min, _n,
-                         _wall_thick=_wall_thickness, _aperture=_aperture,
-                         _nx=_axis_x.size, _ny=_axis_y.size,
-                         _axis_x=_axis_x, _axis_y=_axis_y,
-                         _xc=0, _yc=0,
-                         _ang_rot_ex=0, _ang_rot_ey=0, _ang_rot_ez=0,
-                         _offst_ffs_x=0, _offst_ffs_y=0,
-                         _tilt_ffs_x=0, _tilt_ffs_y=0, _ang_rot_ez_ffs=0,
-                         _wt_offst_ffs=0, _offst_bfs_x=0, _offst_bfs_y=0,
-                         _tilt_bfs_x=0, _tilt_bfs_y=0, _ang_rot_ez_bfs=0, _wt_offst_bfs=0,
-                         isdgr=False, project=True,)
 
-            # print(">>> ", x.shape, y.shape, lens_thickness.shape)
-            #
-            # from srxraylib.plot.gol import plot_image
-            # plot_image(1e6 * lens_thickness.T, 1e6 * x, 1e6 * y, title="Lens surface profile / um",
-            #            xtitle="X / um", ytitle="Y / um")
-
-        # except:
-        #     raise Exception("Error running barc4ro.proj_thick_2D_crl")
+        x, y, lens_thickness = proj_thick_2D_crl(_foc_plane, _shape, _apert_h, _apert_v, _r_min, _n,
+                     _wall_thick=_wall_thickness, _aperture=_aperture,
+                     _nx=_axis_x.size, _ny=_axis_y.size,
+                     _axis_x=_axis_x, _axis_y=_axis_y,
+                     _xc=0, _yc=0,
+                     _ang_rot_ex=0, _ang_rot_ey=0, _ang_rot_ez=0,
+                     _offst_ffs_x=0, _offst_ffs_y=0,
+                     _tilt_ffs_x=0, _tilt_ffs_y=0, _ang_rot_ez_ffs=0,
+                     _wt_offst_ffs=0, _offst_bfs_x=0, _offst_bfs_y=0,
+                     _tilt_bfs_x=0, _tilt_bfs_y=0, _ang_rot_ez_bfs=0, _wt_offst_bfs=0,
+                     isdgr=False, project=True,)
 
         return x, y, lens_thickness.T
 
@@ -272,20 +270,20 @@ class WOLens(Lens, OpticalElementDecorator):
 #
 #
 
-
-class WOLens1D(WOLens):
+class WOLens1D(Lens, OpticalElementDecorator):
     def __init__(self,
                  name="Undefined",
                  surface_shape1=None,
                  surface_shape2=None,
                  boundary_shape=None,
                  material="",
-                 thickness=0.0):
+                 thickness=0.0,
+                 keywords_at_creation=None):
         WOLens.__init__(self, name=name,
                       surface_shape1=surface_shape1, surface_shape2=surface_shape2,
                       boundary_shape=boundary_shape, material=material, thickness=thickness)
 
-        self._keywords_at_creation = None
+        self._keywords_at_creation = keywords_at_creation
 
 
     def get_surface_thickness_mesh(self, input_wavefront):
@@ -299,16 +297,26 @@ class WOLens1D(WOLens):
         error_flag = self._keywords_at_creation["error_flag"                    ]
         error_file = self._keywords_at_creation["error_file"                    ]
         error_edge_management = self._keywords_at_creation["error_edge_management"         ]
+        write_profile_flag = self._keywords_at_creation["write_profile_flag"]
         write_profile = self._keywords_at_creation["write_profile"                 ]
-        xc = self._keywords_at_creation["xc"                            ]
-        ang_rot = self._keywords_at_creation["ang_rot"                       ]
-        wt_offset_ffs = self._keywords_at_creation["wt_offset_ffs"                 ]
-        offset_ffs = self._keywords_at_creation["offset_ffs"                    ]
-        tilt_ffs = self._keywords_at_creation["tilt_ffs"                      ]
-        wt_offset_bfs = self._keywords_at_creation["wt_offset_bfs"                 ]
-        offset_bfs = self._keywords_at_creation["offset_bfs"                    ]
-        tilt_bfs = self._keywords_at_creation["tilt_bfs"                      ]
-
+        if self._keywords_at_creation["mis_flag"]:
+            xc = self._keywords_at_creation["xc"                            ]
+            ang_rot = self._keywords_at_creation["ang_rot"                       ]
+            wt_offset_ffs = self._keywords_at_creation["wt_offset_ffs"                 ]
+            offset_ffs = self._keywords_at_creation["offset_ffs"                    ]
+            tilt_ffs = self._keywords_at_creation["tilt_ffs"                      ]
+            wt_offset_bfs = self._keywords_at_creation["wt_offset_bfs"                 ]
+            offset_bfs = self._keywords_at_creation["offset_bfs"                    ]
+            tilt_bfs = self._keywords_at_creation["tilt_bfs"                      ]
+        else:
+            xc            = 0
+            ang_rot       = 0
+            wt_offset_ffs = 0
+            offset_ffs    = 0
+            tilt_ffs      = 0
+            wt_offset_bfs = 0
+            offset_bfs    = 0
+            tilt_bfs      = 0
 
         abscissas = input_wavefront.get_abscissas().copy()
         abscissas_on_lens = abscissas
@@ -370,7 +378,7 @@ class WOLens1D(WOLens):
             lens_thickness += thickness_interpolated
 
         # output files
-        if write_profile != "":
+        if write_profile_flag:
             f = open(write_profile, "w")
             for i in range(lens_thickness.size):
                 f.write("%g %g\n" % (abscissas_on_lens[i], lens_thickness[i]))
@@ -379,11 +387,50 @@ class WOLens1D(WOLens):
 
         return abscissas_on_lens, lens_thickness
 
+
+    def get_refraction_index(self, photon_energy=10000.0):
+
+        wave_length = codata.h * codata.c / codata.e / photon_energy
+
+        if self.get_material() == "External":
+            refraction_index_delta = self._keywords_at_creation["refraction_index_delta"]
+            att_coefficient = self._keywords_at_creation["att_coefficient"]
+            print("Refracion index delta = %g " % (refraction_index_delta))
+            print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
+            return refraction_index_delta, att_coefficient
+
+        if self.get_material() == "Be": # Be
+            element = "Be"
+            density = xraylib.ElementDensity(4)
+        elif self.get_material() == "Al": # Al
+            element = "Al"
+            density = xraylib.ElementDensity(13)
+        elif self.get_material() == "Diamond": # Diamond
+            element = "C"
+            density = 3.51
+        else:
+            raise Exception("Bad material: " + self.get_material())
+
+        refraction_index = xraylib.Refractive_Index(element, photon_energy/1000, density)
+        refraction_index_delta = 1 - refraction_index.real
+        att_coefficient = 4*numpy.pi * (xraylib.Refractive_Index(element, photon_energy/1000, density)).imag / wave_length
+
+        print("\n\n\n ==========  parameters recovered from xraylib : ")
+        print("Element: %s" % element)
+        print("        density = %g " % density)
+        print("Photon energy = %g eV" % (photon_energy))
+        print("Refracion index delta = %g " % (refraction_index_delta))
+        print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
+
+        return refraction_index_delta, att_coefficient
+
+
     def applyOpticalElement(self, input_wavefront, parameters=None, element_index=None):
 
         # TODO: n_lenses
-        refraction_index_delta  = self._keywords_at_creation["refraction_index_delta"        ]
-        att_coefficient = self._keywords_at_creation["att_coefficient"               ]
+
+        refraction_index_delta, att_coefficient = \
+            self.get_refraction_index(input_wavefront.get_photon_energy())
         n_lenses = self._keywords_at_creation["n_lenses"                      ]
         error_flag = self._keywords_at_creation["error_flag"                    ]
         error_file = self._keywords_at_creation["error_file"                    ]
@@ -418,14 +465,14 @@ class WOLens1D(WOLens):
 
         return output_wavefront
 
-
-
     @classmethod
     def create_from_keywords(cls,
+                             name                           ="Real Lens 1D",
                              shape                          =1,
                              radius                         =0.0005,
                              lens_aperture                  =0.001,
                              wall_thickness                 =5e-5,
+                             material                       ="Be",
                              refraction_index_delta         =5.3e-07,
                              att_coefficient                =0.00357382,
                              number_of_refractive_surfaces  =1, # index of wodget!!!
@@ -433,7 +480,9 @@ class WOLens1D(WOLens):
                              error_flag                     =0,
                              error_file                     ="",
                              error_edge_management          =0,
+                             write_profile_flag             =0,
                              write_profile                  ="",
+                             mis_flag                       =0,
                              xc                             =0,
                              ang_rot                        =0,
                              wt_offset_ffs                  =0,
@@ -441,16 +490,18 @@ class WOLens1D(WOLens):
                              tilt_ffs                       =0,
                              wt_offset_bfs                  =0,
                              offset_bfs                     =0,
-                             tilt_bfs                       =0
+                             tilt_bfs                       =0,
                              ):
 
 
         keywords_at_creation = {}
 
+        # keywords_at_creation["name"                          ] = name
         keywords_at_creation["shape"                         ] = shape
         keywords_at_creation["radius"                        ] = radius
         keywords_at_creation["lens_aperture"                 ] = lens_aperture
         keywords_at_creation["wall_thickness"                ] = wall_thickness
+        # keywords_at_creation["material"                      ] = material
         keywords_at_creation["refraction_index_delta"        ] = refraction_index_delta
         keywords_at_creation["att_coefficient"               ] = att_coefficient
         keywords_at_creation["number_of_refractive_surfaces" ] = number_of_refractive_surfaces
@@ -458,7 +509,9 @@ class WOLens1D(WOLens):
         keywords_at_creation["error_flag"                    ] = error_flag
         keywords_at_creation["error_file"                    ] = error_file
         keywords_at_creation["error_edge_management"         ] = error_edge_management
+        keywords_at_creation["write_profile_flag"            ] = write_profile_flag
         keywords_at_creation["write_profile"                 ] = write_profile
+        keywords_at_creation["mis_flag"                      ] = mis_flag
         keywords_at_creation["xc"                            ] = xc
         keywords_at_creation["ang_rot"                       ] = ang_rot
         keywords_at_creation["wt_offset_ffs"                 ] = wt_offset_ffs
@@ -468,13 +521,10 @@ class WOLens1D(WOLens):
         keywords_at_creation["offset_bfs"                    ] = offset_bfs
         keywords_at_creation["tilt_bfs"                      ] = tilt_bfs
 
-        out = WOLens1D()
 
-        out._keywords_at_creation = keywords_at_creation
+        return WOLens1D(name=name, material=material, thickness=wall_thickness, keywords_at_creation=keywords_at_creation)
 
-        return out
-
-    def to_python_code(self, do_plot=False):
+    def to_python_code(self):
         if self._keywords_at_creation is None:
             raise Exception("Python code autogenerated only if created with WOLens.create_from_keywords()")
 
@@ -482,10 +532,12 @@ class WOLens1D(WOLens):
         txt += "\nfrom orangecontrib.esrf.wofry.util.lens import WOLens1D"
         txt += "\n"
         txt += "\noptical_element = WOLens1D.create_from_keywords("
+        txt += "\n    name='%s'," % self.get_name()
         txt += "\n    shape=%d," % self._keywords_at_creation["shape"]
         txt += "\n    radius=%g," % self._keywords_at_creation["radius"]
         txt += "\n    lens_aperture=%g," % self._keywords_at_creation["lens_aperture"]
         txt += "\n    wall_thickness=%g," % self._keywords_at_creation["wall_thickness"]
+        txt += "\n    material='%s'," % self.get_material()
         txt += "\n    refraction_index_delta=%g," % self._keywords_at_creation["refraction_index_delta"]
         txt += "\n    att_coefficient=%g," % self._keywords_at_creation["att_coefficient"]
         txt += "\n    number_of_refractive_surfaces=%d," % self._keywords_at_creation["number_of_refractive_surfaces"]
@@ -493,7 +545,9 @@ class WOLens1D(WOLens):
         txt += "\n    error_flag=%d," % self._keywords_at_creation["error_flag"]
         txt += "\n    error_file='%s'," % self._keywords_at_creation["error_file"]
         txt += "\n    error_edge_management=%d," % self._keywords_at_creation["error_edge_management"]
+        txt += "\n    write_profile_flag=%d," % self._keywords_at_creation["write_profile_flag"]
         txt += "\n    write_profile='%s'," % self._keywords_at_creation["write_profile"]
+        txt += "\n    mis_flag=%d," % self._keywords_at_creation["mis_flag"]
         txt += "\n    xc=%g," % self._keywords_at_creation["xc"]
         txt += "\n    ang_rot=%g," % self._keywords_at_creation["ang_rot"]
         txt += "\n    wt_offset_ffs=%g," % self._keywords_at_creation["wt_offset_ffs"]
@@ -525,6 +579,5 @@ if __name__ == "__main__":
 
     from srxraylib.plot.gol import plot
 
-    print(">>>>",output_wavefront.get_intensity().max())
     plot(input_wavefront.get_abscissas(), input_wavefront.get_intensity())
     plot(output_wavefront.get_abscissas(),output_wavefront.get_intensity())

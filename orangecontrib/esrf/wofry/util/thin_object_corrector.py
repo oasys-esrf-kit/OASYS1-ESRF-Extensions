@@ -65,6 +65,8 @@ class WOThinObjectCorrector1D(WOThinObject1D):
     def __init__(self, name="Undefined",
                  file_with_thickness_mesh="",
                  material="",
+                 refraction_index_delta=1e-07,
+                 att_coefficient=0.0,
                  correction_method=1,
                  focus_at=10.0,
                  wall_thickness=0.0,
@@ -74,10 +76,9 @@ class WOThinObjectCorrector1D(WOThinObject1D):
         super().__init__(name=name,
                          file_with_thickness_mesh=file_with_thickness_mesh,
                          material=material,
-                         correction_method=correction_method,
-                         focus_at=focus_at,
-                         wall_thickness=wall_thickness,
-                         apply_correction_to_wavefront=apply_correction_to_wavefront)
+                         refraction_index_delta=refraction_index_delta,
+                         att_coefficient=att_coefficient,
+                         )
 
         self._correction_method = correction_method
         self._focus_at = focus_at
