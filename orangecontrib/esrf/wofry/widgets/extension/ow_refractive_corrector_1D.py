@@ -11,7 +11,7 @@ from oasys.widgets import congruence
 from oasys.util.oasys_util import TriggerIn, EmittingStream
 
 from orangecontrib.wofry.util.wofry_objects import WofryData
-from orangecontrib.esrf.wofry.widgets.gui.ow_wofry_widget import WofryWidget # TODO: from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
+from orangecontrib.esrf.wofry.widgets.gui.ow_wofry_widget11 import WofryWidget # TODO from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
 
 from syned.widget.widget_decorator import WidgetDecorator
 

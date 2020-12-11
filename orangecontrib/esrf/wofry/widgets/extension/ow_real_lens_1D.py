@@ -20,8 +20,6 @@ from orangecontrib.wofry.util.wofry_objects import WofryData
 
 from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
 
-
-from orangecontrib.esrf.wofry.widgets.gui.ow_wofry_widget import WofryWidget # TODO: from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
 from orangecontrib.esrf.wofry.widgets.gui.ow_optical_element_1d import OWWOOpticalElement1D # TODO rom orangecontrib.wofry.widgets.gui.ow_optical_element_1d
 
 from orangecontrib.esrf.wofry.util.lens import WOLens1D
@@ -398,16 +396,16 @@ class OWWORealLens1D(OWWOOpticalElement1D):
                 self.progressBarSet(progressBarValue)
 
                 wo_lens = self.get_optical_element()
-                abscissas_on_lens, lens_thickness = wo_lens.get_surface_thickness_mesh(self.wavefront_to_plot)
+                abscissas_on_lens, lens_thickness = wo_lens.get_surface_thickness_mesh(self.input_data.get_wavefront())
 
-                self.plot_data1D(x=abscissas_on_lens, #TODO check how is possible to plot both refractive surfaces
+                self.plot_data1D(x=abscissas_on_lens*1e6, #TODO check how is possible to plot both refractive surfaces
                                  y=lens_thickness*1e6, # in microns
                                  progressBarValue=progressBarValue + 10,
                                  tabs_canvas_index=4,
                                  plot_canvas_index=4,
                                  calculate_fwhm=False,
                                  title=self.get_titles()[4],
-                                 xtitle="Spatial Coordinate along o.e. [m]",
+                                 xtitle="Spatial Coordinate along o.e. [$\mu$m]",
                                  ytitle="Total lens thickness [$\mu$m]")
 
                 self.progressBarFinished()

@@ -45,15 +45,25 @@ class WOThinObject(ThinObject, OpticalElementDecorator):
     def __init__(self,
                  name="Undefined",
                  file_with_thickness_mesh="",
-                 material=""):
+                 material="",
+                 refraction_index_delta=1e-07,
+                 att_coefficient=0.0,
+                 ):
         ThinObject.__init__(self,
                       name=name,
                       file_with_thickness_mesh=file_with_thickness_mesh,
                       material=material)
 
-    def get_refraction_index(self, photon_energy):
+        self._refraction_index_delta = refraction_index_delta
+        self._att_coefficient = att_coefficient
+
+    def get_refraction_index(self, photon_energy=10000.0):
 
         wave_length = codata.h * codata.c / codata.e / photon_energy
+
+        if self.get_material() == "External": # Be
+             return self._refraction_index_delta, \
+                    self._att_coefficient
 
         if self.get_material() == "Be": # Be
             element = "Be"
@@ -125,13 +135,17 @@ class WOThinObject(ThinObject, OpticalElementDecorator):
         txt  = ""
         txt += "\nfrom orangecontrib.esrf.wofry.widgets.extension.ow_thin_object_2d import WOThinObject"
         txt += "\n"
-        txt += "\noptical_element = WOThinObject(name='%s',file_with_thickness_mesh='%s',material='%s')" % \
-               (self.get_name(), self.get_file_with_thickness_mesh(), self.get_material())
+        if self.get_material() == "External":
+            txt += "\noptical_element = WOThinObject(name='%s',file_with_thickness_mesh='%s',material='%s',refraction_index_delta=%g,att_coefficient=%g)" % \
+                   (self.get_name(), self.get_file_with_thickness_mesh(), self.get_material(), self._refraction_index_delta, self._att_coefficient)
+        else:
+            txt += "\noptical_element = WOThinObject(name='%s',file_with_thickness_mesh='%s',material='%s')" % \
+                   (self.get_name(), self.get_file_with_thickness_mesh(), self.get_material())
         txt += "\n"
         return txt
 
 
-class WOThinObject1D(ThinObject):
+class WOThinObject1D(ThinObject, OpticalElementDecorator):
     def __init__(self,
                  name="Undefined",
                  file_with_thickness_mesh="",

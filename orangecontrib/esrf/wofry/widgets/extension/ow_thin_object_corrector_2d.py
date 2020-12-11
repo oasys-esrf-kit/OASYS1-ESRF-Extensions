@@ -34,6 +34,8 @@ class OWWOThinObjectCorrector2D(OWWOOpticalElement):
 
 
     material = Setting(1)
+    refraction_index_delta = Setting(5.3e-7)
+    att_coefficient = Setting(0.00357382)
 
     aperture_shape = Setting(0)
     aperture_dimension_v = Setting(100e-6)
@@ -78,6 +80,16 @@ class OWWOThinObjectCorrector2D(OWWOOpticalElement):
                      items=self.get_material_name(),
                      sendSelectedValue=False, orientation="horizontal")
 
+        self.box_refraction_index_id = oasysgui.widgetBox(self.box_corrector_1, "", addSpace=False, orientation="horizontal")
+        tmp = oasysgui.lineEdit(self.box_refraction_index_id, self, "refraction_index_delta", "Refraction index delta",
+                          labelWidth=250, valueType=float, orientation="horizontal")
+        tmp.setToolTip("refraction_index_delta")
+
+        self.box_att_coefficient_id = oasysgui.widgetBox(self.box_corrector_1, "", addSpace=False, orientation="horizontal")
+        tmp = oasysgui.lineEdit(self.box_att_coefficient_id, self, "att_coefficient", "Attenuation coefficient [m-1]",
+                          labelWidth=250, valueType=float, orientation="horizontal")
+        tmp.setToolTip("att_coefficient")
+
 
         self.box_wall_thickness_id = oasysgui.widgetBox(self.box_corrector_1, "", addSpace=False, orientation="horizontal")
         tmp = oasysgui.lineEdit(self.thinobject_box, self, "wall_thickness", "Wall thickness [m]",
@@ -92,17 +104,15 @@ class OWWOThinObjectCorrector2D(OWWOOpticalElement):
                      items=["No","Yes"],
                      sendSelectedValue=False, orientation="horizontal")
 
-        # # files i/o tab
-        # self.tab_files = oasysgui.createTabPage(self.tabs_setting, "File I/O")
-        # files_box = oasysgui.widgetBox(self.tab_files, "Files", addSpace=True, orientation="vertical")
-
         self.set_visible()
 
     def set_visible(self):
         self.box_corrector_1.setVisible(self.correction_method != 0)
+        self.box_refraction_index_id.setVisible(self.material in [0])
+        self.box_att_coefficient_id.setVisible(self.material in [0])
 
     def get_material_name(self, index=None):
-        materials_list = ["", "Be", "Al", "Diamond"]
+        materials_list = ["External", "Be", "Al", "Diamond"]
         if index is None:
             return materials_list
         else:
@@ -113,6 +123,8 @@ class OWWOThinObjectCorrector2D(OWWOOpticalElement):
         return WOThinObjectCorrector(name="Undefined",
                  file_with_thickness_mesh=self.file_with_thickness_mesh,
                  material=self.get_material_name(self.material),
+                 refraction_index_delta=self.refraction_index_delta,
+                 att_coefficient=self.att_coefficient,
                  correction_method=self.correction_method,
                  focus_at=self.focus_at,
                  wall_thickness=self.wall_thickness,
@@ -127,8 +139,10 @@ class OWWOThinObjectCorrector2D(OWWOOpticalElement):
     def receive_specific_syned_data(self, optical_element):
         pass
 
-
+    #
     # overwrite this method to add tab with thickness profile
+    #
+
     def initializeTabs(self):
         size = len(self.tab)
         indexes = range(0, size)
@@ -155,8 +169,7 @@ class OWWOThinObjectCorrector2D(OWWOOpticalElement):
 
                 self.progressBarSet(progressBarValue)
 
-                xx, yy, zz = read_surface_file(self.file_with_thickness_mesh)
-                if zz.min() < 0: zz -= zz.min()
+                zz, xx, yy = self.get_optical_element().calculate_correction_profile(self.input_data.get_wavefront())
 
                 self.plot_data2D(data2D=zz.T,
                                  dataX=1e6*xx,
@@ -169,14 +182,6 @@ class OWWOThinObjectCorrector2D(OWWOOpticalElement):
                                  ytitle="Vertical [$\mu$m] ( %d pixels)"%(yy.size))
 
                 self.progressBarFinished()
-
-    def propagate_wavefront(self):
-        super().propagate_wavefront()
-
-        if self.write_profile_flag == 1:
-            xx, yy, s = self.get_optical_element().get_surface_thickness_mesh(self.input_data.get_wavefront())
-            write_surface_file(s.T, xx, yy, self.write_profile, overwrite=True)
-            print("\nFile for OASYS " + self.write_profile + " written to disk.")
             
 
 if __name__ == "__main__":

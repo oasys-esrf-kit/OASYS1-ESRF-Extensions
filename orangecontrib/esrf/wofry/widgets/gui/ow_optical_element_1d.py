@@ -214,6 +214,8 @@ class OWWOOpticalElement1D(WofryWidget, WidgetDecorator):
 
         self.progressBarInit()
 
+        self.wofry_output.setText("")
+
         sys.stdout = EmittingStream(textWritten=self.writeStdOut)
 
         if self.input_data is None: raise Exception("No Input Data")

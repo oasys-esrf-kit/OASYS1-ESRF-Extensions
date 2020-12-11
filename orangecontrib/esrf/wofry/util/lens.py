@@ -20,16 +20,24 @@ class WOLens(Lens, OpticalElementDecorator):
                  surface_shape2=None,
                  boundary_shape=None,
                  material="",
-                 thickness=0.0):
+                 thickness=0.0,
+                 keywords_at_creation=None):
         Lens.__init__(self, name=name,
                       surface_shape1=surface_shape1, surface_shape2=surface_shape2,
                       boundary_shape=boundary_shape, material=material, thickness=thickness)
 
-        self._keywords_at_creation = None
+        self._keywords_at_creation = keywords_at_creation
 
     def get_refraction_index(self, photon_energy=10000.0):
 
         wave_length = codata.h * codata.c / codata.e / photon_energy
+
+        if self.get_material() == "External":
+            refraction_index_delta = self._keywords_at_creation["refraction_index_delta"]
+            att_coefficient = self._keywords_at_creation["att_coefficient"]
+            print("\n\n\nRefracion index delta = %g " % (refraction_index_delta))
+            print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
+            return refraction_index_delta, att_coefficient
 
         if self.get_material() == "Be": # Be
             element = "Be"
@@ -55,6 +63,7 @@ class WOLens(Lens, OpticalElementDecorator):
         print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
 
         return refraction_index_delta, att_coefficient
+
 
     def applyOpticalElement(self, wavefront, parameters=None, element_index=None):
 
@@ -104,6 +113,8 @@ class WOLens(Lens, OpticalElementDecorator):
                      _wt_offst_ffs=0, _offst_bfs_x=0, _offst_bfs_y=0,
                      _tilt_bfs_x=0, _tilt_bfs_y=0, _ang_rot_ez_bfs=0, _wt_offst_bfs=0,
                      isdgr=False, project=True,)
+
+        lens_thickness *= self._keywords_at_creation["n_lenses"]
 
         return x, y, lens_thickness.T
 
@@ -183,7 +194,10 @@ class WOLens(Lens, OpticalElementDecorator):
                              surface_shape=0,
                              wall_thickness=10e-6,
                              material="Be",
+                             refraction_index_delta=5.3e-07,
+                             att_coefficient=0.00357382,
                              lens_radius=100e-6,
+                             n_lenses=1,
                              aperture_shape=0,
                              aperture_dimension_h=500e-6,
                              aperture_dimension_v=1000e-6,
@@ -229,7 +243,10 @@ class WOLens(Lens, OpticalElementDecorator):
         keywords_at_creation["surface_shape"]                 = surface_shape
         keywords_at_creation["wall_thickness"]                = wall_thickness
         keywords_at_creation["material"]                      = material
+        keywords_at_creation["refraction_index_delta"]        = refraction_index_delta
+        keywords_at_creation["att_coefficient"]               = att_coefficient
         keywords_at_creation["lens_radius"]                   = lens_radius
+        keywords_at_creation["n_lenses"]                      = n_lenses
         keywords_at_creation["aperture_shape"]                = aperture_shape
         keywords_at_creation["aperture_dimension_h"]          = aperture_dimension_h
         keywords_at_creation["aperture_dimension_v"]          = aperture_dimension_v
@@ -259,7 +276,11 @@ class WOLens(Lens, OpticalElementDecorator):
         txt += "\n    surface_shape=%d,"             % self._keywords_at_creation["surface_shape"]
         txt += "\n    wall_thickness=%g,"            % self._keywords_at_creation["wall_thickness"]
         txt += "\n    material='%s',"                % self._keywords_at_creation["material"]
+        if self._keywords_at_creation["material"] == "External":
+            txt += "\n    refraction_index_delta=%g," % self._keywords_at_creation["refraction_index_delta"]
+            txt += "\n    att_coefficient=%g,"        % self._keywords_at_creation["att_coefficient"]
         txt += "\n    lens_radius=%g,"               % self._keywords_at_creation["lens_radius"]
+        txt += "\n    n_lenses=%g,"                  % self._keywords_at_creation["n_lenses"]
         txt += "\n    aperture_shape=%d,"            % self._keywords_at_creation["aperture_shape"]
         txt += "\n    aperture_dimension_h=%g,"      % self._keywords_at_creation["aperture_dimension_h"]
         txt += "\n    aperture_dimension_v=%g)"      % self._keywords_at_creation["aperture_dimension_v"]
@@ -293,7 +314,7 @@ class WOLens1D(Lens, OpticalElementDecorator):
         lens_aperture = self._keywords_at_creation["lens_aperture"                 ]
         wall_thickness = self._keywords_at_creation["wall_thickness"                ]
         number_of_refractive_surfaces  = self._keywords_at_creation["number_of_refractive_surfaces" ]
-        n_lenses = self._keywords_at_creation["n_lenses"                      ] # TODO: use this here
+        n_lenses = self._keywords_at_creation["n_lenses"                      ]
         error_flag = self._keywords_at_creation["error_flag"                    ]
         error_file = self._keywords_at_creation["error_file"                    ]
         error_edge_management = self._keywords_at_creation["error_edge_management"         ]
@@ -365,6 +386,8 @@ class WOLens1D(Lens, OpticalElementDecorator):
                 if (x < -bound) or (x > bound):
                     lens_thickness[i] = lens_thickness.max()
 
+        lens_thickness *= n_lenses
+
         if error_flag:
             a = numpy.loadtxt(error_file)  # extrapolation
             if error_edge_management == 0:
@@ -395,7 +418,7 @@ class WOLens1D(Lens, OpticalElementDecorator):
         if self.get_material() == "External":
             refraction_index_delta = self._keywords_at_creation["refraction_index_delta"]
             att_coefficient = self._keywords_at_creation["att_coefficient"]
-            print("Refracion index delta = %g " % (refraction_index_delta))
+            print("\n\n\nRefracion index delta = %g " % (refraction_index_delta))
             print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
             return refraction_index_delta, att_coefficient
 
@@ -427,11 +450,11 @@ class WOLens1D(Lens, OpticalElementDecorator):
 
     def applyOpticalElement(self, input_wavefront, parameters=None, element_index=None):
 
-        # TODO: n_lenses
+        # TODO: 1
 
         refraction_index_delta, att_coefficient = \
             self.get_refraction_index(input_wavefront.get_photon_energy())
-        n_lenses = self._keywords_at_creation["n_lenses"                      ]
+
         error_flag = self._keywords_at_creation["error_flag"                    ]
         error_file = self._keywords_at_creation["error_file"                    ]
         error_edge_management = self._keywords_at_creation["error_edge_management"         ]
@@ -439,8 +462,8 @@ class WOLens1D(Lens, OpticalElementDecorator):
         output_wavefront = input_wavefront.duplicate()
         abscissas_on_lens, lens_thickness = self.get_surface_thickness_mesh(input_wavefront=input_wavefront)
 
-        amp_factors = (numpy.exp(-1.0 * att_coefficient * lens_thickness)) ** n_lenses / 2
-        phase_shifts = -1.0 * output_wavefront.get_wavenumber() * refraction_index_delta * lens_thickness * n_lenses
+        amp_factors = (numpy.exp(-1.0 * att_coefficient * lens_thickness)) ** 1 / 2
+        phase_shifts = -1.0 * output_wavefront.get_wavenumber() * refraction_index_delta * lens_thickness
 
         output_wavefront.rescale_amplitudes(amp_factors)
         output_wavefront.add_phase_shifts(phase_shifts)
@@ -561,8 +584,6 @@ class WOLens1D(Lens, OpticalElementDecorator):
 
 if __name__ == "__main__":
 
-
-    # wolens = WOLens.create_from_keywords()
     wolens = WOLens1D.create_from_keywords()
     print(wolens.info())
     for key in wolens._keywords_at_creation.keys():

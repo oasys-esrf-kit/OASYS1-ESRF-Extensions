@@ -29,6 +29,8 @@ class OWWOThinObject2D(OWWOOpticalElement):
 
 
     material = Setting(1)
+    refraction_index_delta = Setting(5.3e-7)
+    att_coefficient = Setting(0.00357382)
 
     aperture_shape = Setting(0)
     aperture_dimension_v = Setting(100e-6)
@@ -50,8 +52,20 @@ class OWWOThinObject2D(OWWOOpticalElement):
                                            height=350)
 
         gui.comboBox(self.thinobject_box, self, "material", label="Lens material",
-                     items=self.get_material_name(),
+                     items=self.get_material_name(), callback=self.set_visible,
                      sendSelectedValue=False, orientation="horizontal")
+
+        self.box_refraction_index_id = oasysgui.widgetBox(self.thinobject_box, "", addSpace=False, orientation="horizontal")
+        tmp = oasysgui.lineEdit(self.box_refraction_index_id, self, "refraction_index_delta", "Refraction index delta",
+                          labelWidth=250, valueType=float, orientation="horizontal")
+        tmp.setToolTip("refraction_index_delta")
+
+        self.box_att_coefficient_id = oasysgui.widgetBox(self.thinobject_box, "", addSpace=False, orientation="horizontal")
+        tmp = oasysgui.lineEdit(self.box_att_coefficient_id, self, "att_coefficient", "Attenuation coefficient [m-1]",
+                          labelWidth=250, valueType=float, orientation="horizontal")
+        tmp.setToolTip("att_coefficient")
+
+
 
         oasysgui.lineEdit(self.thinobject_box, self, "file_with_thickness_mesh", "File with thickness mesh",
                             labelWidth=200, valueType=str, orientation="horizontal")
@@ -92,9 +106,11 @@ class OWWOThinObject2D(OWWOOpticalElement):
 
     def set_visible(self):
         self.box_file_out.setVisible(self.write_profile_flag == 1)
+        self.box_refraction_index_id.setVisible(self.material in [0])
+        self.box_att_coefficient_id.setVisible(self.material in [0])
 
     def get_material_name(self, index=None):
-        materials_list = ["", "Be", "Al", "Diamond"]
+        materials_list = ["External", "Be", "Al", "Diamond"]
         if index is None:
             return materials_list
         else:
@@ -103,8 +119,11 @@ class OWWOThinObject2D(OWWOOpticalElement):
     def get_optical_element(self):
 
         return WOThinObject(name=self.name,
-                 file_with_thickness_mesh=self.file_with_thickness_mesh,
-                 material=self.get_material_name(self.material))
+                    file_with_thickness_mesh=self.file_with_thickness_mesh,
+                    material=self.get_material_name(self.material),
+                    refraction_index_delta=self.refraction_index_delta,
+                    att_coefficient=self.att_coefficient,
+                    )
 
     # def get_optical_element_python_code(self):
     #     return self.get_optical_element().to_python_code()
@@ -116,17 +135,13 @@ class OWWOThinObject2D(OWWOOpticalElement):
 
     def receive_specific_syned_data(self, optical_element):
         pass
-        # if not optical_element is None:
-        #     if isinstance(optical_element, Lens):
-        #         self.lens_radius = optical_element._radius
-        #         self.wall_thickness = optical_element._thickness
-        #         self.material = optical_element._material
-        #     else:
-        #         raise Exception("Syned Data not correct: Optical Element is not a Lens")
-        # else:
-        #     raise Exception("Syned Data not correct: Empty Optical Element")
 
+
+
+    #
     # overwrite this method to add tab with thickness profile
+    #
+
     def initializeTabs(self):
         size = len(self.tab)
         indexes = range(0, size)
@@ -146,13 +161,6 @@ class OWWOThinObject2D(OWWOOpticalElement):
             tab.setFixedHeight(self.IMAGE_HEIGHT)
             tab.setFixedWidth(self.IMAGE_WIDTH)
 
-    def propagate_wavefront(self):
-        super().propagate_wavefront()
-
-        if self.write_profile_flag == 1:
-            xx, yy, s = self.get_optical_element().get_surface_thickness_mesh(self.input_data.get_wavefront())
-            write_surface_file(s.T, xx, yy, self.write_profile, overwrite=True)
-            print("\nFile for OASYS " + self.write_profile + " written to disk.")
 
     def do_plot_results(self, progressBarValue=80):
         super().do_plot_results(progressBarValue)
@@ -161,8 +169,7 @@ class OWWOThinObject2D(OWWOOpticalElement):
 
                 self.progressBarSet(progressBarValue)
 
-                xx, yy, zz = read_surface_file(self.file_with_thickness_mesh)
-                if zz.min() < 0: zz -= zz.min()
+                xx, yy, zz = self.get_optical_element().get_surface_thickness_mesh(self.input_data.get_wavefront())
 
                 self.plot_data2D(data2D=1e6*zz.T,
                                  dataX=1e6*xx,

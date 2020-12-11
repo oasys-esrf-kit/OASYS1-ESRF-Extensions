@@ -46,6 +46,7 @@ class OWWOThinObjectCorrector1D(OWWOOpticalElement1D):
     write_profile_flag = Setting(0)
     write_profile = Setting("thin_object_profile_1D.dat")
 
+    file_with_thickness_mesh_flag = Setting(0)
     file_with_thickness_mesh = Setting("profile1D.dat")
 
     def __init__(self):
@@ -88,7 +89,14 @@ class OWWOThinObjectCorrector1D(OWWOOpticalElement1D):
         tmp = oasysgui.lineEdit(self.thinobject_box, self, "wall_thickness", "Wall thickness [m]",
                                 labelWidth=300, valueType=float, orientation="horizontal", tooltip="wall_thickness")
 
-        oasysgui.lineEdit(self.thinobject_box, self, "file_with_thickness_mesh", "Output file with thickness mesh",
+        gui.comboBox(self.thinobject_box, self, "file_with_thickness_mesh_flag", label="Write profile to file",
+                     labelWidth=350,
+                     items=["No", "Yes"],
+                     sendSelectedValue=False, orientation="horizontal", callback=self.set_visible)
+
+        self.box_write_file = oasysgui.widgetBox(self.thinobject_box, "", addSpace=False, orientation="horizontal")
+
+        oasysgui.lineEdit(self.box_write_file, self, "file_with_thickness_mesh", "Output file with thickness mesh",
                           labelWidth=200, valueType=str, orientation="horizontal")
 
         gui.comboBox(self.thinobject_box, self, "apply_correction_to_wavefront", label="Apply correction to wavefront",
@@ -106,6 +114,7 @@ class OWWOThinObjectCorrector1D(OWWOOpticalElement1D):
         self.box_corrector_1.setVisible(self.correction_method != 0)
         self.box_refraction_index_id.setVisible(self.material in [0])
         self.box_att_coefficient_id.setVisible(self.material in [0])
+        self.box_write_file.setVisible(self.file_with_thickness_mesh_flag == 1)
 
     def get_material_name(self, index=None):
         materials_list = ["External", "Be", "Al", "Diamond"]
@@ -117,9 +126,9 @@ class OWWOThinObjectCorrector1D(OWWOOpticalElement1D):
     def get_optical_element(self):
 
         return WOThinObjectCorrector1D(name=self.oe_name,
+                                       file_with_thickness_mesh_flag=self.file_with_thickness_mesh_flag,
                                        file_with_thickness_mesh=self.file_with_thickness_mesh,
                                        material=self.get_material_name(self.material),
-
                                        correction_method=self.correction_method,
                                        focus_at=self.focus_at,
                                        wall_thickness=self.wall_thickness,
@@ -164,16 +173,16 @@ class OWWOThinObjectCorrector1D(OWWOOpticalElement1D):
                 self.progressBarSet(progressBarValue)
 
                 wo_lens = self.get_optical_element()
-                abscissas_on_lens, lens_thickness = wo_lens.get_surface_thickness_mesh(self.wavefront_to_plot)
+                abscissas_on_lens, lens_thickness = wo_lens.calculate_correction_profile(self.input_data.get_wavefront())
 
-                self.plot_data1D(x=abscissas_on_lens, #TODO check how is possible to plot both refractive surfaces
+                self.plot_data1D(x=abscissas_on_lens*1e6, #TODO check how is possible to plot both refractive surfaces
                                  y=lens_thickness*1e6, # in microns
                                  progressBarValue=progressBarValue + 10,
                                  tabs_canvas_index=4,
                                  plot_canvas_index=4,
                                  calculate_fwhm=False,
                                  title=self.get_titles()[4],
-                                 xtitle="Spatial Coordinate along o.e. [m]",
+                                 xtitle="Spatial Coordinate along o.e. [$\mu$m]",
                                  ytitle="Total lens thickness [$\mu$m]")
 
                 self.progressBarFinished()

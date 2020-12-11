@@ -26,7 +26,10 @@ class OWWORealLens2D(OWWOOpticalElement):
     two_d_lens = Setting(0)
     wall_thickness = Setting(10e-6)
 
+    n_lenses = Setting(1)
     material = Setting(1)
+    refraction_index_delta = Setting(5.3e-7)
+    att_coefficient = Setting(0.00357382)
 
     aperture_shape = Setting(0)
     aperture_dimension_v = Setting(100e-6)
@@ -45,9 +48,11 @@ class OWWORealLens2D(OWWOOpticalElement):
         self.lens_radius_box_id.setVisible(self.number_of_curved_surfaces != 0)
         self.lens_width_id.setVisible(self.aperture_shape == 1)
         self.box_file_out.setVisible(self.write_profile_flag == 1)
+        self.box_refraction_index_id.setVisible(self.material in [0])
+        self.box_att_coefficient_id.setVisible(self.material in [0])
 
     def get_material_name(self, index=None):
-        materials_list = ["", "Be", "Al", "Diamond"]
+        materials_list = ["External", "Be", "Al", "Diamond"]
         if index is None:
             return materials_list
         else:
@@ -60,9 +65,24 @@ class OWWORealLens2D(OWWOOpticalElement):
 
         oasysgui.lineEdit(self.lens_box, self, "wall_thickness", "(t_wall) Wall thickness [m]", labelWidth=260, valueType=float, orientation="horizontal")
 
+
+        oasysgui.lineEdit(self.lens_box, self, "n_lenses", "Number of lenses",
+                          labelWidth=300, valueType=int, orientation="horizontal")
+
         gui.comboBox(self.lens_box, self, "material", label="Lens material",
-                     items=self.get_material_name(),
+                     items=self.get_material_name(),callback=self.set_visible,
                      sendSelectedValue=False, orientation="horizontal")
+
+        self.box_refraction_index_id = oasysgui.widgetBox(self.lens_box, "", addSpace=False, orientation="horizontal")
+        tmp = oasysgui.lineEdit(self.box_refraction_index_id, self, "refraction_index_delta", "Refraction index delta",
+                          labelWidth=250, valueType=float, orientation="horizontal")
+        tmp.setToolTip("refraction_index_delta")
+
+        self.box_att_coefficient_id = oasysgui.widgetBox(self.lens_box, "", addSpace=False, orientation="horizontal")
+        tmp = oasysgui.lineEdit(self.box_att_coefficient_id, self, "att_coefficient", "Attenuation coefficient [m-1]",
+                          labelWidth=250, valueType=float, orientation="horizontal")
+        tmp.setToolTip("att_coefficient")
+
 
 
         gui.comboBox(self.lens_box, self, "number_of_curved_surfaces", label="Number of curved surfaces", labelWidth=350,
@@ -120,6 +140,9 @@ class OWWORealLens2D(OWWOOpticalElement):
             wall_thickness=self.wall_thickness,
             lens_radius=self.lens_radius,
             material=self.get_material_name(index=self.material),
+            refraction_index_delta=self.refraction_index_delta,
+            att_coefficient=self.att_coefficient,
+            n_lenses=self.n_lenses,
             aperture_shape=self.aperture_shape,
             aperture_dimension_h=self.aperture_dimension_h,
             aperture_dimension_v=self.aperture_dimension_v,
@@ -143,7 +166,7 @@ class OWWORealLens2D(OWWOOpticalElement):
 
     # overwrite this method to add tab with thickness profile
 
-    def initializeTabs(self): # OVERWRITTEN
+    def initializeTabs(self): #TODO Customize parent and remove (like in 1D)
         size = len(self.tab)
         indexes = range(0, size)
 
@@ -178,8 +201,8 @@ class OWWORealLens2D(OWWOOpticalElement):
 
                 self.progressBarSet(progressBarValue)
 
-                wo_lens = self.get_optical_element()
-                x, y, lens_thickness = wo_lens.get_surface_thickness_mesh(self.wavefront_to_plot)
+                x, y, lens_thickness = self.get_optical_element().get_surface_thickness_mesh(self.input_data.get_wavefront())
+
                 self.plot_data2D(data2D=1e6*lens_thickness,
                              dataX=1e6*x,
                              dataY=1e6*y,
