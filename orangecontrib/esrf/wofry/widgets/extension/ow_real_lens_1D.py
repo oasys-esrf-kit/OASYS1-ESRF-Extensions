@@ -14,6 +14,8 @@ from oasys.widgets import gui as oasysgui
 from oasys.widgets import congruence
 from oasys.util.oasys_util import TriggerIn, TriggerOut, EmittingStream
 
+from orangecontrib.esrf.syned.util.lens import Lens # TODO: from syned.beamline.optical_elements....
+
 from syned.widget.widget_decorator import WidgetDecorator
 
 from orangecontrib.wofry.util.wofry_objects import WofryData
@@ -27,10 +29,10 @@ from orangecontrib.esrf.wofry.util.lens import WOLens1D
 
 class OWWORealLens1D(OWWOOpticalElement1D):
 
-    name = "Lens 1D"
+    name = "Real Lens 1D"
     id = "WofryLens1D"
     description = "Wofry: Real Lens 1D"
-    icon = "icons/lens.png"
+    icon = "icons/lens1d.png"
     priority = 4
 
     category = "Wofry Wavefront Propagation"
@@ -46,7 +48,6 @@ class OWWORealLens1D(OWWOOpticalElement1D):
                 "id":"Trigger"}]
 
     inputs = [("WofryData", WofryData, "set_input"),
-              ("GenericWavefront1D", GenericWavefront1D, "set_input"),
               ("DABAM 1D Profile", numpy.ndarray, "receive_dabam_profile"),
               ("Trigger", TriggerOut, "receive_trigger_signal"),
               WidgetDecorator.syned_input_data()[0]]

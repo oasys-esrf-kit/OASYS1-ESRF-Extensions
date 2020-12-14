@@ -6,18 +6,18 @@ from oasys.widgets import congruence
 from oasys.util.oasys_util import write_surface_file
 
 from orangecontrib.esrf.syned.util.lens import Lens # TODO: from syned.beamline.optical_elements....
-from orangecontrib.esrf.wofry.util.lens import WOLens # from wofryimpl...
 
+from orangecontrib.esrf.wofry.util.lens import WOLens # from wofryimpl...
 from orangecontrib.wofry.widgets.gui.ow_optical_element import OWWOOpticalElement
 
 
 class OWWORealLens2D(OWWOOpticalElement):
 
-    name = "Lens 2D"
+    name = "Real Lens 2D"
     id = "WofryLens2D"
     description = "Wofry: Real Lens 2D"
-    icon = "icons/lens.png"
-    priority = 25
+    icon = "icons/lens2d.png"
+    priority = 204
 
     number_of_curved_surfaces = Setting(2)
     lens_radius = Setting(200e-6)

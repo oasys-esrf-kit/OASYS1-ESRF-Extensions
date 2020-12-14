@@ -6,7 +6,7 @@ except AttributeError:
     from setuptools import find_packages, setup
 
 NAME = 'OASYS1-ESRF-Extensions'
-VERSION = '0.0.20'
+VERSION = '0.0.21'
 ISRELEASED = True
 
 DESCRIPTION = 'OASYS extension for the ESRF'
@@ -79,9 +79,9 @@ ENTRY_POINTS = {
                       ),
     'oasys.widgets' : (
         "Oasys ESRF Extension = orangecontrib.esrf.oasys.widgets.extension",
-        "WOFRY ESRF Extension = orangecontrib.esrf.wofry.widgets.extension",
+        "Wofry ESRF Extension = orangecontrib.esrf.wofry.widgets.extension",
         "XOPPY ESRF Extension = orangecontrib.esrf.xoppy.widgets.extension",
-        "SYNED ESRF Extension = orangecontrib.esrf.syned.widgets.extension",
+        "Syned ESRF Extension = orangecontrib.esrf.syned.widgets.extension",
         "Shadow ESRF Extension = orangecontrib.esrf.shadow.widgets.extension",
         "SRW ESRF Extension = orangecontrib.esrf.srw.widgets.extension",
     ),

@@ -5,8 +5,6 @@ from orangewidget import gui
 from oasys.widgets import gui as oasysgui
 from oasys.widgets import congruence
 
-from oasys.util.oasys_util import write_surface_file, read_surface_file
-from oasys.util.oasys_util import write_surface_file
 from oasys.util.oasys_objects import OasysPreProcessorData, OasysSurfaceData
 
 from syned.widget.widget_decorator import WidgetDecorator
@@ -22,15 +20,8 @@ class OWWOThinObjectCorrector2D(OWWOOpticalElement):
 
     name = "ThinObjectCorrector2D"
     description = "Wofry: Thin Object Corrector 2D"
-    icon = "icons/lenscorrector2d.png"
-    priority = 35
-
-    inputs = [("WofryData", WofryData, "set_input"),
-              # ("GenericWavefront2D", GenericWavefront2D, "set_input"),
-              WidgetDecorator.syned_input_data()[0],
-              # ("Oasys PreProcessorData", OasysPreProcessorData, "set_input"),
-              ("Surface Data", OasysSurfaceData, "set_input")
-              ]
+    icon = "icons/corrector2d.png"
+    priority = 208
 
 
     material = Setting(1)
@@ -133,8 +124,6 @@ class OWWOThinObjectCorrector2D(OWWOOpticalElement):
 
     def check_data(self):
         super().check_data()
-        # congruence.checkStrictlyPositiveNumber(numpy.abs(self.focal_x), "Horizontal Focal Length")
-        # congruence.checkStrictlyPositiveNumber(numpy.abs(self.focal_y), "Vertical Focal Length")
 
     def receive_specific_syned_data(self, optical_element):
         pass

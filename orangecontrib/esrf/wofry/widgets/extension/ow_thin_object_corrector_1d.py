@@ -19,13 +19,8 @@ from orangecontrib.esrf.wofry.widgets.gui.ow_optical_element_1d import OWWOOptic
 class OWWOThinObjectCorrector1D(OWWOOpticalElement1D):
     name = "ThinObjectCorrector1D"
     description = "Wofry: Thin Object Corrector 1D"
-    icon = "icons/lenscorrector2d.png"
+    icon = "icons/corrector1d.png"
     priority = 8
-
-    inputs = [("WofryData", WofryData, "set_input"),
-              WidgetDecorator.syned_input_data()[0],
-              ("Surface Data", OasysSurfaceData, "set_input")
-              ]
 
     material = Setting(1)
     refraction_index_delta = Setting(5.3e-7)
@@ -137,8 +132,6 @@ class OWWOThinObjectCorrector1D(OWWOOpticalElement1D):
 
     def check_data(self):
         super().check_data()
-        # congruence.checkStrictlyPositiveNumber(numpy.abs(self.focal_x), "Horizontal Focal Length")
-        # congruence.checkStrictlyPositiveNumber(numpy.abs(self.focal_y), "Vertical Focal Length")
 
     def receive_specific_syned_data(self, optical_element):
         pass

@@ -17,13 +17,8 @@ class OWWOThinObject1D(OWWOOpticalElement1D):
 
     name = "ThinObject1D"
     description = "Wofry: Thin Object 1D"
-    icon = "icons/thin_object.jpg"
+    icon = "icons/thinb1d.png"
     priority = 6
-
-    inputs = [("WofryData", WofryData, "set_input"),
-              WidgetDecorator.syned_input_data()[0],
-              ("Surface Data", OasysSurfaceData, "set_input")
-              ]
 
 
     material = Setting(1)
@@ -65,29 +60,26 @@ class OWWOThinObject1D(OWWOOpticalElement1D):
 
 
 
-        oasysgui.lineEdit(self.thinobject_box, self, "file_with_thickness_mesh", "File with thickness mesh",
-                            labelWidth=200, valueType=str, orientation="horizontal")
-
-
-        # files i/o tab
-        self.tab_files = oasysgui.createTabPage(self.tabs_setting, "File I/O")
-        files_box = oasysgui.widgetBox(self.tab_files, "Files", addSpace=True, orientation="vertical")
-
-        gui.comboBox(files_box, self, "write_profile_flag", label="Dump profile to file",
-                     items=["No", "Yes"], sendSelectedValue=False, orientation="horizontal",
-                     callback=self.set_visible)
-
-        self.box_file_out = gui.widgetBox(files_box, "", addSpace=False, orientation="vertical")
-        oasysgui.lineEdit(self.box_file_out, self, "write_profile", "File name",
-                            labelWidth=200, valueType=str, orientation="horizontal")
+        filein_box = oasysgui.widgetBox(self.thinobject_box, "", addSpace=True,
+                                        orientation="horizontal")  # width=550, height=50)
+        self.le_beam_file_name = oasysgui.lineEdit(filein_box, self, "file_with_thickness_mesh",
+                                                   "File with thickness mesh",
+                                                   labelWidth=90, valueType=str, orientation="horizontal")
+        gui.button(filein_box, self, "...", callback=self.selectFile)
 
 
         self.set_visible()
 
     def set_visible(self):
-        self.box_file_out.setVisible(self.write_profile_flag == 1)
         self.box_refraction_index_id.setVisible(self.material in [0])
         self.box_att_coefficient_id.setVisible(self.material in [0])
+
+    def selectFile(self):
+        filename = oasysgui.selectFileFromDialog(self,
+                previous_file_path=self.file_with_thickness_mesh, message="HDF5 Files (*.hdf5 *.h5 *.hdf)",
+                start_directory=".", file_extension_filter="*.*")
+
+        self.le_beam_file_name.setText(filename)
 
     def get_material_name(self, index=None):
         materials_list = ["External", "Be", "Al", "Diamond"]
@@ -106,20 +98,10 @@ class OWWOThinObject1D(OWWOOpticalElement1D):
 
     def check_data(self):
         super().check_data()
-        # congruence.checkStrictlyPositiveNumber(numpy.abs(self.focal_x), "Horizontal Focal Length")
-        # congruence.checkStrictlyPositiveNumber(numpy.abs(self.focal_y), "Vertical Focal Length")
+        congruence.checkFileName(self.file_with_thickness_mesh)
 
     def receive_specific_syned_data(self, optical_element):
         pass
-        # if not optical_element is None:
-        #     if isinstance(optical_element, Lens):
-        #         self.lens_radius = optical_element._radius
-        #         self.wall_thickness = optical_element._thickness
-        #         self.material = optical_element._material
-        #     else:
-        #         raise Exception("Syned Data not correct: Optical Element is not a Lens")
-        # else:
-        #     raise Exception("Syned Data not correct: Empty Optical Element")
 
 
 
