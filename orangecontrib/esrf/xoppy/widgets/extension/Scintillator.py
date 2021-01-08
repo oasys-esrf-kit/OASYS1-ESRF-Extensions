@@ -1,7 +1,6 @@
 import sys
 import numpy
 from PyQt5.QtWidgets import QApplication, QMessageBox, QSizePolicy
-from PyQt5.QtGui import QIntValidator, QDoubleValidator
 
 from orangewidget import gui
 from orangewidget.settings import Setting
@@ -71,7 +70,7 @@ class Scintillator(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "THICK",
                                        label=self.unitLabels()[idx], addSpace=False,
-                                       valueType=float, validator=QDoubleValidator(),  orientation="horizontal", labelWidth=150)
+                                       valueType=float,  orientation="horizontal", labelWidth=150)
         self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 4
@@ -79,7 +78,7 @@ class Scintillator(XoppyWidget):
         #box1 = gui.widgetBox(box)
         #oasysgui.lineEdit(box1, self, "DENS",
                           #label=self.unitLabels()[idx], addSpace=False,
-                          #valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=150)
+                          #valueType=float, orientation="horizontal", labelWidth=150)
         #self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 5
@@ -87,7 +86,7 @@ class Scintillator(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "ENER_MIN",
                           label=self.unitLabels()[idx], addSpace=False,
-                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                          valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 6
@@ -95,7 +94,7 @@ class Scintillator(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "ENER_MAX",
                           label=self.unitLabels()[idx], addSpace=False,
-                          valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                          valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 7
@@ -103,7 +102,7 @@ class Scintillator(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "ENER_N",
                           label=self.unitLabels()[idx], addSpace=False,
-                          valueType=int, validator=QIntValidator(), orientation="horizontal", labelWidth=250)
+                          valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 8 ***********   File Browser ******************
@@ -121,7 +120,7 @@ class Scintillator(XoppyWidget):
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "CORRECTION_FACTOR",
                                        label=self.unitLabels()[idx], addSpace=False,
-                                       valueType=float, validator=QDoubleValidator(),  orientation="horizontal", labelWidth=150)
+                                       valueType=float, orientation="horizontal", labelWidth=150)
         self.show_at(self.unitFlags()[idx], box1)
 
         #widget index 10

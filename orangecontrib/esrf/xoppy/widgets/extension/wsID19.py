@@ -1,6 +1,6 @@
 import sys, os, platform
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtGui import QIntValidator, QDoubleValidator
+
 from orangewidget import gui
 from orangewidget.settings import Setting
 from oasys.widgets import gui as oasysgui, congruence
@@ -56,7 +56,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         box1 = gui.widgetBox(box) 
         self.id_ENERGY = oasysgui.lineEdit(box1, self, "ENERGY",
                      label=self.unitLabels()[idx], addSpace=False,
-                    valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
         #widget index 2 
@@ -64,7 +64,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         box1 = gui.widgetBox(box) 
         self.id_CUR = oasysgui.lineEdit(box1, self, "CUR",
                      label=self.unitLabels()[idx], addSpace=False,
-                    valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
         #widget index 3 
@@ -72,7 +72,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         box1 = gui.widgetBox(box) 
         self.id_PERIOD = oasysgui.lineEdit(box1, self, "PERIOD",
                      label=self.unitLabels()[idx], addSpace=False,
-                    valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
         #widget index 4 
@@ -80,7 +80,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         box1 = gui.widgetBox(box) 
         self.id_N = oasysgui.lineEdit(box1, self, "N",
                      label=self.unitLabels()[idx], addSpace=False,
-                    valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
 
         # COMMENTED AS IT IS NOT IMPLEMENTED!!
@@ -89,21 +89,21 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         # box1 = gui.widgetBox(box)
         # oasysgui.lineEdit(box1, self, "KX",
         #              label=self.unitLabels()[idx], addSpace=False,
-        #             valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+        #             valueType=float, orientation="horizontal", labelWidth=250)
         # self.show_at(self.unitFlags()[idx], box1)
         
         #widget index 6 
         idx += 1 
         box1 = gui.widgetBox(box) 
         self.id_KY = oasysgui.lineEdit(box1, self, "KY",
-                     valueType=float, validator=QDoubleValidator(), label=self.unitLabels()[idx], addSpace=False, orientation="horizontal", labelWidth=250, callback=self.calculateGAP)
+                     valueType=float, label=self.unitLabels()[idx], addSpace=False, orientation="horizontal", labelWidth=250, callback=self.calculateGAP)
         self.show_at(self.unitFlags()[idx], box1)
 
         #widget index 7
         idx += 1
         box1 = gui.widgetBox(box)
         self.id_GAP = oasysgui.lineEdit(box1, self, "GAP",
-                     valueType=float, validator=QDoubleValidator(), label=self.unitLabels()[idx], addSpace=False, orientation="horizontal", labelWidth=250, callback=self.calculateKY)
+                     valueType=float, label=self.unitLabels()[idx], addSpace=False, orientation="horizontal", labelWidth=250, callback=self.calculateKY)
         self.show_at(self.unitFlags()[idx], box1)
 
         #widget index 8
@@ -111,7 +111,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "EMIN",
                      label=self.unitLabels()[idx], addSpace=False,
-                    valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
         #widget index 9
@@ -119,7 +119,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "EMAX",
                      label=self.unitLabels()[idx], addSpace=False,
-                    valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
         #widget index 10
@@ -127,7 +127,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "NEE",
                      label=self.unitLabels()[idx], addSpace=False,
-                    valueType=int, validator=QIntValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
         #widget index 11
@@ -135,7 +135,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "D",
                      label=self.unitLabels()[idx], addSpace=False,
-                    valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
         #widget index 12
@@ -143,7 +143,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "XPC",
                      label=self.unitLabels()[idx], addSpace=False,
-                    valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
         #widget index 13
@@ -151,7 +151,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "YPC",
                      label=self.unitLabels()[idx], addSpace=False,
-                    valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
         #widget index 14
@@ -159,7 +159,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "XPS",
                      label=self.unitLabels()[idx], addSpace=False,
-                    valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
         #widget index 15
@@ -167,7 +167,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "YPS",
                      label=self.unitLabels()[idx], addSpace=False,
-                    valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
         #widget index 16
@@ -175,7 +175,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "NXP",
                      label=self.unitLabels()[idx], addSpace=False,
-                    valueType=int, validator=QIntValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1) 
         
         #widget index 17
@@ -183,7 +183,7 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         box1 = gui.widgetBox(box) 
         oasysgui.lineEdit(box1, self, "NYP",
                      label=self.unitLabels()[idx], addSpace=False,
-                    valueType=int, validator=QIntValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
     def calculateGAP(self):

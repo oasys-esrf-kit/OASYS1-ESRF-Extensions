@@ -14,7 +14,7 @@ import oasys.util.oasys_util as OU
 
 from silx.gui.plot import Plot2D
 from PyQt5 import QtGui
-from PyQt5.QtGui import QDoubleValidator, QIntValidator
+
 from scipy import interpolate
 
 class OWSurfaceFileReader(OWWidget):
@@ -106,11 +106,11 @@ class OWSurfaceFileReader(OWWidget):
         #
         oasysgui.lineEdit(input_box, self, "factor_surface1",
                      label="Factor for surface1", addSpace=False,
-                    valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=float, orientation="horizontal", labelWidth=250)
 
         oasysgui.lineEdit(input_box, self, "factor_surface2",
                      label="Factor for surface2", addSpace=False,
-                    valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=float, orientation="horizontal", labelWidth=250)
 
 
         #
@@ -125,19 +125,19 @@ class OWSurfaceFileReader(OWWidget):
 
         oasysgui.lineEdit(self.interpoleted_id, self, "interpolated_length_x",
                      label="Interpolated width (X)", addSpace=False,
-                    valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=float, orientation="horizontal", labelWidth=250)
 
         oasysgui.lineEdit(self.interpoleted_id, self, "interpolated_length_y",
                      label="Interpolated length (Y)", addSpace=False,
-                    valueType=float, validator=QDoubleValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=float, orientation="horizontal", labelWidth=250)
 
         oasysgui.lineEdit(self.interpoleted_id, self, "interpolated_nx",
                      label="Interpolated points along with (X)", addSpace=False,
-                    valueType=float, validator=QIntValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=float, orientation="horizontal", labelWidth=250)
 
         oasysgui.lineEdit(self.interpoleted_id, self, "interpolated_ny",
                      label="Interpolated points along with (Y)", addSpace=False,
-                    valueType=float, validator=QIntValidator(), orientation="horizontal", labelWidth=250)
+                    valueType=float, orientation="horizontal", labelWidth=250)
 
 
         # file
