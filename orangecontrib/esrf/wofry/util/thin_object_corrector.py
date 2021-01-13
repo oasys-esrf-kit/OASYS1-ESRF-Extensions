@@ -194,7 +194,7 @@ class WOThinObjectCorrector1D(WOThinObject1D, OpticalElementDecorator):
 
         if self._apply_correction_to_wavefront > 0:
 
-            amp_factors = numpy.sqrt(numpy.exp(-1.0 * att_coefficient * profile))
+            amp_factors = numpy.exp(-1.0 * att_coefficient * profile / 2) # factor of 2 because it is amplitude
             phase_shifts = -1.0 * wavefront.get_wavenumber() * refraction_index_delta * profile
 
             output_wavefront = wavefront.duplicate()

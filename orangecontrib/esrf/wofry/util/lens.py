@@ -71,9 +71,27 @@ class WOLens(Lens, OpticalElementDecorator):
 
         photon_energy = wavefront.get_photon_energy()
 
-        refraction_index_delta, att_coefficient = self.get_refraction_index(photon_energy=photon_energy)
+        #
+        print("\n\n\n ==========  parameters in use : ")
 
-        amp_factors = numpy.sqrt(numpy.exp(-1.0 * att_coefficient * lens_thickness))
+        refraction_index_delta, att_coefficient = \
+            self.get_refraction_index(photon_energy=photon_energy)
+
+        # this is for info...
+        number_of_curved_surfaces = self._keywords_at_creation["number_of_curved_surfaces"]
+        lens_radius = self._keywords_at_creation["lens_radius"]
+        n_lenses = self._keywords_at_creation["n_lenses"]
+
+        print("\n\nRadius of curvature R = %g um" % (1e6 * lens_radius))
+        print("Number of lenses N: %d" % n_lenses)
+        print("Number of curved refractive surfaces in a lens Nd = %d" % (number_of_curved_surfaces))
+        if number_of_curved_surfaces != 0:
+            F = lens_radius / (number_of_curved_surfaces * n_lenses * refraction_index_delta)
+            print("Focal distance F = R / (Nd N delta) = %g m" % (F))
+        # end info...
+
+
+        amp_factors = numpy.exp(-1.0 * att_coefficient * lens_thickness / 2) # factor of 2 because it is amplitude
         phase_shifts = -1.0 * wavefront.get_wavenumber() * refraction_index_delta * lens_thickness
 
         output_wavefront = wavefront.duplicate()
@@ -277,8 +295,8 @@ class WOLens(Lens, OpticalElementDecorator):
         txt += "\n    wall_thickness=%g,"            % self._keywords_at_creation["wall_thickness"]
         txt += "\n    material='%s',"                % self._keywords_at_creation["material"]
         if self._keywords_at_creation["material"] == "External":
-            txt += "\n    refraction_index_delta=%g," % self._keywords_at_creation["refraction_index_delta"]
-            txt += "\n    att_coefficient=%g,"        % self._keywords_at_creation["att_coefficient"]
+            txt += "\n    refraction_index_delta=%g, # used if material='External'" % self._keywords_at_creation["refraction_index_delta"]
+            txt += "\n    att_coefficient=%g, # used if material='External'"        % self._keywords_at_creation["att_coefficient"]
         txt += "\n    lens_radius=%g,"               % self._keywords_at_creation["lens_radius"]
         txt += "\n    n_lenses=%g,"                  % self._keywords_at_creation["n_lenses"]
         txt += "\n    aperture_shape=%d,"            % self._keywords_at_creation["aperture_shape"]
@@ -313,7 +331,7 @@ class WOLens1D(Lens, OpticalElementDecorator):
         radius = self._keywords_at_creation["radius"                        ]
         lens_aperture = self._keywords_at_creation["lens_aperture"                 ]
         wall_thickness = self._keywords_at_creation["wall_thickness"                ]
-        number_of_refractive_surfaces  = self._keywords_at_creation["number_of_refractive_surfaces" ]
+        number_of_curved_surfaces  = self._keywords_at_creation["number_of_curved_surfaces" ]
         n_lenses = self._keywords_at_creation["n_lenses"                      ]
         error_flag = self._keywords_at_creation["error_flag"                    ]
         error_file = self._keywords_at_creation["error_file"                    ]
@@ -342,49 +360,46 @@ class WOLens1D(Lens, OpticalElementDecorator):
         abscissas = input_wavefront.get_abscissas().copy()
         abscissas_on_lens = abscissas
 
-        if number_of_refractive_surfaces == 0:
-            n_ref_lens = 1
-        elif number_of_refractive_surfaces == 1:
-            n_ref_lens = 2
-        else:
-            raise Exception("Error while reading the number of refractive lenses")
+        n_ref_lens = number_of_curved_surfaces
 
-        if shape == 0:  # Flat
+        if n_ref_lens == 0:
             lens_thickness = numpy.full_like(abscissas_on_lens, wall_thickness)
+        else:
+            if shape == 0:  # Flat
+                lens_thickness = numpy.full_like(abscissas_on_lens, wall_thickness)
 
-        elif shape == 1:  # Parabolic
+            elif shape == 1:  # Parabolic
 
-            # focus_length = radius / (n_lenses * n_ref_lens * refraction_index_delta)
+                # focus_length = radius / (n_lenses * n_ref_lens * refraction_index_delta)
 
-            # Implementation of barc4ro
-            x_2, lens_thickness = proj_thick_1D_crl(shape, lens_aperture, radius,
-                                                    _n=n_ref_lens,
-                                                    _wall_thick=wall_thickness,
-                                                    _xc=xc,
-                                                    _nx=100,
-                                                    _ang_rot_ex=ang_rot,
-                                                    _offst_ffs_x=offset_ffs,
-                                                    _tilt_ffs_x=tilt_ffs,
-                                                    _wt_offst_ffs=wt_offset_ffs,
-                                                    _offst_bfs_x=offset_bfs,
-                                                    _tilt_bfs_x=tilt_bfs,
-                                                    _wt_offst_bfs=wt_offset_bfs,
-                                                    isdgr=False,
-                                                    project=True,
-                                                    _axis=abscissas)
+                # Implementation of barc4ro
+                x_2, lens_thickness = proj_thick_1D_crl(shape, lens_aperture, radius,
+                                                        _n=n_ref_lens,
+                                                        _wall_thick=wall_thickness,
+                                                        _xc=xc,
+                                                        _nx=100,
+                                                        _ang_rot_ex=ang_rot,
+                                                        _offst_ffs_x=offset_ffs,
+                                                        _tilt_ffs_x=tilt_ffs,
+                                                        _wt_offst_ffs=wt_offset_ffs,
+                                                        _offst_bfs_x=offset_bfs,
+                                                        _tilt_bfs_x=tilt_bfs,
+                                                        _wt_offst_bfs=wt_offset_bfs,
+                                                        isdgr=False,
+                                                        project=True,
+                                                        _axis=abscissas)
 
-
-        elif shape == 2:  # Circular
-            lens_thickness = n_ref_lens * (
-                        numpy.abs(radius) - numpy.sqrt(radius ** 2 - abscissas_on_lens ** 2)) + wall_thickness
-            bound = 0.5 * lens_aperture
-            if radius < bound: bound = radius
-            for i, x in enumerate(abscissas_on_lens):
-                if (x < -bound) or (x > bound):
-                    lens_thickness[i] = 0
-            for i, x in enumerate(abscissas_on_lens):
-                if (x < -bound) or (x > bound):
-                    lens_thickness[i] = lens_thickness.max()
+            elif shape == 2:  # Circular
+                lens_thickness = n_ref_lens * (
+                            numpy.abs(radius) - numpy.sqrt(radius ** 2 - abscissas_on_lens ** 2)) + wall_thickness
+                bound = 0.5 * lens_aperture
+                if radius < bound: bound = radius
+                for i, x in enumerate(abscissas_on_lens):
+                    if (x < -bound) or (x > bound):
+                        lens_thickness[i] = 0
+                for i, x in enumerate(abscissas_on_lens):
+                    if (x < -bound) or (x > bound):
+                        lens_thickness[i] = lens_thickness.max()
 
         lens_thickness *= n_lenses
 
@@ -450,10 +465,26 @@ class WOLens1D(Lens, OpticalElementDecorator):
 
     def applyOpticalElement(self, input_wavefront, parameters=None, element_index=None):
 
-        # TODO: 1
+        #
+        print("\n\n\n ==========  parameters in use : ")
 
         refraction_index_delta, att_coefficient = \
             self.get_refraction_index(input_wavefront.get_photon_energy())
+
+        # this is for info...
+        radius = self._keywords_at_creation["radius"                        ]
+        number_of_curved_surfaces  = self._keywords_at_creation["number_of_curved_surfaces" ]
+
+        n_lenses = self._keywords_at_creation["n_lenses"                      ]
+        F = radius / (number_of_curved_surfaces * n_lenses * refraction_index_delta)
+
+        print("\n\nRadius of curvature R = %g um" % (1e6 * radius))
+        print("Number of lenses N: %d" % n_lenses)
+        print("Number of curved refractive surfaces in a lens Nd = %d" % (number_of_curved_surfaces))
+        print("Focal distance F = R / (Nd N delta) = %g m" % (F))
+        # end info.
+
+
 
         error_flag = self._keywords_at_creation["error_flag"                    ]
         error_file = self._keywords_at_creation["error_file"                    ]
@@ -462,7 +493,7 @@ class WOLens1D(Lens, OpticalElementDecorator):
         output_wavefront = input_wavefront.duplicate()
         abscissas_on_lens, lens_thickness = self.get_surface_thickness_mesh(input_wavefront=input_wavefront)
 
-        amp_factors = (numpy.exp(-1.0 * att_coefficient * lens_thickness)) ** 1 / 2
+        amp_factors = numpy.exp(-1.0 * att_coefficient * lens_thickness / 2) # factor of 2 because it is amplitude
         phase_shifts = -1.0 * output_wavefront.get_wavenumber() * refraction_index_delta * lens_thickness
 
         output_wavefront.rescale_amplitudes(amp_factors)
@@ -498,7 +529,7 @@ class WOLens1D(Lens, OpticalElementDecorator):
                              material                       ="Be",
                              refraction_index_delta         =5.3e-07,
                              att_coefficient                =0.00357382,
-                             number_of_refractive_surfaces  =1, # index of wodget!!!
+                             number_of_curved_surfaces      =2,
                              n_lenses                       =1,
                              error_flag                     =0,
                              error_file                     ="",
@@ -527,7 +558,7 @@ class WOLens1D(Lens, OpticalElementDecorator):
         # keywords_at_creation["material"                      ] = material
         keywords_at_creation["refraction_index_delta"        ] = refraction_index_delta
         keywords_at_creation["att_coefficient"               ] = att_coefficient
-        keywords_at_creation["number_of_refractive_surfaces" ] = number_of_refractive_surfaces
+        keywords_at_creation["number_of_curved_surfaces" ]     = number_of_curved_surfaces
         keywords_at_creation["n_lenses"                      ] = n_lenses
         keywords_at_creation["error_flag"                    ] = error_flag
         keywords_at_creation["error_file"                    ] = error_file
@@ -561,9 +592,10 @@ class WOLens1D(Lens, OpticalElementDecorator):
         txt += "\n    lens_aperture=%g," % self._keywords_at_creation["lens_aperture"]
         txt += "\n    wall_thickness=%g," % self._keywords_at_creation["wall_thickness"]
         txt += "\n    material='%s'," % self.get_material()
-        txt += "\n    refraction_index_delta=%g," % self._keywords_at_creation["refraction_index_delta"]
-        txt += "\n    att_coefficient=%g," % self._keywords_at_creation["att_coefficient"]
-        txt += "\n    number_of_refractive_surfaces=%d," % self._keywords_at_creation["number_of_refractive_surfaces"]
+        if self.get_material() == "External":
+            txt += "\n    refraction_index_delta=%g, # used if material='External'" % self._keywords_at_creation["refraction_index_delta"]
+            txt += "\n    att_coefficient=%g, # used if material='External'" % self._keywords_at_creation["att_coefficient"]
+        txt += "\n    number_of_curved_surfaces=%d," % self._keywords_at_creation["number_of_curved_surfaces"]
         txt += "\n    n_lenses=%d," % self._keywords_at_creation["n_lenses"]
         txt += "\n    error_flag=%d," % self._keywords_at_creation["error_flag"]
         txt += "\n    error_file='%s'," % self._keywords_at_creation["error_file"]

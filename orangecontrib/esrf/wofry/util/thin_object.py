@@ -122,7 +122,7 @@ class WOThinObject(ThinObject, OpticalElementDecorator):
 
         x, y, interpolated_profile = self.get_surface_thickness_mesh(wavefront)
 
-        amp_factors = numpy.sqrt(numpy.exp(-1.0 * att_coefficient * interpolated_profile))
+        amp_factors = numpy.exp(-1.0 * att_coefficient * interpolated_profile / 2) # factor of 2 because it is amplitude
         phase_shifts = -1.0 * wavefront.get_wavenumber() * refraction_index_delta * interpolated_profile
 
         output_wavefront = wavefront.duplicate()
@@ -216,7 +216,7 @@ class WOThinObject1D(ThinObject, OpticalElementDecorator):
 
         x, interpolated_profile = self.get_surface_thickness_mesh(wavefront)
         #
-        amp_factors = numpy.sqrt(numpy.exp(-1.0 * att_coefficient * interpolated_profile))
+        amp_factors = numpy.exp(-1.0 * att_coefficient * interpolated_profile / 2) # factor of 2 because it is amplitude
         phase_shifts = -1.0 * wavefront.get_wavenumber() * refraction_index_delta * interpolated_profile
 
         output_wavefront = wavefront.duplicate()

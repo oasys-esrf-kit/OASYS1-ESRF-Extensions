@@ -58,7 +58,8 @@ class OWWORealLens1D(OWWOOpticalElement1D):
     radius = Setting(0.0005)
     wall_thickness = Setting(0.00005)
     lens_aperture = Setting(0.001)
-    number_of_refractive_surfaces = Setting(1)
+    # number_of_refractive_surfaces = Setting(1)
+    number_of_curved_surfaces = Setting(2)
     n_lenses = Setting(1)
     material = Setting(0)
     refraction_index_delta = Setting(5.3e-7)
@@ -133,9 +134,14 @@ class OWWORealLens1D(OWWOOpticalElement1D):
         box_refractor2 = oasysgui.widgetBox(self.tab_err, "1D Lens parameters", addSpace=False, orientation="vertical")
 
 
-        gui.comboBox(box_refractor2, self, "number_of_refractive_surfaces", label="Number of refractive surfaces", labelWidth=350,
-                     items=["1", "2"],
-                     sendSelectedValue=False, orientation="horizontal")
+        # gui.comboBox(box_refractor2, self, "number_of_refractive_surfaces", label="Number of refractive surfaces", labelWidth=350,
+        #              items=["1", "2"],
+        #              sendSelectedValue=False, orientation="horizontal")
+
+        gui.comboBox(box_refractor2, self, "number_of_curved_surfaces", label="Number of curved surfaces", labelWidth=350,
+                     items=["0 (parallel plate)", "1 (plano-concave)", "2 (bi-concave)"],
+                     sendSelectedValue=False, orientation="horizontal", callback=self.set_visible)
+
 
         self.box_n_lenses_id = oasysgui.widgetBox(box_refractor2, "", addSpace=False, orientation="horizontal")
         tmp = oasysgui.lineEdit(self.box_n_lenses_id, self, "n_lenses", "Number of lenses",
@@ -361,7 +367,7 @@ class OWWORealLens1D(OWWOOpticalElement1D):
                     material                     = self.get_material_name(self.material),
                     refraction_index_delta       = self.refraction_index_delta,
                     att_coefficient              = self.att_coefficient,
-                    number_of_refractive_surfaces= self.number_of_refractive_surfaces,
+                    number_of_curved_surfaces    = self.number_of_curved_surfaces,
                     n_lenses                     = self.n_lenses,
                     error_flag                   = self.error_flag,
                     error_file                   = self.error_file,
