@@ -67,34 +67,6 @@ class WOThinObjectCorrector(WOThinObject, OpticalElementDecorator):
 
     def applyOpticalElement(self, wavefront, parameters=None, element_index=None):
 
-        # photon_energy = wavefront.get_photon_energy()
-        #
-        # x = wavefront.get_coordinate_x()
-        # y = wavefront.get_coordinate_y()
-        #
-        # if self._correction_method == 0: # write file with zero profile
-        #     profile = numpy.zeros((x.size, y.size))
-        # elif self._correction_method == 1: # focus to waist
-        #
-        #     print("\n\n\n ==========  parameters from optical element : ")
-        #     print(self.info())
-        #
-        #
-        #     refraction_index_delta, att_coefficient = self.get_refraction_index(photon_energy)
-        #     # auxiliar spherical wavefront
-        #     wavefront_model = wavefront.duplicate()
-        #     wavefront_model.set_spherical_wave(radius=-self._focus_at, complex_amplitude=1.0,)
-        #
-        #
-        #     phase_correction = numpy.angle( wavefront_model.get_complex_amplitude() / wavefront.get_complex_amplitude())
-        #     profile = -phase_correction / wavefront.get_wavenumber() / refraction_index_delta
-        #
-        #
-        # profile += self._wall_thickness
-        # if self._file_with_thickness_mesh_flag:
-        #     write_surface_file(profile.T, x, y, self.get_file_with_thickness_mesh(), overwrite=True)
-        #     print("\nFile for OASYS " + self.get_file_with_thickness_mesh() + " written to disk.")
-
         profile, x, y = self.calculate_correction_profile(wavefront)
 
         if self._apply_correction_to_wavefront > 0:
@@ -183,6 +155,20 @@ class WOThinObjectCorrector1D(WOThinObject1D, OpticalElementDecorator):
                 f.write("%g %g\n" % (x[i], profile[i]))
             f.close()
             print("\nFile 1D for OASYS " + self.get_file_with_thickness_mesh() + " written to disk.")
+
+        # for info
+        n = profile.size
+        w = n // 20
+
+        xx = x[(n // 2 - w):(n // 2 + w)]
+        yy = profile[(n // 2 - w):(n // 2 + w)]
+
+        yder = numpy.gradient(yy, xx)
+        coeff = numpy.polyfit(xx, yder, 1)
+        print("\n\n\n ==========  fitted radius in the profile center : ")
+        print("fitted lens (with two curved sides) of radius = %g m " % (2 / coeff[0]))
+        print("which corresponds to a focal length of %g m " % (1 / coeff[0] / refraction_index_delta))
+
 
         return x, profile
 
