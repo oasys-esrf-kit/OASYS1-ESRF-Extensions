@@ -25,6 +25,9 @@ from syned.beamline.beamline import Beamline
 
 from oasys.widgets.gui import ConfirmDialog
 
+import orangecanvas.resources as resources
+
+
 m2ev = codata.c * codata.h / codata.e
 
 VERTICAL = 1
@@ -121,7 +124,10 @@ class OWEBS(OWWidget):
     a5 = Setting(0.0)
     a6 = Setting(0.0)
 
-    data_url = 'ftp://ftp.esrf.eu/pub/scisoft/syned/resources/jsrund.csv'
+    # data_url = 'ftp://ftp.esrf.eu/pub/scisoft/syned/resources/jsrund.csv'
+    # create it in nice with the ID app: /segfs/tango/bin/jsrund
+    data_url = os.path.join(resources.package_dirname("orangecontrib.esrf.syned.data"), 'jsrund.csv')
+
     data_dict = None
 
     def __init__(self):
@@ -174,18 +180,10 @@ class OWEBS(OWWidget):
         self.tabs_setting.setFixedHeight(self.TABS_AREA_HEIGHT)
         self.tabs_setting.setFixedWidth(self.CONTROL_AREA_WIDTH-5)
 
-
-
-
         self.tab_sou = oasysgui.createTabPage(self.tabs_setting, "Light Source Setting")
 
-        out_list = [("ID%02d %s" % (self.data_dict["straight_section"][i], self.data_dict["id_name"][i])) for i in
-                    range(len(self.data_dict["id_name"]))]
-
-        out_list.insert(0,"<None>") # We add None at the beginning: ebs_id_index is the dict index plus one
-
         gui.comboBox(self.tab_sou, self, "ebs_id_index", label="Load ID parameters from database list: ", labelWidth=350,
-                     items=out_list, callback=self.set_id, sendSelectedValue=False, orientation="horizontal")
+                     items=self.get_id_list(), callback=self.set_id, sendSelectedValue=False, orientation="horizontal")
 
         self.electron_beam_box = oasysgui.widgetBox(self.tab_sou, "Electron Beam/Machine Parameters", addSpace=False, orientation="vertical")
 
@@ -304,6 +302,13 @@ class OWEBS(OWWidget):
         self.set_visible()
         self.update()
 
+
+    def get_id_list(self):
+        out_list = [("ID%02d %s" % (self.data_dict["straight_section"][i], self.data_dict["id_name"][i])) for i in
+                    range(len(self.data_dict["id_name"]))]
+
+        out_list.insert(0,"<None>") # We add None at the beginning: ebs_id_index is the dict index plus one
+        return out_list
 
     def titles(self):
         return ["K vs Gap", "B vs Gap", "Gap vs resonance energy", "Power vs Gap"]
@@ -945,11 +950,11 @@ Approximated coherent fraction at 1st harmonic:
 
             Kmax = Bmax * id_period * codata.e / (2 * numpy.pi * codata.m_e * codata.c)
 
-            print("\n\n%5s  %10s  %15s %15s %15s %15s" % ("sect", "name", "Gmin", "Bmax", "Kmax", "a0"))
-            print("%5s  %10s  %15s %15s %15s %15s" % ("====", "====", "====", "====", "====", "===="))
-            for i in range(Bmax.size):
-                print("%5d  %10s  %15.3f %15.3f %15.3f %15.3f" % (
-                straight_section[i], id_name[i], id_minimum_gap_mm[i], Bmax[i], Kmax[i], a0[i]))
+            # print("\n\n%5s  %10s  %15s %15s %15s %15s" % ("sect", "name", "Gmin", "Bmax", "Kmax", "a0"))
+            # print("%5s  %10s  %15s %15s %15s %15s" % ("====", "====", "====", "====", "====", "===="))
+            # for i in range(Bmax.size):
+            #     print("%5d  %10s  %15.3f %15.3f %15.3f %15.3f" % (
+            #     straight_section[i], id_name[i], id_minimum_gap_mm[i], Bmax[i], Kmax[i], a0[i]))
 
             out_dict = {}
             out_dict["straight_section"] = straight_section.tolist()
