@@ -394,20 +394,23 @@ def to_python_code(self,do_plot=True,mode_index_max=2): # self is beamline
     full_text_code += indented
     full_text_code += "\n" + indent + "return output_wavefront"
 
+    full_text_code += "\n\n\n#\n# MAIN FUNCTION========================\n#\n\n"
+    full_text_code += "\n\n\ndef main():"
+
+    full_text_code += "\n" + indent + "from srxraylib.plot.gol import plot, plot_image"
+    full_text_code += "\n" + indent + "from orangecontrib.esrf.wofry.util.tally import TallyCoherentModes"
+    full_text_code += "\n" + indent + ""
+    full_text_code += "\n" + indent + "tally = TallyCoherentModes()"
+    full_text_code += "\n" + indent + "for my_mode_index in range(%g):" % mode_index_max
+    full_text_code += "\n" + indent * 2 + "output_wavefront = run_source(my_mode_index=my_mode_index)"
+    full_text_code += "\n" + indent * 2 + "output_wavefront = run_beamline(output_wavefront)"
+    full_text_code += "\n" + indent * 2 + "tally.append(output_wavefront)"
+    full_text_code += "\n" + indent + ""
+    full_text_code += "\n" + indent + "cf, eigenvalues, eigenvectors, cross_spectral_density = tally.calculate_coherent_fraction(do_plot=True)"
+    full_text_code += "\n" + indent + "print('Coherent fraction from new (rediagonalized) modes: %f ' % cf)"
 
     full_text_code += "\n\n\n#\n# MAIN========================\n#\n\n"
-    full_text_code += "\nfrom srxraylib.plot.gol import plot, plot_image"
-    full_text_code += "\nfrom orangecontrib.esrf.wofry.util.tally import TallyCoherentModes"
-    full_text_code += "\n"
-    full_text_code += "\ntally = TallyCoherentModes()"
-    full_text_code += "\nfor my_mode_index in range(%g):" % mode_index_max
-    full_text_code += "\n    output_wavefront = run_source(my_mode_index=my_mode_index)"
-    full_text_code += "\n    output_wavefront = run_beamline(output_wavefront)"
-    full_text_code += "\n    tally.append(output_wavefront)"
-    full_text_code += "\n"
-    full_text_code += "\ncf, eigenvalues, eigenvectors, cross_spectral_density = tally.calculate_coherent_fraction(do_plot=True)"
-    full_text_code += "\nprint('Coherent fraction from new (rediagonalized) modes: %f ' % cf)"
-
+    full_text_code += "\n\n\nmain()"
     return full_text_code
 
 

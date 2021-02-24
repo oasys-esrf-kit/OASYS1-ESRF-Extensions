@@ -136,12 +136,42 @@ class TallyCoherentModes(Tally):
                  additional_stored_variable_names=additional_stored_variable_names,
                  do_store_wavefronts=True)
 
+        self.abscissas = None
+        self.cross_spectral_density = None
+        self.spectral_density = None,
+        self.eigenvalues = None
+        self.eigenvectors = None
+
+    def get_cross_pectral_density(self):
+        if self.cross_spectral_density is None: self.calculate_cross_spectral_density()
+        return self.cross_spectral_density
+
+    def get_spectral_density(self):
+        csd = self.get_cross_pectral_density()
+        nx = csd.shape[0]
+        spectral_density = numpy.zeros(nx)
+        for i in range(nx):
+            spectral_density[i] = csd[i, i]
+        return spectral_density
+
+    def get_eigenvalues(self):
+        if self.eigenvalues is None: self.diagonalize()
+        return self.eigenvalues
+
+    def get_eigenvectors(self):
+        if self.eigenvectors is None: self.diagonalize()
+        return self.eigenvectors
+
+    def get_abscissas(self):
+        if self.abscissas is None: self.abscissas = self.get_wavefronts()[-1].get_abscissas()
+        return self.abscissas
+
+
     def calculate_cross_spectral_density(self, do_plot=False):
         # retrieve arrays
         WFs = self.get_wavefronts()
         nmodes = self.get_number_of_calls()
-        abscissas = WFs[-1].get_abscissas()
-
+        abscissas = self.get_abscissas()
         #
         # calculate the CSD
         #
@@ -155,60 +185,78 @@ class TallyCoherentModes(Tally):
         for i in range(nmodes):
             cross_spectral_density += numpy.outer(numpy.conjugate(input_array[i, :]), input_array[i, :])
 
-        if do_plot:
-            from srxraylib.plot.gol import plot, plot_image
-            plot_image(numpy.abs(cross_spectral_density), 1e6*abscissas, 1e6*abscissas,
-                       title="Cross Spectral Density", xtitle="X1 [um]", ytitle="X2 [um]")
-        print("matrix cross_spectral_density: ", cross_spectral_density.shape)
+        self.cross_spectral_density = cross_spectral_density
 
-        return cross_spectral_density
+
+
 
     def diagonalize(self, do_plot=False):
-
-        cross_spectral_density = self.calculate_cross_spectral_density(do_plot=do_plot)
+        csd = self.get_cross_pectral_density()
 
         #
         # diagonalize the CSD
         #
 
-        w, v = numpy.linalg.eig(cross_spectral_density)
+        w, v = numpy.linalg.eig(csd)
         print(w.shape, v.shape)
         idx = w.argsort()[::-1]  # large to small
-        eigenvalues = numpy.real(w[idx])
-        eigenvectors = v[:, idx].T
+        self.eigenvalues = numpy.real(w[idx])
+        self.eigenvectors = v[:, idx].T
 
+
+    def get_occupation(self):
+        ev = self.get_eigenvalues()
+        nmodes = self.get_number_of_calls()
+        return  numpy.arange(ev.size), ev / ev.sum()
+
+
+
+    def calculate_coherent_fraction(self, do_plot=False):
+        if self.eigenvalues is None:
+            self.diagonalize()
+        # eigenvalues, eigenvectors, cross_spectral_density = self.diagonalize(do_plot=do_plot)
+        cf = self.eigenvalues[0] / self.eigenvalues.sum()
+        return cf, self.eigenvalues, self.eigenvectors, self.cross_spectral_density
+
+    def plot_cross_spectral_density(self):
+        from srxraylib.plot.gol import plot, plot_image
+        csd = self.get_cross_pectral_density()
+        plot_image(numpy.abs(csd), 1e6*self.abscissas, 1e6*self.abscissas,
+                   title="Cross Spectral Density", xtitle="X1 [um]", ytitle="X2 [um]")
+        print("matrix cross_spectral_density: ", csd.shape)
+
+    def plot_spectral_density(self):
         #
         # plot intensity
         #
-        if do_plot:
-            from srxraylib.plot.gol import plot
-            abscissas = self.get_wavefronts()[-1].get_abscissas()
-            nmodes = self.get_number_of_calls()
-            y = numpy.zeros_like(abscissas)
-            for i in range(nmodes):
-                y += eigenvalues[i] * numpy.real(numpy.conjugate(eigenvectors[i, :]) * eigenvectors[i, :])
+        abscissas = self.get_abscissas()
+        eigenvalues = self.get_eigenvalues()
+        eigenvectors = self.get_eigenvectors()
+        csd = self.get_cross_pectral_density()
 
-            spectral_density = numpy.zeros_like(abscissas)
-            for i in range(abscissas.size):
-                spectral_density[i] = cross_spectral_density[i, i]
+        from srxraylib.plot.gol import plot
+        # abscissas = self.get_wavefronts()[-1].get_abscissas()
+        nmodes = self.get_number_of_calls()
+        y = numpy.zeros_like(abscissas)
+        for i in range(nmodes):
+            y += eigenvalues[i] * numpy.real(numpy.conjugate(eigenvectors[i, :]) * eigenvectors[i, :])
 
-            plot(1e6 * abscissas, spectral_density,
-                 1e6 * abscissas, y, legend=["From Cross Spectral Density", "From modes"],
-                 xtitle="x [um]", ytitle="Spectral Density")
+        spectral_density = self.get_spectral_density() # numpy.zeros_like(abscissas)
+        # for i in range(abscissas.size):
+        #     spectral_density[i] = csd[i, i]
 
-            plot(numpy.arange(nmodes), eigenvalues[0:nmodes] / (eigenvalues[0:nmodes].sum()),
-                 title="CF: %g" % (eigenvalues[0] / eigenvalues.sum()),
-                 xtitle="mode index", ytitle="occupation")
+        fwhm, quote, coordinates = get_fwhm(spectral_density, 1e6 * abscissas)
+        plot(1e6 * abscissas, spectral_density,
+             1e6 * abscissas, y, legend=["From Cross Spectral Density", "From modes"],
+             xtitle="x [um]", ytitle="Spectral Density", title="FWHM = %g um" % fwhm)
 
-        return eigenvalues, eigenvectors, cross_spectral_density
-
-    def calculate_coherent_fraction(self, do_plot=False):
-
-        eigenvalues, eigenvectors, cross_spectral_density = self.diagonalize(do_plot=do_plot)
-        cf = eigenvalues[0] / eigenvalues.sum()
-        return cf, eigenvalues, eigenvectors, cross_spectral_density
-
-
+    def plot_occupation(self):
+        x, y = self.get_occupation()
+        nmodes = self.get_number_of_calls()
+        from srxraylib.plot.gol import plot
+        plot(x[0:nmodes], y[0:nmodes],
+             title="CF: %g" % (y[0]),
+             xtitle="mode index", ytitle="occupation")
 
 
 if __name__ == "__main__":
@@ -228,4 +276,9 @@ if __name__ == "__main__":
     sc.plot()
     sc.save("tmp.dat")
 
-    cf, _, _, _ = sc.calculate_coherent_fraction(do_plot=1)
+    sc.plot_cross_spectral_density()
+    sc.plot_spectral_density()
+    sc.plot_occupation()
+
+
+    # cf, _, _, _ = sc.calculate_coherent_fraction(do_plot=1)

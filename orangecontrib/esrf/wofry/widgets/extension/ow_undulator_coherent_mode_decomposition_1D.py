@@ -65,7 +65,6 @@ class OWUndulatorCoherentModeDecomposition1D(WofryWidget):
     sigma_divergence_v = Setting(1.37498e-06)
 
     photon_energy = Setting(10000.0)
-    undulator_length = Setting(4.0)
 
     period_length = Setting(0.020)
     number_of_periods = Setting(100)
@@ -297,7 +296,8 @@ class OWUndulatorCoherentModeDecomposition1D(WofryWidget):
                        "Cross Spectral Density",
                        "Cumulated occupation",
                        "Eigenfunctions",
-                       "Spectral Density"]
+                       "Spectral Density",
+                       "Sent mode"]
         self.tab = []
         self.plot_canvas = []
 
@@ -340,16 +340,23 @@ class OWUndulatorCoherentModeDecomposition1D(WofryWidget):
                 if not data._light_source is None:
                     if isinstance(data._light_source._magnetic_structure, Undulator):
                         light_source = data._light_source
+                        ebeam = light_source.get_electron_beam()
+                        und = light_source.get_magnetic_structure()
 
-                        self.photon_energy =  round(light_source._magnetic_structure.resonance_energy(light_source._electron_beam.gamma()), 3)
-
-                        x, xp, y, yp = light_source._electron_beam.get_sigmas_all()
-
+                        x, xp, y, yp = ebeam.get_sigmas_all()
                         self.sigma_h = x
                         self.sigma_v = y
                         self.sigma_divergence_h = xp
                         self.sigma_divergence_v = yp
-                        self.undulator_length = light_source._magnetic_structure._period_length*light_source._magnetic_structure._number_of_periods # in meter
+                        self.electron_energy_in_GeV = ebeam.energy()
+                        self.ring_current = ebeam.current()
+
+                        self.number_of_periods = und.number_of_periods()
+                        self.period_length = und.period_length()
+                        self.photon_energy =  round(und.resonance_energy(ebeam.gamma()), 3)
+                        self.K_vertical = und.K_vertical()
+
+
                     else:
                         raise ValueError("Syned light source not congruent")
                 else:
@@ -447,11 +454,38 @@ class OWUndulatorCoherentModeDecomposition1D(WofryWidget):
         if self.coherent_mode_decomposition is None:
             self.calculate()
 
+        if self.view_type != 0:
+            self.do_plot_send_mode()
+
         beamline = WOBeamline(light_source=self.get_light_source())
         print(">>> sending mode: ", int(self.mode_index))
         self.send("WofryData", WofryData(
             wavefront=self.coherent_mode_decomposition.get_eigenvector_wavefront(int(self.mode_index)),
             beamline=beamline))
+
+    def do_plot_send_mode(self):
+        if not self.coherent_mode_decomposition is None:
+
+            #
+            # plot mode to send
+            #
+            abscissas = self.coherent_mode_decomposition_results["abscissas"]
+            wf = self.coherent_mode_decomposition.get_eigenvector_wavefront(self.mode_index)
+
+            xtitle = "Photon energy [keV]"
+            ytitle = "wavefront intensity"
+
+            self.plot_data1D(1e6 * abscissas,
+                             wf.get_intensity(),
+                             progressBarValue=90.0,
+                             tabs_canvas_index=5,
+                             plot_canvas_index=5,
+                             title=self.titles[5],
+                             xtitle="Spatial Coordinate [$\mu$m]",
+                             ytitle="Intensity",
+                             calculate_fwhm=True)
+
+            self.progressBarFinished()
 
     def do_plot_results(self, progressBarValue):
         if not self.coherent_mode_decomposition is None:
@@ -565,7 +599,13 @@ class OWUndulatorCoherentModeDecomposition1D(WofryWidget):
                              ytitles=["SD from CSD","SD from modes"],
                              colors=colors)
 
-            self.progressBarFinished()
+
+            #
+            # plot mode to be sent and close progress bar
+            #
+            self.do_plot_send_mode()
+
+
 
 
 if __name__ == "__main__":
