@@ -406,9 +406,9 @@ def to_python_code(self,do_plot=True,mode_index_max=2): # self is beamline
     full_text_code += "\n" + indent * 2 + "output_wavefront = run_beamline(output_wavefront)"
     full_text_code += "\n" + indent * 2 + "tally.append(output_wavefront)"
     full_text_code += "\n" + indent + ""
-    full_text_code += "\n" + indent + "cf, eigenvalues, eigenvectors, cross_spectral_density = tally.calculate_coherent_fraction(do_plot=True)"
-    full_text_code += "\n" + indent + "print('Coherent fraction from new (rediagonalized) modes: %f ' % cf)"
-
+    full_text_code += "\n" + indent + "tally.plot_cross_spectral_density()"
+    full_text_code += "\n" + indent + "tally.plot_spectral_density()"
+    full_text_code += "\n" + indent + "tally.plot_occupation()"
     full_text_code += "\n\n\n#\n# MAIN========================\n#\n\n"
     full_text_code += "\n\n\nmain()"
     return full_text_code
