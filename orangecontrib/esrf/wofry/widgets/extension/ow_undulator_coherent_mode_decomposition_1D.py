@@ -93,7 +93,7 @@ class OWUndulatorCoherentModeDecomposition1D(WofryWidget):
         super().__init__(is_automatic=False, show_view_options=True, show_script_tab=True)
 
         self.runaction = widget.OWAction("Generate Wavefront", self)
-        self.runaction.triggered.connect(self.calculate)
+        self.runaction.triggered.connect(self.calculate_and_send_mode)
         self.addAction(self.runaction)
 
 
@@ -102,7 +102,7 @@ class OWUndulatorCoherentModeDecomposition1D(WofryWidget):
 
         button_box = oasysgui.widgetBox(self.controlArea, "", addSpace=False, orientation="horizontal")
 
-        button = gui.button(button_box, self, "Calculate and Send mode", callback=self.calculate_sand_send_mode)
+        button = gui.button(button_box, self, "Calculate and Send mode", callback=self.calculate_and_send_mode)
         font = QFont(button.font())
         font.setBold(True)
         button.setFont(font)
@@ -382,7 +382,7 @@ class OWUndulatorCoherentModeDecomposition1D(WofryWidget):
     def generate(self):
         pass
 
-    def calculate_sand_send_mode(self):
+    def calculate_and_send_mode(self):
         self.calculate()
         self.send_mode()
 
@@ -452,53 +452,6 @@ class OWUndulatorCoherentModeDecomposition1D(WofryWidget):
         self.send("WofryData", WofryData(
             wavefront=self.coherent_mode_decomposition.get_eigenvector_wavefront(int(self.mode_index)),
             beamline=beamline))
-
-
-    # def generate_python_code(self):
-    #
-    #     if self.scan_direction == 0:
-    #         scan_direction = "H"
-    #         sigmaxx=self.sigma_h
-    #         sigmaxpxp=self.sigma_divergence_h
-    #     else:
-    #         scan_direction = "V"
-    #         sigmaxx=self.sigma_v
-    #         sigmaxpxp=self.sigma_divergence_v
-    #     if self.flag_gsm == 0:
-    #         useGSMapproximation = 0
-    #     elif self.flag_gsm == 1:
-    #         useGSMapproximation = 1
-    #
-    #
-    #     txt = "#"
-    #     txt += "\n# create input_wavefront\n#"
-    #     txt += "\n#"
-    #     txt += "\nfrom wofryimpl.propagator.util.undulator_coherent_mode_decomposition_1d import UndulatorCoherentModeDecomposition1D"
-    #
-    #     txt += "\n# main calculation"
-    #     txt += "\ncoherent_mode_decomposition = UndulatorCoherentModeDecomposition1D("
-    #     txt += "\n    electron_energy=%g," % self.electron_energy_in_GeV
-    #     txt += "\n    electron_current=%g," % self.ring_current
-    #     txt += "\n    undulator_period=%g," % self.period_length
-    #     txt += "\n    undulator_nperiods=%g," % self.number_of_periods
-    #     txt += "\n    K=%g" % self.K_vertical
-    #     txt += "\n    photon_energy=%g," % self.photon_energy
-    #     txt += "\n    abscissas_interval=%g," % (self.range_to - self.range_from)
-    #     txt += "\n    number_of_points=%d,",self.number_of_points
-    #     txt += "\n    distance_to_screen=100.0,"
-    #     txt += "\n    scan_direction='%s'," % scan_direction
-    #     txt += "\n    sigmaxx=%g," % sigmaxx
-    #     txt += "\n    sigmaxpxp=%g," % sigmaxpxp
-    #     txt += "\n    useGSMapproximation=%d," % useGSMapproximation
-    #     txt += "\n# make calculation"
-    #     txt += "\ncoherent_mode_decomposition_results = coherent_mode_decomposition.calculate()"
-    #     txt += "\ninput_wavefront = coherent_mode_decomposition_results.get_eigenfunction_wavefront(%d)" % self.mode_index
-    #
-    #
-    #     txt += "\n\n\nfrom srxraylib.plot.gol import plot"
-    #     txt += "\nplot(input_wavefront.get_abscissas(),input_wavefront.get_intensity())"
-    #
-    #     return txt
 
     def do_plot_results(self, progressBarValue):
         if not self.coherent_mode_decomposition is None:

@@ -130,7 +130,7 @@ class DiagonalizePythonScript(widget.OWWidget):
         self.show_at("self.script_file_flag == 1", box1)
 
         oasysgui.lineEdit(gen_box, self, "mode_index_max", "Max mode (index)", labelWidth=150, valueType=int,
-                          orientation="horizontal")
+                          orientation="horizontal", callback=self.refresh_script)
 
 
         tabs_setting = oasysgui.tabWidget(self.mainArea)
@@ -201,28 +201,12 @@ class DiagonalizePythonScript(widget.OWWidget):
                 file.close()
 
 
-    # def setBeam(self, beam):
-    #     if ShadowCongruence.checkEmptyBeam(beam):
-    #         if ShadowCongruence.checkGoodBeam(beam):
-    #             # sys.stdout = EmittingStream(textWritten=self.writeStdOut)
-    #
-    #             self.input_beam = beam
-    #
-    #             if self.is_automatic_run:
-    #                 self.refresh_script()
-    #
-    #         else:
-    #             QtWidgets.QMessageBox.critical(self, "Error",
-    #                                        "Data not displayable: No good rays or bad content",
-    #                                        QtWidgets.QMessageBox.Ok)
-
     def refresh_script(self):
 
         self.wofry_output.setText("")
 
         sys.stdout = EmittingStream(textWritten=self.writeStdOut)
 
-        print(">>>>>>>>>>>>>>>>>>>>> refresh_script...")
         if self.input_data is None:
             raise Exception("No input data")
 
@@ -242,7 +226,6 @@ class DiagonalizePythonScript(widget.OWWidget):
 def to_python_code(self,do_plot=True,mode_index_max=2): # self is beamline
 
     import_text_code = ""
-
     import_text_code += "\n#"
     import_text_code += "\n# Import section"
     import_text_code += "\n#"
@@ -274,69 +257,6 @@ def to_python_code(self,do_plot=True,mode_index_max=2): # self is beamline
             import_text_code +=   "\nfrom wofryimpl.propagator.propagators2D.fraunhofer import Fraunhofer2D"
             import_text_code +=   "\nfrom wofryimpl.propagator.propagators2D.integral import Integral2D"
             import_text_code +=   "\nfrom wofryimpl.propagator.propagators2D.fresnel_zoom_xy import FresnelZoomXY2D"
-
-
-        auxiliar_functions_text_code = """
-#
-# AUXILIAR FINCTION(S)=========================
-#
-def get_CF_after_rediagonalization(sc, do_plot=False):
-
-    # retrieve arrays
-    WFs = sc.get_wavefronts()
-    nmodes = sc.get_number_of_calls()
-    abscissas = WFs[-1].get_abscissas()
-
-    #
-    # calculate the CSD
-    #
-
-    input_array = numpy.zeros((nmodes, abscissas.size), dtype=complex)
-    for i,wf in enumerate(WFs):
-        input_array[i,:] = wf.get_complex_amplitude() # tmp[i][0]
-
-    cross_spectral_density = numpy.zeros((abscissas.size, abscissas.size), dtype=complex)
-
-    for i in range(nmodes):
-        cross_spectral_density += numpy.outer(numpy.conjugate(input_array[i, :]), input_array[i, :])
-
-    if do_plot:
-        plot_image(numpy.abs(cross_spectral_density), 1e6*abscissas, 1e6*abscissas,
-                   title="Cross Spectral Density", xtitle="X1 [um]", ytitle="X2 [um]")
-    print("matrix cross_spectral_density: ", cross_spectral_density.shape)
-
-    #
-    # diagonalize the CSD
-    #
-
-    w, v = numpy.linalg.eig(cross_spectral_density)
-    print(w.shape, v.shape)
-    idx = w.argsort()[::-1]  # large to small
-    eigenvalues  = numpy.real(w[idx])
-    eigenvectors = v[:, idx].T
-
-    #
-    # plot intensity
-    #
-    if do_plot:
-        y = numpy.zeros_like(abscissas)
-
-        for i in range(nmodes):
-            y += eigenvalues[i] * numpy.real(numpy.conjugate(eigenvectors[i,:]) * eigenvectors[i,:])
-
-        cumulated_intensity = sc.get_additional_stored_values()[-1][0]
-
-        plot(1e6*abscissas, cumulated_intensity,
-             1e6*abscissas, y, legend=["Data", "From modes"],
-             xtitle="x [um]", ytitle="Spectral Density")
-
-        plot(numpy.arange(nmodes), eigenvalues[0:nmodes]/(eigenvalues[0:nmodes].sum()),
-             title="CF: %g" % (eigenvalues[0] / eigenvalues.sum()),
-             xtitle="mode index", ytitle="occupation")
-
-    return eigenvalues[0] / eigenvalues.sum()
-     
-"""
 
         source_text_code = ""
         if do_plot:
@@ -439,16 +359,10 @@ def get_CF_after_rediagonalization(sc, do_plot=False):
 
     full_text_code = import_text_code
 
-    full_text_code += auxiliar_functions_text_code
-
-
     indent = '    '
 
     full_text_code += "\n\n\n#\n# SOURCE========================\n#\n\n"
     full_text_code += "\n\n\ndef run_source(my_mode_index=0):"
-
-    print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> WOLightSource", isinstance(self.get_light_source(), WOLightSource))
-    print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> WOLightSourceCMD", isinstance(self.get_light_source(), WOLightSourceCMD))
 
     if isinstance(self.get_light_source(), WOLightSourceCMD):
         full_text_code += "\n" + indent + "global coherent_mode_decomposition"
@@ -483,21 +397,15 @@ def get_CF_after_rediagonalization(sc, do_plot=False):
 
     full_text_code += "\n\n\n#\n# MAIN========================\n#\n\n"
     full_text_code += "\nfrom srxraylib.plot.gol import plot, plot_image"
-    full_text_code += "\nfrom orangecontrib.esrf.wofry.util.score import Score"
+    full_text_code += "\nfrom orangecontrib.esrf.wofry.util.tally import TallyCoherentModes"
     full_text_code += "\n"
-    full_text_code += "\nsc = Score(scan_variable_name='mode index', additional_stored_variable_names=['cumulated_intensity'],"
-    full_text_code += "\n           do_store_wavefronts=True)"
+    full_text_code += "\ntally = TallyCoherentModes()"
     full_text_code += "\nfor my_mode_index in range(%g):" % mode_index_max
     full_text_code += "\n    output_wavefront = run_source(my_mode_index=my_mode_index)"
     full_text_code += "\n    output_wavefront = run_beamline(output_wavefront)"
-    full_text_code += "\n    if my_mode_index == 0:"
-    full_text_code += "\n        intensity = output_wavefront.get_intensity()"
-    full_text_code += "\n    else:"
-    full_text_code += "\n        intensity += output_wavefront.get_intensity()"
-    full_text_code += "\n    sc.append(output_wavefront, scan_variable_value=my_mode_index, additional_stored_values=[intensity])"
-    full_text_code += "\n#plot(output_wavefront.get_abscissas(), output_wavefront.get_intensity(), title='LAST Mode %d' % my_mode_index)"
+    full_text_code += "\n    tally.append(output_wavefront)"
     full_text_code += "\n"
-    full_text_code += "\ncf = get_CF_after_rediagonalization(sc, do_plot=True)"
+    full_text_code += "\ncf, eigenvalues, eigenvectors, cross_spectral_density = tally.calculate_coherent_fraction(do_plot=True)"
     full_text_code += "\nprint('Coherent fraction from new (rediagonalized) modes: %f ' % cf)"
 
     return full_text_code

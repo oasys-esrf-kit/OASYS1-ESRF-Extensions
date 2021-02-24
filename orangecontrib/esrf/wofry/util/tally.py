@@ -18,7 +18,7 @@ from oasys.util.oasys_util import get_fwhm
 #
 #
 #
-class Score():
+class Tally():
     def __init__(self,
                  scan_variable_name='x',
                  additional_stored_variable_names=None,
@@ -128,26 +128,104 @@ class Score():
 
 
 
+class TallyCoherentModes(Tally):
+    def __init__(self,
+                 additional_stored_variable_names=None):
+
+        super().__init__(scan_variable_name='mode_index',
+                 additional_stored_variable_names=additional_stored_variable_names,
+                 do_store_wavefronts=True)
+
+    def calculate_cross_spectral_density(self, do_plot=False):
+        # retrieve arrays
+        WFs = self.get_wavefronts()
+        nmodes = self.get_number_of_calls()
+        abscissas = WFs[-1].get_abscissas()
+
+        #
+        # calculate the CSD
+        #
+
+        input_array = numpy.zeros((nmodes, abscissas.size), dtype=complex)
+        for i,wf in enumerate(WFs):
+            input_array[i,:] = wf.get_complex_amplitude() # tmp[i][0]
+
+        cross_spectral_density = numpy.zeros((abscissas.size, abscissas.size), dtype=complex)
+
+        for i in range(nmodes):
+            cross_spectral_density += numpy.outer(numpy.conjugate(input_array[i, :]), input_array[i, :])
+
+        if do_plot:
+            from srxraylib.plot.gol import plot, plot_image
+            plot_image(numpy.abs(cross_spectral_density), 1e6*abscissas, 1e6*abscissas,
+                       title="Cross Spectral Density", xtitle="X1 [um]", ytitle="X2 [um]")
+        print("matrix cross_spectral_density: ", cross_spectral_density.shape)
+
+        return cross_spectral_density
+
+    def diagonalize(self, do_plot=False):
+
+        cross_spectral_density = self.calculate_cross_spectral_density(do_plot=do_plot)
+
+        #
+        # diagonalize the CSD
+        #
+
+        w, v = numpy.linalg.eig(cross_spectral_density)
+        print(w.shape, v.shape)
+        idx = w.argsort()[::-1]  # large to small
+        eigenvalues = numpy.real(w[idx])
+        eigenvectors = v[:, idx].T
+
+        #
+        # plot intensity
+        #
+        if do_plot:
+            from srxraylib.plot.gol import plot
+            abscissas = self.get_wavefronts()[-1].get_abscissas()
+            nmodes = self.get_number_of_calls()
+            y = numpy.zeros_like(abscissas)
+            for i in range(nmodes):
+                y += eigenvalues[i] * numpy.real(numpy.conjugate(eigenvectors[i, :]) * eigenvectors[i, :])
+
+            spectral_density = numpy.zeros_like(abscissas)
+            for i in range(abscissas.size):
+                spectral_density[i] = cross_spectral_density[i, i]
+
+            plot(1e6 * abscissas, spectral_density,
+                 1e6 * abscissas, y, legend=["From Cross Spectral Density", "From modes"],
+                 xtitle="x [um]", ytitle="Spectral Density")
+
+            plot(numpy.arange(nmodes), eigenvalues[0:nmodes] / (eigenvalues[0:nmodes].sum()),
+                 title="CF: %g" % (eigenvalues[0] / eigenvalues.sum()),
+                 xtitle="mode index", ytitle="occupation")
+
+        return eigenvalues, eigenvectors, cross_spectral_density
+
+    def calculate_coherent_fraction(self, do_plot=False):
+
+        eigenvalues, eigenvectors, cross_spectral_density = self.diagonalize(do_plot=do_plot)
+        cf = eigenvalues[0] / eigenvalues.sum()
+        return cf, eigenvalues, eigenvectors, cross_spectral_density
+
+
+
+
 if __name__ == "__main__":
     from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
 
-    sc = Score(scan_variable_name='mode index',additional_stored_variable_names=['a','b'])
-
-
+    # sc = Tally(scan_variable_name='mode index', additional_stored_variable_names=['a', 'b'])
+    sc = TallyCoherentModes()
     for xmode in range(51):
         output_wavefront = GenericWavefront1D.initialize_wavefront_from_range(x_min=-0.00012, x_max=0.00012,
                                                                               number_of_points=1000)
         output_wavefront.set_photon_energy(10000)
         output_wavefront.set_gaussian_hermite_mode(sigma_x=3.03783e-05, amplitude=1, mode_x=xmode, shift=0, beta=0.0922395)
 
-        if xmode == 0:
-            WF = output_wavefront.duplicate()
-        else:
-            intens = WF.get_intensity()
-            intens += output_wavefront.get_intensity()
-            WF.set_complex_amplitude(numpy.sqrt(intens))
 
-        sc.append(WF, scan_variable_value=xmode, additional_stored_values=[1,2.1])
+        sc.append(output_wavefront, scan_variable_value=xmode, additional_stored_values=[1,2.1])
 
     sc.plot()
     sc.save("tmp.dat")
+
+    cf, _, _, _ = sc.calculate_coherent_fraction(do_plot=1)
