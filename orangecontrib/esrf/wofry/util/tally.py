@@ -146,6 +146,18 @@ class TallyCoherentModes(Tally):
         if self.cross_spectral_density is None: self.calculate_cross_spectral_density()
         return self.cross_spectral_density
 
+    def get_spectral_density_from_intensities(self):
+        WF = self.get_wavefronts()
+        print(WF)
+        intensity = None
+        for i,wf in enumerate(WF):
+            if intensity is None:
+                intensity = wf.get_intensity()
+            else:
+                intensity += wf.get_intensity()
+        return intensity
+
+
     def get_spectral_density(self):
         csd = self.get_cross_pectral_density()
         nx = csd.shape[0]
@@ -275,6 +287,9 @@ if __name__ == "__main__":
 
     sc.plot()
     sc.save("tmp.dat")
+
+    from srxraylib.plot.gol import plot
+    plot(sc.get_abscissas(), sc.get_spectral_density_from_intensities(), title="Spectral Density from intensities")
 
     sc.plot_cross_spectral_density()
     sc.plot_spectral_density()
