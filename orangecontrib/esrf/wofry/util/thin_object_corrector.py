@@ -62,6 +62,39 @@ class WOThinObjectCorrector(WOThinObject, OpticalElementDecorator):
             write_surface_file(profile.T, x, y, self.get_file_with_thickness_mesh(), overwrite=True)
             print("\nFile for OASYS " + self.get_file_with_thickness_mesh() + " written to disk.")
 
+        # for info
+
+
+        # H profile
+        n = profile.shape[0]
+        one_over_fraction_in_length = 10
+        w = n // (2 * one_over_fraction_in_length)
+
+        profile_line = profile[:, w]
+        xx = x[(n // 2 - w):(n // 2 + w)]
+        yy = profile_line[(n // 2 - w):(n // 2 + w)]
+
+        yder = numpy.gradient(yy, xx)
+        coeff = numpy.polyfit(xx, yder, 1)
+        print("\n\n\n ==========  fitted radius in the H profile center (over 1/%d of length): " % one_over_fraction_in_length)
+        print("fitted lens (with two curved sides) of radius = %g m " % (2 / coeff[0]))
+        print("which corresponds to a focal length of %g m " % (1 / coeff[0] / refraction_index_delta))
+
+        # V profile
+        n = profile.shape[1]
+        one_over_fraction_in_length = 10
+        w = n // (2 * one_over_fraction_in_length)
+
+        profile_line = profile[w, :]
+        xx = y[(n // 2 - w):(n // 2 + w)]
+        yy = profile_line[(n // 2 - w):(n // 2 + w)]
+
+        yder = numpy.gradient(yy, xx)
+        coeff = numpy.polyfit(xx, yder, 1)
+        print("\n\n\n ==========  fitted radius in the V profile center (over 1/%d of length): " % one_over_fraction_in_length)
+        print("fitted lens (with two curved sides) of radius = %g m " % (2 / coeff[0]))
+        print("which corresponds to a focal length of %g m " % (1 / coeff[0] / refraction_index_delta))
+
         return profile, x, y
 
 
@@ -158,14 +191,15 @@ class WOThinObjectCorrector1D(WOThinObject1D, OpticalElementDecorator):
 
         # for info
         n = profile.size
-        w = n // 20
+        fracion_in_length = 10
+        w = n // (2 * fracion_in_length)
 
         xx = x[(n // 2 - w):(n // 2 + w)]
         yy = profile[(n // 2 - w):(n // 2 + w)]
 
         yder = numpy.gradient(yy, xx)
         coeff = numpy.polyfit(xx, yder, 1)
-        print("\n\n\n ==========  fitted radius in the profile center : ")
+        print("\n\n\n ==========  fitted radius in the profile center (over 1/%d of length): " % fracion_in_length)
         print("fitted lens (with two curved sides) of radius = %g m " % (2 / coeff[0]))
         print("which corresponds to a focal length of %g m " % (1 / coeff[0] / refraction_index_delta))
 

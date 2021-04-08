@@ -176,8 +176,8 @@ class DiagonalizePythonScript(widget.OWWidget):
             else:
                 raise Exception("Bad input.")
 
-            # if self.is_automatic_execution:
-            #     self.propagate_wavefront()
+            if self.is_automatic_run:
+                self.refresh_script()
 
 
     def callResetSettings(self):

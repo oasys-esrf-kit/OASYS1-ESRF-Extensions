@@ -6,7 +6,7 @@ except AttributeError:
     from setuptools import find_packages, setup
 
 NAME = 'OASYS1-ESRF-Extensions'
-VERSION = '0.0.30'
+VERSION = '0.0.31'
 ISRELEASED = True
 
 DESCRIPTION = 'OASYS extension for the ESRF'

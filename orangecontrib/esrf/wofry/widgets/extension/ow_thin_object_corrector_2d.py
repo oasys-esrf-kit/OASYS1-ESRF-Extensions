@@ -120,6 +120,7 @@ class OWWOThinObjectCorrector2D(OWWOOpticalElement):
                  focus_at=self.focus_at,
                  wall_thickness=self.wall_thickness,
                  apply_correction_to_wavefront=self.apply_correction_to_wavefront,
+                 file_with_thickness_mesh_flag=1,
                                      )
 
     def check_data(self):
