@@ -367,6 +367,7 @@ def to_python_code(self,do_plot=True,mode_index_max=2): # self is beamline
     if isinstance(self.get_light_source(), WOLightSourceCMD):
         full_text_code += "\n" + indent + "global coherent_mode_decomposition"
         full_text_code += "\n" + indent + "try:"
+        full_text_code += "\n" + indent*2 + "if my_mode_index == 0: raise Exception()"
         full_text_code += "\n" + indent*2 + "tmp = coherent_mode_decomposition"
         full_text_code += "\n" + indent + "except:"
 
