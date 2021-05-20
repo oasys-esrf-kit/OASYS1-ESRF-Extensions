@@ -1,6 +1,10 @@
 import numpy
 from oasys.util.oasys_util import get_fwhm
 
+from srxraylib.plot.gol import plot, plot_image
+import matplotlib.pylab as plt
+import os
+
 # def get_fwhm(histogram, bins):
 #     quote = numpy.max(histogram)*0.5
 #     cursor = numpy.where(histogram >= quote)
@@ -65,7 +69,7 @@ class Tally():
     def get_additional_stored_values(self):
         return self.additional_stored_values
 
-    def save(self, filename="tmp.dat", add_header=True):
+    def save_scan(self, filename="tmp.dat", add_header=True):
         f = open(filename, 'w')
         if add_header:
             if self.additional_stored_variable_names is None:
@@ -93,7 +97,6 @@ class Tally():
         print("File written to disk: %s" % filename)
 
     def plot(self, title=""):
-        from srxraylib.plot.gol import plot
         x = numpy.array(self.scan_variable_value)
 
 
@@ -230,14 +233,21 @@ class TallyCoherentModes(Tally):
         cf = self.eigenvalues[0] / self.eigenvalues.sum()
         return cf, self.eigenvalues, self.eigenvectors, self.cross_spectral_density
 
-    def plot_cross_spectral_density(self):
-        from srxraylib.plot.gol import plot, plot_image
+    def plot_cross_spectral_density(self, show=True, filename=""):
         csd = self.get_cross_pectral_density()
         plot_image(numpy.abs(csd), 1e6*self.abscissas, 1e6*self.abscissas,
-                   title="Cross Spectral Density", xtitle="X1 [um]", ytitle="X2 [um]")
+                   title="Cross Spectral Density", xtitle="X1 [um]", ytitle="X2 [um]",show=False)
+
+        if filename != "":
+            plt.savefig(filename)
+            print("File written to disk: %s" % filename)
+
+        if show:
+            plt.show()
+
         print("matrix cross_spectral_density: ", csd.shape)
 
-    def plot_spectral_density(self):
+    def plot_spectral_density(self, show=True, filename="", method=2, title=""):
         #
         # plot intensity
         #
@@ -246,29 +256,89 @@ class TallyCoherentModes(Tally):
         eigenvectors = self.get_eigenvectors()
         csd = self.get_cross_pectral_density()
 
-        from srxraylib.plot.gol import plot
-        # abscissas = self.get_wavefronts()[-1].get_abscissas()
-        nmodes = self.get_number_of_calls()
-        y = numpy.zeros_like(abscissas)
-        for i in range(nmodes):
-            y += eigenvalues[i] * numpy.real(numpy.conjugate(eigenvectors[i, :]) * eigenvectors[i, :])
-
         spectral_density = self.get_spectral_density() # numpy.zeros_like(abscissas)
-        # for i in range(abscissas.size):
-        #     spectral_density[i] = csd[i, i]
-
         fwhm, quote, coordinates = get_fwhm(spectral_density, 1e6 * abscissas)
-        plot(1e6 * abscissas, spectral_density,
-             1e6 * abscissas, y, legend=["From Cross Spectral Density", "From modes"],
-             xtitle="x [um]", ytitle="Spectral Density", title="FWHM = %g um" % fwhm)
 
-    def plot_occupation(self):
+        if method > 0:
+            nmodes = self.get_number_of_calls()
+            y = numpy.zeros_like(abscissas)
+            for i in range(nmodes):
+                y += eigenvalues[i] * numpy.real(numpy.conjugate(eigenvectors[i, :]) * eigenvectors[i, :])
+
+        if method == 0:
+            plot(1e6 * abscissas, spectral_density,
+                 xtitle="x [um]", ytitle="Spectral Density (From Cross Spectral Density)",
+                 title="%s FWHM = %g um" % (title, fwhm), show=False)
+        elif method == 1:
+            plot(1e6 * abscissas, y,
+                 xtitle="x [um]", ytitle="Spectral Density (From modes)", title="%s FWHM = %g um" % (title,fwhm), show=False)
+        elif method == 2:
+            plot(1e6 * abscissas, spectral_density,
+                 1e6 * abscissas, y, legend=["From Cross Spectral Density", "From modes"],
+                 xtitle="x [um]", ytitle="Spectral Density", title="%s FWHM = %g um" % (title, fwhm), show=False)
+
+
+        if filename != "":
+            plt.savefig(filename)
+            print("File written to disk: %s" % filename)
+
+        if show:
+            plt.show()
+
+    def save_spectral_density(self, filename="", add_header=True):
+        #
+        # plot intensity
+        #
+        abscissas = self.get_abscissas()
+        eigenvalues = self.get_eigenvalues()
+        eigenvectors = self.get_eigenvectors()
+        csd = self.get_cross_pectral_density()
+
+        spectral_density = self.get_spectral_density()
+        fwhm, quote, coordinates = get_fwhm(spectral_density, 1e6 * abscissas)
+
+
+        f = open(filename, 'w')
+        if add_header:
+            header = "#S 1 spectral density\n#N 2\n#UFWHM %g\n" % fwhm
+            header += "#L  %s  %s\n" % ("abscissas [um]","spectral density")
+            f.write(header)
+
+        for i in range(abscissas.size):
+            f.write("%g  %g\n" % (1e6 * abscissas[i], spectral_density[i]))
+        f.close()
+        print("File written to disk: %s" % filename)
+
+
+    def plot_occupation(self, show=True, filename=""):
         x, y = self.get_occupation()
         nmodes = self.get_number_of_calls()
-        from srxraylib.plot.gol import plot
         plot(x[0:nmodes], y[0:nmodes],
              title="CF: %g" % (y[0]),
-             xtitle="mode index", ytitle="occupation")
+             xtitle="mode index", ytitle="occupation", show=False)
+
+        if filename != "":
+            plt.savefig(filename)
+            print("File written to disk: %s" % filename)
+
+        if show:
+            plt.show()
+
+    def save_occupation(self, filename="", add_header=True):
+        x, y = self.get_occupation()
+        nmodes = self.get_number_of_calls()
+
+
+        f = open(filename, 'w')
+        if add_header:
+            header = "#S 1 occupation\n#N 2\n"
+            header += "#L  %s  %s\n" % ("mode index","occupation")
+            f.write(header)
+
+        for i in range(nmodes):
+            f.write("%g  %g\n" % (x[i], y[i]))
+        f.close()
+        print("File written to disk: %s" % filename)
 
 
 if __name__ == "__main__":
@@ -285,15 +355,16 @@ if __name__ == "__main__":
 
         sc.append(output_wavefront, scan_variable_value=xmode, additional_stored_values=[1,2.1])
 
-    sc.plot()
-    sc.save("tmp.dat")
+    # sc.plot()
+    sc.save_scan("tmp.dat")
 
-    from srxraylib.plot.gol import plot
-    plot(sc.get_abscissas(), sc.get_spectral_density_from_intensities(), title="Spectral Density from intensities")
+    # plot(sc.get_abscissas(), sc.get_spectral_density_from_intensities(), title="Spectral Density from intensities")
 
-    sc.plot_cross_spectral_density()
-    sc.plot_spectral_density()
-    sc.plot_occupation()
+    sc.plot_cross_spectral_density(show=1,filename="tmp_cs.png")
+    sc.plot_spectral_density(show=1, filename="tmp_sd.png", method=2)
+    sc.save_spectral_density(filename="tmp_sd.txt")
+    sc.plot_occupation(show=1, filename="tmp_occ.png",)
+    sc.save_occupation(filename="tmp_occ.txt")
 
 
     # cf, _, _, _ = sc.calculate_coherent_fraction(do_plot=1)

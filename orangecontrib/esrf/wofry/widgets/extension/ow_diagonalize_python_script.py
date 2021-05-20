@@ -50,10 +50,14 @@ class DiagonalizePythonScript(widget.OWWidget):
                 "id":"WofryData"}
                 ]
 
+    mode_index_max = Setting(10)
 
+    show_graph_flag = Setting(1)
     script_file_flag = Setting(0)
     script_file_name = Setting("tmp.py")
-    mode_index_max = Setting(10)
+    graph_file_flag = Setting(0)
+    data_file_flag = Setting(0)
+    root_file_name = Setting("tmp")
 
     #
     #
@@ -118,19 +122,38 @@ class DiagonalizePythonScript(widget.OWWidget):
 
         gui.separator(self.controlArea)
 
-        gen_box = oasysgui.widgetBox(self.controlArea, "Script Generation", addSpace=False, orientation="vertical", height=530, width=self.CONTROL_AREA_WIDTH-5)
+        gen_box = oasysgui.widgetBox(self.controlArea, "Scan modes", addSpace=False, orientation="vertical", width=self.CONTROL_AREA_WIDTH-5)
+        oasysgui.lineEdit(gen_box, self, "mode_index_max", "Max mode (index)", labelWidth=150, valueType=int,
+                          orientation="horizontal", callback=self.refresh_script)
 
+        gen_box = oasysgui.widgetBox(self.controlArea, "Script file", addSpace=False, orientation="vertical", width=self.CONTROL_AREA_WIDTH-5)
         gui.comboBox(gen_box, self, "script_file_flag", label="write file with script",
                      items=["No", "Yes"], labelWidth=300,
                      sendSelectedValue=False, orientation="horizontal")
-
         box1 = gui.widgetBox(gen_box, orientation="horizontal")
         oasysgui.lineEdit(box1, self, "script_file_name", "Script File Name", labelWidth=150, valueType=str,
                           orientation="horizontal")
         self.show_at("self.script_file_flag == 1", box1)
 
-        oasysgui.lineEdit(gen_box, self, "mode_index_max", "Max mode (index)", labelWidth=150, valueType=int,
-                          orientation="horizontal", callback=self.refresh_script)
+
+        gen_box = oasysgui.widgetBox(self.controlArea, "Output Graph and Data", addSpace=False, orientation="vertical", width=self.CONTROL_AREA_WIDTH-5)
+        gui.comboBox(gen_box, self, "show_graph_flag", label="show plots",
+                     items=["No", "Yes"], labelWidth=300,
+                     sendSelectedValue=False, orientation="horizontal")
+
+        gui.comboBox(gen_box, self, "graph_file_flag", label="dump plots to file",
+                     items=["No", "Yes [png]", "Yes [pdf]"], labelWidth=300,
+                     sendSelectedValue=False, orientation="horizontal")
+
+        gui.comboBox(gen_box, self, "data_file_flag", label="dump plot data to file",
+                     items=["No", "Yes"], labelWidth=300,
+                     sendSelectedValue=False, orientation="horizontal")
+
+        box3 = gui.widgetBox(gen_box, orientation="horizontal")
+        oasysgui.lineEdit(box3, self, "root_file_name", "Data File Name Root", labelWidth=150, valueType=str,
+                          orientation="horizontal")
+
+        self.show_at("self.graph_file_flag > 0 or self.data_file_flag == 1", box3)
 
 
         tabs_setting = oasysgui.tabWidget(self.mainArea)
@@ -211,7 +234,14 @@ class DiagonalizePythonScript(widget.OWWidget):
             raise Exception("No input data")
 
         beamline = self.input_data.get_beamline()
-        self.pythonScript.setText(to_python_code(beamline, do_plot=False, mode_index_max=self.mode_index_max))
+        self.pythonScript.setText(to_python_code(beamline,
+                                                 do_plot=False,
+                                                 mode_index_max=self.mode_index_max,
+                                                 show_graph_flag=self.show_graph_flag,
+                                                 graph_file_flag=self.graph_file_flag,
+                                                 data_file_flag=self.data_file_flag,
+                                                 root_file_name=self.root_file_name,
+                                                 ))
 
         if self.script_file_flag:
             self.save_script()
@@ -223,7 +253,14 @@ class DiagonalizePythonScript(widget.OWWidget):
         self.wofry_output.setTextCursor(cursor)
         self.wofry_output.ensureCursorVisible()
 
-def to_python_code(self,do_plot=True,mode_index_max=2): # self is beamline
+def to_python_code(self, # self is beamline
+                    do_plot=True,
+                    mode_index_max=2,
+                    show_graph_flag=1,
+                    graph_file_flag=0,
+                    data_file_flag=0,
+                    root_file_name="tmp",
+                   ):
 
     import_text_code = ""
     import_text_code += "\n#"
@@ -407,9 +444,37 @@ def to_python_code(self,do_plot=True,mode_index_max=2): # self is beamline
     full_text_code += "\n" + indent * 2 + "output_wavefront = run_beamline(output_wavefront)"
     full_text_code += "\n" + indent * 2 + "tally.append(output_wavefront)"
     full_text_code += "\n" + indent + ""
-    full_text_code += "\n" + indent + "tally.plot_cross_spectral_density()"
-    full_text_code += "\n" + indent + "tally.plot_spectral_density()"
-    full_text_code += "\n" + indent + "tally.plot_occupation()"
+
+
+    if graph_file_flag == 0:
+        dump_file = ""
+    elif graph_file_flag == 1:
+        dump_file = "%s_cross_spectral_density.png" % root_file_name
+    elif graph_file_flag == 2:
+        dump_file = "%s_cross_spectral_density.pdf" % root_file_name
+
+    full_text_code += "\n\n" + indent + 'tally.plot_cross_spectral_density(show=%d,filename="%s")' % (show_graph_flag, dump_file)
+
+    if graph_file_flag == 0:
+        dump_file = ""
+    elif graph_file_flag == 1:
+        dump_file = "%s_spectral_density.png" % root_file_name
+    elif graph_file_flag == 2:
+        dump_file = "%s_spectral_density.pdf" % root_file_name
+    full_text_code += "\n" + indent + 'tally.plot_spectral_density(show=%d,filename="%s")' % (show_graph_flag, dump_file)
+
+    if graph_file_flag == 0:
+        dump_file = ""
+    elif graph_file_flag == 1:
+        dump_file = "%s_occupation.png" % root_file_name
+    elif graph_file_flag == 2:
+        dump_file = "%s_occupation.pdf" % root_file_name
+    full_text_code += "\n" + indent + 'tally.plot_occupation(show=%d,filename="%s")' % (show_graph_flag, dump_file)
+
+    if data_file_flag:
+        full_text_code += "\n\n" + indent + 'tally.save_spectral_density(filename="%s_spectral_density.dat")' % (root_file_name)
+        full_text_code += "\n" + indent + 'tally.save_occupation(filename="%s_occupation.dat")' % (root_file_name)
+
     full_text_code += "\n\n\n#\n# MAIN========================\n#\n\n"
     full_text_code += "\n\n\nmain()"
     return full_text_code
