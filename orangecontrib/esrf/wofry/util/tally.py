@@ -244,6 +244,8 @@ class TallyCoherentModes(Tally):
 
         if show:
             plt.show()
+        else:
+            plt.close()
 
         print("matrix cross_spectral_density: ", csd.shape)
 
@@ -284,6 +286,8 @@ class TallyCoherentModes(Tally):
 
         if show:
             plt.show()
+        else:
+            plt.close()
 
     def save_spectral_density(self, filename="", add_header=True):
         #
@@ -323,6 +327,8 @@ class TallyCoherentModes(Tally):
 
         if show:
             plt.show()
+        else:
+            plt.close()
 
     def save_occupation(self, filename="", add_header=True):
         x, y = self.get_occupation()
