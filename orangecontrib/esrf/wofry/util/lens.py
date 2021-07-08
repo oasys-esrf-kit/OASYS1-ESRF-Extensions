@@ -138,11 +138,8 @@ class WOLens(Lens, OpticalElementDecorator):
 
     def __get_barc_inputs(self):
 
-        if isinstance(self.get_surface_shape(index=0), Paraboloid) or \
-                isinstance(self.get_surface_shape(index=0), Sphere) or \
-                isinstance(self.get_surface_shape(index=0), Plane):
-            _foc_plane = 3
-        elif isinstance(self.get_surface_shape(index=0), ParabolicCylinder) or \
+    #     :param _foc_plane: plane of focusing: 1- horizontal, 2- vertical, 3- both
+        if isinstance(self.get_surface_shape(index=0), ParabolicCylinder) or \
                 isinstance(self.get_surface_shape(index=0), SphericalCylinder):
             if self.get_surface_shape(index=0).get_cylinder_direction() == Direction.TANGENTIAL:
                 _foc_plane = 2
@@ -150,6 +147,10 @@ class WOLens(Lens, OpticalElementDecorator):
                 _foc_plane = 1
             else:
                 raise Exception("Wrong _foc_plane value.")
+        elif isinstance(self.get_surface_shape(index=0), Paraboloid) or \
+                isinstance(self.get_surface_shape(index=0), Sphere) or \
+                isinstance(self.get_surface_shape(index=0), Plane):
+            _foc_plane = 3
         else:
             raise Exception("Not implemented surface shape")
 
@@ -223,19 +224,20 @@ class WOLens(Lens, OpticalElementDecorator):
         if number_of_curved_surfaces == 0:
             surface_shape1 = Plane()
         else:
+            #     :param _foc_plane: plane of focusing: 1- horizontal, 2- vertical, 3- both
             if surface_shape == 0:
                 if two_d_lens == 0:
                     surface_shape1 = Paraboloid(parabola_parameter=lens_radius, convexity=Convexity.DOWNWARD)
                 elif two_d_lens == 1:
                     surface_shape1 = ParabolicCylinder(parabola_parameter=lens_radius, cylinder_direction=Direction.TANGENTIAL, convexity=Convexity.DOWNWARD)
                 elif two_d_lens == 2:
-                    surface_shape1 = ParabolicCylinder(parabola_parameter=lens_radius, cylinder_direction=Direction.TANGENTIAL, convexity=Convexity.UPWARD)
+                    surface_shape1 = ParabolicCylinder(parabola_parameter=lens_radius, cylinder_direction=Direction.SAGITTAL, convexity=Convexity.UPWARD)
             elif surface_shape == 1:
                 if two_d_lens == 0:
                     surface_shape1 = Sphere(radius=lens_radius, convexity=Convexity.DOWNWARD)
                 elif two_d_lens == 1:
                     surface_shape1 = SphericalCylinder(radius=lens_radius, cylinder_direction=Direction.TANGENTIAL, convexity=Convexity.DOWNWARD)
-                elif two_d_lens == 3:
+                elif two_d_lens == 2:
                     surface_shape1 = SphericalCylinder(radius=lens_radius, cylinder_direction=Direction.SAGITTAL, convexity=Convexity.UPWARD)
 
 
@@ -615,22 +617,49 @@ class WOLens1D(Lens, OpticalElementDecorator):
         return txt
 
 if __name__ == "__main__":
+    pass
 
-    wolens = WOLens1D.create_from_keywords()
-    print(wolens.info())
-    for key in wolens._keywords_at_creation.keys():
-        print(key, wolens._keywords_at_creation[key])
+    # wolens = WOLens1D.create_from_keywords()
+    # print(wolens.info())
+    # for key in wolens._keywords_at_creation.keys():
+    #     print(key, wolens._keywords_at_creation[key])
+    #
+    #
+    # from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
+    # input_wavefront = GenericWavefront1D.initialize_wavefront_from_range(x_min=-0.0005, x_max=0.0005,
+    #                                                                      number_of_points=1000)
+    # input_wavefront.set_photon_energy(10000)
+    # input_wavefront.set_spherical_wave(radius=13.73, center=0, complex_amplitude=complex(1, 0))
+    #
+    # output_wavefront = wolens.applyOpticalElement(input_wavefront=input_wavefront)
+    #
+    # from srxraylib.plot.gol import plot
+    #
+    # plot(input_wavefront.get_abscissas(), input_wavefront.get_intensity())
+    # plot(output_wavefront.get_abscissas(),output_wavefront.get_intensity())
 
 
-    from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
-    input_wavefront = GenericWavefront1D.initialize_wavefront_from_range(x_min=-0.0005, x_max=0.0005,
-                                                                         number_of_points=1000)
-    input_wavefront.set_photon_energy(10000)
-    input_wavefront.set_spherical_wave(radius=13.73, center=0, complex_amplitude=complex(1, 0))
 
-    output_wavefront = wolens.applyOpticalElement(input_wavefront=input_wavefront)
-
-    from srxraylib.plot.gol import plot
-
-    plot(input_wavefront.get_abscissas(), input_wavefront.get_intensity())
-    plot(output_wavefront.get_abscissas(),output_wavefront.get_intensity())
+    # wolens2d = WOLens.create_from_keywords(name='Real Lens 2D',
+    # number_of_curved_surfaces=2,
+    # two_d_lens=2,
+    # surface_shape=0,
+    # wall_thickness=5e-05,
+    # material='Be',
+    # lens_radius=0.0006419,
+    # n_lenses=1,
+    # aperture_shape=1,
+    # aperture_dimension_h=0.0002,
+    # aperture_dimension_v=0.001)
+    #
+    # _foc_plane, _shape, _apert_h, _apert_v, _r_min, _n, _wall_thickness, _aperture = wolens2d.get_barc_inputs()
+    #
+    # print("\n\n\n ==========  parameters recovered for barc4ro.proj_thick_2D_crl : ")
+    # print(">>> _aperture = ", _aperture)
+    # print(">>> _apert_h = ", _apert_h)
+    # print(">>> _apert_v = ", _apert_v)
+    # print(">>> _wall_thick:  min. wall thickness between 'holes' [m]= ", _wall_thickness)
+    # print(">>> _n: number of lenses (/holes) = ", _n)
+    # print(">>> _r_min: radius (on tip of parabola for parabolic shape) [m] = ", _r_min)
+    # print(">>> _shape: 1- parabolic, 2- circular (spherical) = ", _shape)
+    # print(">>> _foc_plane: (plane of focusing: 1- horizontal, 2- vertical, 3- both) = ", _foc_plane)
