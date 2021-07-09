@@ -134,7 +134,7 @@ class WOLens(Lens, OpticalElementDecorator):
 
         lens_thickness *= self._keywords_at_creation["n_lenses"]
 
-        return x, y, lens_thickness.T
+        return x, y, lens_thickness
 
     def __get_barc_inputs(self):
 
