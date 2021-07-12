@@ -79,10 +79,7 @@ class WOLightSourceCMD(LightSource, LightSourceDecorator, UndulatorCoherentModeD
         txt += "\n    abscissas_interval=%g," % self.abscissas_interval
         txt += "\n    number_of_points=%g," % self.number_of_points
         txt += "\n    distance_to_screen=%g," % self.distance_to_screen
-        if self.scan_direction == 0:
-            txt += "\n    scan_direction='H',"
-        else:
-            txt += "\n    scan_direction='V',"
+        txt += "\n    scan_direction='%s'," % self.scan_direction
         txt += "\n    sigmaxx=%g,"   % (1.0 / numpy.sqrt(self.mxx))
         txt += "\n    sigmaxpxp=%g," % (1.0 / numpy.sqrt(self.mxpxp))
         if self.useGSMapproximation:

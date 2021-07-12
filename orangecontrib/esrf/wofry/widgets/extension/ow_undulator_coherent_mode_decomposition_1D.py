@@ -77,7 +77,7 @@ class OWUndulatorCoherentModeDecomposition1D(WofryWidget):
 
 
     flag_gsm = Setting(0)
-    scan_direction = Setting(0)
+    scan_direction_flag = Setting(0)
     mode_index = Setting(0)
 
     spectral_density_threshold = Setting(0.99)
@@ -175,7 +175,7 @@ class OWUndulatorCoherentModeDecomposition1D(WofryWidget):
                      callback=self.set_visible,
                      sendSelectedValue=False, orientation="horizontal")
 
-        gui.comboBox(left_box_3, self, "scan_direction", label="Direction", labelWidth=350,
+        gui.comboBox(left_box_3, self, "scan_direction_flag", label="Direction", labelWidth=350,
                      items=["Horizontal",
                             "Vertical"
                             ],
@@ -255,8 +255,8 @@ class OWUndulatorCoherentModeDecomposition1D(WofryWidget):
 
 
     def set_visible(self):
-        self.emittances_box_h.setVisible(self.scan_direction == 0)
-        self.emittances_box_v.setVisible(self.scan_direction == 1)
+        self.emittances_box_h.setVisible(self.scan_direction_flag == 0)
+        self.emittances_box_v.setVisible(self.scan_direction_flag == 1)
 
     def increase_mode_index(self):
         self.mode_index += 1
@@ -404,7 +404,8 @@ class OWUndulatorCoherentModeDecomposition1D(WofryWidget):
 
         self.check_fields()
 
-        if self.scan_direction == 0:
+
+        if self.scan_direction_flag == 0:
             scan_direction = "H"
             sigmaxx=self.sigma_h
             sigmaxpxp=self.sigma_divergence_h
@@ -412,6 +413,7 @@ class OWUndulatorCoherentModeDecomposition1D(WofryWidget):
             scan_direction = "V"
             sigmaxx=self.sigma_v
             sigmaxpxp=self.sigma_divergence_v
+
         if self.flag_gsm == 0:
             useGSMapproximation = False
         elif self.flag_gsm == 1:
