@@ -323,7 +323,27 @@ class OWWOOpticalElement1D(WofryWidget, WidgetDecorator):
         #     pass
 
         self.setStatusMessage("")
+        try:
+            self.print_intensities()
+        except:
+            pass
 
+    def print_intensities(self):
+        input_wavefront = self.input_data.get_wavefront()
+        output_wavefront = self.wavefront_to_plot
+
+        c1 = input_wavefront.get_intensity().sum()
+        c2 = output_wavefront.get_intensity().sum()
+        d1 = input_wavefront.delta()
+        d2 = output_wavefront.delta()
+        i1 = c1 * d1
+        i2 = c2 * d2
+        print("\n\n\n ==========  integrated intensities: ")
+        print("input wavefront integrated intensity: %g, counts: %g" % (i1, c1))
+        print("output wavefront integrated intensity: %g, counts: %g" % (i2, c2))
+        print("output/input intensity ratio (transmission): %g " % (i2 / i1))
+        print("(input-output)/input intensity ratio (absorption): %g " % ((i1 - i2) / i1))
+        print("abscissas step in: %g um, out: %g um" % (1e6 * d1, 1e6 * d2))
 
     def get_handler_name(self):
         if self.propagator == 0:
