@@ -69,6 +69,32 @@ class Tally():
     def get_additional_stored_values(self):
         return self.additional_stored_values
 
+    def get_scan_variable_value(self):
+        return numpy.array(self.scan_variable_value)
+
+    def get_intensity_at_center(self):
+        return numpy.array(self.intensity_at_center)
+
+    def get_fwhm(self):
+        return numpy.array(self.fwhm)
+
+    def get_wavefronts_intensity(self):
+        if len(self.stored_wavefronts) == 0:
+            raise Exception("No stored wavefronts found")
+
+        for i, wf in enumerate(self.stored_wavefronts):
+            x, y = wf.get_abscissas(), wf.get_intensity()
+            if i == 0:
+                INTENSITY = numpy.zeros((self.get_number_of_calls(), x.size))
+            INTENSITY[i, :] = y
+        return INTENSITY
+
+    def get_wavefronts_abscissas(self):
+        if len(self.stored_wavefronts) == 0:
+            raise Exception("No stored wavefronts found")
+        else:
+            return self.stored_wavefronts[-1].get_abscissas()
+
     def save_scan(self, filename="tmp.dat", add_header=True):
         f = open(filename, 'w')
         if add_header:
@@ -96,26 +122,49 @@ class Tally():
         f.close()
         print("File written to disk: %s" % filename)
 
-    def plot(self, title=""):
+    def plot(self, title="", factor_abscissas=1.0, xtitle=None):
+        self.plot_fwhm(title=title, factor_abscissas=factor_abscissas, xtitle=xtitle)
+        self.plot_intensity_at_center(title=title, factor_abscissas=factor_abscissas, xtitle=xtitle)
+
+    def plot_intensity_at_center(self, title="", factor_abscissas=1.0, xtitle=None):
         x = numpy.array(self.scan_variable_value)
-
-
         y = numpy.array(self.intensity_at_center)
-        plot(x, y, yrange=[0,1.1*y.max()],
-             title=title, ytitle="Intensity at center[a.u.]", xtitle=self.scan_variable_name,
+        if xtitle is None:
+            xtitle = self.scan_variable_name
+        out = plot(factor_abscissas * x, y, yrange=[0,1.1*y.max()],
+             title=title, ytitle="Intensity at center[a.u.]", xtitle=xtitle,
              figsize=(15, 4), show=0)
+        return out
 
-        # y = numpy.array(self.intensity_total)
-        # plot(x, y, yrange=[0,1.1*y.max()],
-        #      title=title, ytitle="Beam intensity [a.u.]", xtitle=self.scan_variable_name,
-        #      figsize=(15, 4), show=0)
-
+    def plot_fwhm(self, title="", factor_fwhm=1.0, xtitle=None, ytitle=None):
+        x = numpy.array(self.scan_variable_value)
         y = numpy.array(self.fwhm)
-        plot(x, y, yrange=[0,1.1*y.max()],
-             title=title, ytitle="FWHM [um]", xtitle=self.scan_variable_name,
+        if xtitle is None:
+            xtitle = self.scan_variable_name
+        if ytitle is None:
+            if factor_fwhm == 1.0:
+                ytitle = "FWHM [m]"
+            elif factor_fwhm == 1e6:
+                ytitle = "FWHM [um]"
+            else:
+                ytitle = "FWHM"
+
+        out = plot(x, factor_fwhm * y, yrange=[0,1.1*factor_fwhm*y.max()],
+             title=title, ytitle=ytitle, xtitle=xtitle,
              figsize=(15, 4), show=1)
+        return out
 
+    def plot_wavefronts_intensity(self,
+                                  xtitle="scan_variable_value",
+                                  ytitle="wavefront abscissas",
+                                  factor_abscissas=1.0,
+                                  title=""):
 
+        out = plot_image(self.get_wavefronts_intensity(),
+                   self.get_scan_variable_value(),
+                   factor_abscissas * self.get_wavefronts_abscissas(),
+                   xtitle=xtitle, ytitle=ytitle, title=title, aspect='auto')
+        return out
 
     @classmethod
     def process_wavefront(cls, wf):
@@ -201,8 +250,6 @@ class TallyCoherentModes(Tally):
             cross_spectral_density += numpy.outer(numpy.conjugate(input_array[i, :]), input_array[i, :])
 
         self.cross_spectral_density = cross_spectral_density
-
-
 
 
     def diagonalize(self, do_plot=False):
