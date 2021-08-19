@@ -6,14 +6,14 @@ except AttributeError:
     from setuptools import find_packages, setup
 
 NAME = 'OASYS1-ESRF-Extensions'
-VERSION = '0.0.37'
+VERSION = '0.0.38'
 ISRELEASED = True
 
 DESCRIPTION = 'OASYS extension for the ESRF'
 README_FILE = os.path.join(os.path.dirname(__file__), 'README.md')
 LONG_DESCRIPTION = open(README_FILE).read()
-AUTHOR = 'Luca Rebuffi, Manuel Sanchez del Rio'
-AUTHOR_EMAIL = 'lrebuffi@anl.gov, srio@serf.eu'
+AUTHOR = 'Manuel Sanchez del Rio, Juan reyes-Herrera, Luca Rebuffi'
+AUTHOR_EMAIL = 'srio@serf.eu'
 URL = 'https://github.com/oasys-esrf-kit/OASYS1-ESRF-Extensions'
 DOWNLOAD_URL = 'https://github.com/oasys-esrf-kit/OASYS1-ESRF-Extensions'
 LICENSE = 'GPLv3'
@@ -40,6 +40,7 @@ SETUP_REQUIRES = (
 INSTALL_REQUIRES = (
     'setuptools',
     'oasys-barc4ro>=1.0.3',
+    'pandas',
 )
 
 PACKAGES = find_packages(exclude=('*.tests', '*.tests.*', 'tests.*', 'tests'))

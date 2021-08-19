@@ -29,12 +29,14 @@ from orangecontrib.esrf.syned.util.FEA_File import FEA_File
 import orangecanvas.resources as resources
 from silx.gui.plot import Plot2D
 
+from srxraylib.metrology.profiles_simulation import slopes
+
 
 
 class FiniteElementReader(OWWidget): #ow_automatic_element.AutomaticElement):
 
-    name = "Finite Element reader"
-    description = "Syned: Finite Element reader"
+    name = "Surface / Finite Element reader"
+    description = "Syned: Surface / Finite Element reader"
     icon = "icons/hhlo.png"
     maintainer = "M. Sanchez del Rio"
     maintainer_email = "srio@esrf.eu"
@@ -89,6 +91,8 @@ class FiniteElementReader(OWWidget): #ow_automatic_element.AutomaticElement):
     sigma_axis0 = Setting(10)
     sigma_axis1 = Setting(10)
 
+    display_raw_data = Setting(0)
+
     fea_file_object = FEA_File()
 
     usage_path = os.path.join(resources.package_dirname("orangecontrib.esrf.syned.widgets.extension") , "misc", "finite_element_usage.png")
@@ -142,15 +146,17 @@ class FiniteElementReader(OWWidget): #ow_automatic_element.AutomaticElement):
 
 
         figure_box = oasysgui.widgetBox(data_file_box, "", addSpace=True, orientation="horizontal") #width=550, height=50)
-        self.le_beam_file_name = oasysgui.lineEdit(figure_box, self, "file_in", "FEA File:",
-                                                    labelWidth=90, valueType=str, orientation="horizontal")
+        self.le_beam_file_name = oasysgui.lineEdit(figure_box, self, "file_in", "FEA/Surface File/Url:",
+                                                    labelWidth=140, valueType=str, orientation="horizontal")
         gui.button(figure_box, self, "...", callback=self.selectFile)
 
 
         data_file_box2 = oasysgui.widgetBox(data_file_box, "", addSpace=True, orientation="horizontal",)
 
         gui.comboBox(data_file_box2, self, "file_in_type", label="File content", labelWidth=220,
-                     items=["ALS cols: A X Y Z DX DY DZ","ESRF cols: X,Y,Z,DX,DY,DZ",],
+                     items=["ALS cols: A X Y Z DX DY DZ",
+                            "ESRF cols: X,Y,Z,DX,DY,DZ",
+                            "OASYS surface file [hdf5]"],
                      sendSelectedValue=False, orientation="horizontal")
 
 
@@ -247,13 +253,30 @@ class FiniteElementReader(OWWidget): #ow_automatic_element.AutomaticElement):
         profile1D_box = oasysgui.widgetBox(tab_out, "1D profile", addSpace=True,
                                          orientation="vertical",)
         gui.comboBox(profile1D_box, self, "extract_profile1D", label="Extract and send 1D profile", labelWidth=220,
-                     items=["horizontal", "vertical"],
+                     items=["axis 0 (horizontal)", "axis 1 (vertical)"],
                      sendSelectedValue=False, orientation="horizontal")
 
         oasysgui.lineEdit(profile1D_box, self, "coordinate_profile1D", "At coordinate [m]:", labelWidth=260, valueType=float,
                           orientation="horizontal")
 
         gui.separator(tab_out, height=20)
+
+
+        display_box = oasysgui.widgetBox(tab_out, "Display", addSpace=True,
+                                         orientation="vertical",)
+        gui.comboBox(display_box, self, "display_raw_data", label="Display Raw data [slow]", labelWidth=220,
+                     items=["No", "Yes"],
+                     sendSelectedValue=False, orientation="horizontal")
+
+        oasysgui.lineEdit(profile1D_box, self, "coordinate_profile1D", "At coordinate [m]:", labelWidth=260, valueType=float,
+                          orientation="horizontal")
+
+        gui.separator(tab_out, height=20)
+
+
+
+
+
 
         file_info_box = oasysgui.widgetBox(tab_out, "Info", addSpace=True,
                                          orientation="vertical",)
@@ -334,7 +357,7 @@ class FiniteElementReader(OWWidget): #ow_automatic_element.AutomaticElement):
 
     def selectFile(self):
         filename = oasysgui.selectFileFromDialog(self,
-                previous_file_path=self.file_in, message="Open FEA Raw ASCII File",
+                previous_file_path=self.file_in, message="Open FEA File",
                 start_directory=".", file_extension_filter="*.*")
 
         self.le_beam_file_name.setText(filename)
@@ -361,7 +384,10 @@ class FiniteElementReader(OWWidget): #ow_automatic_element.AutomaticElement):
             cursor.insertText(text)
 
     def set_file_out(self):
-        file_out = os.path.splitext(self.file_in)[0]+'.h5'
+        if self.file_in_type == 2:
+            file_out = os.path.splitext(self.file_in)[0] + '_processed.h5'
+        else:
+            file_out = os.path.splitext(self.file_in)[0]+'.h5'
         # if self.file_out[0:4] == "http":
         #     self.file_out = "tmp.h5" # self.file_out.split(os.sep)[-1]
         # print(">>>>>>>>>>>>>>>>>>>",self.file_out)
@@ -381,8 +407,12 @@ class FiniteElementReader(OWWidget): #ow_automatic_element.AutomaticElement):
 
         self.fea_file_object.triangulate()
 
-        # add 3 pixels to match requested pixels after edge removal
-        self.fea_file_object.interpolate(self.n_axis_0 + 3, self.n_axis_1 + 3, remove_nan=self.remove_nan)
+
+        if self.file_in_type == 2:
+            self.fea_file_object.interpolate(self.n_axis_0, self.n_axis_1, remove_nan=self.remove_nan)
+        else:
+            # add 3 pixels to match requested pixels after edge removal
+            self.fea_file_object.interpolate(self.n_axis_0 + 3, self.n_axis_1 + 3, remove_nan=self.remove_nan)
 
         if self.fea_file_object.does_interpolated_have_nan():
             self.fea_file_object.remove_borders_in_interpolated_data()
@@ -439,66 +469,79 @@ class FiniteElementReader(OWWidget): #ow_automatic_element.AutomaticElement):
                        ytitle="Y [m] (%d pixels, max:%f)"%(self.fea_file_object.y_interpolated.size,
                                                        self.fea_file_object.y_interpolated.max()) )
 
+        slp = slopes(self.fea_file_object.Z_INTERPOLATED,
+                     self.fea_file_object.x_interpolated,
+                     self.fea_file_object.y_interpolated,
+                     silent=0, return_only_rms=0)
+
+
+        print("\n\n\n**** heights: ****")
+        print("Heigh error StDev: %g um" % (1e6 * self.fea_file_object.Z_INTERPOLATED.std()))
+        print("*****************")
+
         #
         # interpolation plot
         #
-        self.interpolation_id.layout().removeItem(self.interpolation_id.layout().itemAt(1))
-        self.interpolation_id.layout().removeItem(self.interpolation_id.layout().itemAt(0))
+        if self.file_in_type != 2:
+            self.interpolation_id.layout().removeItem(self.interpolation_id.layout().itemAt(1))
+            self.interpolation_id.layout().removeItem(self.interpolation_id.layout().itemAt(0))
 
-        f = self.fea_file_object.plot_interpolated(show=0)
-        figure_canvas = FigureCanvasQTAgg(f)
-        toolbar = NavigationToolbar(figure_canvas, self)
+            f = self.fea_file_object.plot_interpolated(show=0)
+            figure_canvas = FigureCanvasQTAgg(f)
+            toolbar = NavigationToolbar(figure_canvas, self)
 
-        self.interpolation_id.layout().addWidget(toolbar)
-        self.interpolation_id.layout().addWidget(figure_canvas)
+            self.interpolation_id.layout().addWidget(toolbar)
+            self.interpolation_id.layout().addWidget(figure_canvas)
 
 
         #
         # triangulation plot
         #
-        self.triangulation_id.layout().removeItem(self.triangulation_id.layout().itemAt(1))
-        self.triangulation_id.layout().removeItem(self.triangulation_id.layout().itemAt(0))
+        if self.file_in_type != 2:
+            self.triangulation_id.layout().removeItem(self.triangulation_id.layout().itemAt(1))
+            self.triangulation_id.layout().removeItem(self.triangulation_id.layout().itemAt(0))
 
-        f = self.fea_file_object.plot_triangulation(show=0)
-        figure_canvas = FigureCanvasQTAgg(f)
-        toolbar = NavigationToolbar(figure_canvas, self)
+            f = self.fea_file_object.plot_triangulation(show=0)
+            figure_canvas = FigureCanvasQTAgg(f)
+            toolbar = NavigationToolbar(figure_canvas, self)
 
-        self.triangulation_id.layout().addWidget(toolbar)
-        self.triangulation_id.layout().addWidget(figure_canvas)
+            self.triangulation_id.layout().addWidget(toolbar)
+            self.triangulation_id.layout().addWidget(figure_canvas)
 
         #
         # raw data
         #
-        self.rawdata_id.layout().removeItem(self.rawdata_id.layout().itemAt(1))
-        self.rawdata_id.layout().removeItem(self.rawdata_id.layout().itemAt(0))
+        if self.display_raw_data:
+            self.rawdata_id.layout().removeItem(self.rawdata_id.layout().itemAt(1))
+            self.rawdata_id.layout().removeItem(self.rawdata_id.layout().itemAt(0))
 
-        xs, ys, zs = self.fea_file_object.get_deformed()
+            xs, ys, zs = self.fea_file_object.get_deformed()
 
-        xs *= 1e3
-        ys *= 1e3
-        zs *= 1e6
+            xs *= 1e3
+            ys *= 1e3
+            zs *= 1e6
 
-        fig = Figure()
-        self.axis = fig.add_subplot(111, projection='3d')
+            fig = Figure()
+            self.axis = fig.add_subplot(111, projection='3d')
 
-        # For each set of style and range settings, plot n random points in the box
-        # defined by x in [23, 32], y in [0, 100], z in [zlow, zhigh].
-        # for m, zlow, zhigh in [('o', -50, -25), ('^', -30, -5)]:
-        for m, zlow, zhigh in [('o', zs.min(), zs.max())]:
-            self.axis.scatter(xs, ys, zs, marker=m)
+            # For each set of style and range settings, plot n random points in the box
+            # defined by x in [23, 32], y in [0, 100], z in [zlow, zhigh].
+            # for m, zlow, zhigh in [('o', -50, -25), ('^', -30, -5)]:
+            for m, zlow, zhigh in [('o', zs.min(), zs.max())]:
+                self.axis.scatter(xs, ys, zs, marker=m)
 
-        self.axis.set_xlabel('X [mm]')
-        self.axis.set_ylabel('Y [mm]')
-        self.axis.set_zlabel('Z [um]')
+            self.axis.set_xlabel('X [mm]')
+            self.axis.set_ylabel('Y [mm]')
+            self.axis.set_zlabel('Z [um]')
 
 
-        figure_canvas = FigureCanvasQTAgg(fig)
-        toolbar = NavigationToolbar(figure_canvas, self)
+            figure_canvas = FigureCanvasQTAgg(fig)
+            toolbar = NavigationToolbar(figure_canvas, self)
 
-        self.rawdata_id.layout().addWidget(toolbar)
-        self.rawdata_id.layout().addWidget(figure_canvas)
+            self.rawdata_id.layout().addWidget(toolbar)
+            self.rawdata_id.layout().addWidget(figure_canvas)
 
-        self.axis.mouse_init()
+            self.axis.mouse_init()
 
         #
         # result
@@ -518,16 +561,19 @@ class FiniteElementReader(OWWidget): #ow_automatic_element.AutomaticElement):
             except:
                 index0 = -1
             profile1D = mesh[:, index0]
+            slope1D = numpy.gradient(profile1D,abscissas)
+            profile1D_std = profile1D.std()
+            slope1D_std = slope1D.std()
             if self.invert_axes_names:
-                title = "profile at X[%d] = %f" % (index0, perp_abscissas[index0])
-                titleS = "slope at X[%d] = %f" % (index0, perp_abscissas[index0])
+                title = "profile at X[%d] = %g; StDev = %g um" % (index0, perp_abscissas[index0], 1e6*profile1D_std)
+                titleS = "slopes at X[%d] = %g; StDev = %g urad" % (index0, perp_abscissas[index0], 1e6*slope1D_std)
                 xtitle = "Y [m] "
             else:
-                title = "profile at Y[%d] = %f" % (index0, perp_abscissas[index0])
-                titleS = "profile at Y[%d] = %f" % (index0, perp_abscissas[index0])
+                title = "profile at Y[%d] = %g; StDev = %g um" % (index0, perp_abscissas[index0], 1e6*profile1D_std)
+                titleS = "slopes at Y[%d] = %g; StDev = %g urad" % (index0, perp_abscissas[index0], 1e6*slope1D_std)
                 xtitle = "X [m] "
             self.plot_data1D(abscissas, 1e6*profile1D, self.profile1D_id, title=title, xtitle=xtitle, ytitle="Z [um] ")
-            self.plot_data1D(abscissas, 1e6*numpy.gradient(profile1D,abscissas), self.slope1D_id, title=titleS, xtitle=xtitle, ytitle="Z' [urad]")
+            self.plot_data1D(abscissas, 1e6*slope1D, self.slope1D_id, title=titleS, xtitle=xtitle, ytitle="Z' [urad]")
         else:
             abscissas = y
             perp_abscissas = x
@@ -537,16 +583,19 @@ class FiniteElementReader(OWWidget): #ow_automatic_element.AutomaticElement):
             except:
                 index0 = -1
             profile1D = mesh[index0, :]
+            slope1D = numpy.gradient(profile1D,abscissas)
+            profile1D_std = profile1D.std()
+            slope1D_std = slope1D.std()
             if self.invert_axes_names:
-                title = "profile at Y[%d] = %f" % (index0, perp_abscissas[index0])
-                titleS = "slopes at Y[%d] = %f" % (index0, perp_abscissas[index0])
+                title = "profile at Y[%d] = %g; StDev = %g um" % (index0, perp_abscissas[index0], 1e6*profile1D_std)
+                titleS = "slopes at Y[%d] = %g; StDev = %g urad" % (index0, perp_abscissas[index0], 1e6*slope1D_std)
                 xtitle = "X [m] "
             else:
-                title = "profile at X[%d] = %f" % (index0, perp_abscissas[index0])
-                titleS = "slopes at X[%d] = %f" % (index0, perp_abscissas[index0])
+                title = "profile at X[%d] = %g; StDev = %g um" % (index0, perp_abscissas[index0], 1e6*profile1D_std)
+                titleS = "slopes at X[%d] = %g; StDev = %g urad" % (index0, perp_abscissas[index0], 1e6*slope1D_std)
                 xtitle = "Y [m] "
-            self.plot_data1D(abscissas, profile1D, self.profile1D_id, title=title, xtitle=xtitle, ytitle="Z [m] ")
-            self.plot_data1D(abscissas, numpy.gradient(profile1D,abscissas), self.slope1D_id, title=titleS, xtitle=xtitle, ytitle="Z'")
+            self.plot_data1D(abscissas, 1e6*profile1D, self.profile1D_id, title=title, xtitle=xtitle, ytitle="Z [um] ")
+            self.plot_data1D(abscissas, 1e6*slope1D, self.slope1D_id, title=titleS, xtitle=xtitle, ytitle="Z' [urad]")
 
         if self.invert_axes_names:
             self.send("Surface Data",
@@ -630,15 +679,28 @@ if __name__ == "__main__":
     # ow.set_input_file("/users/srio/Oasys/s4.txt")
     # ow.file_in_type = 0
     # ow.replicate_raw_data_flag = 0
+
     # ESRF
-    # ow.set_input_file("/users/srio/Oasys/ANSYS/ID03-DMM-LC3-E20.25keV-th0.245deg-Wc8mm.out")
-    ow.set_input_file("https://raw.githubusercontent.com/oasys-esrf-kit/OasysWorkspaces/master/ANSYS/ID03-DMM-LC3-E20.25keV-th0.245deg-Wc8mm.out")
-    ow.file_in_type = 1
-    ow.file_in_skiprows = 9
-    ow.replicate_raw_data_flag = 1
-    ow.file_factor_x = 1e-3
-    ow.file_factor_y = 1e-3
-    ow.file_factor_z = 1e-3
+    # ow.set_input_file("https://raw.githubusercontent.com/oasys-esrf-kit/OasysWorkspaces/master/ANSYS/ID03-DMM-LC3-E20.25keV-th0.245deg-Wc8mm.out")
+    # ow.file_in_type = 1
+    # ow.file_in_skiprows = 9
+    # ow.replicate_raw_data_flag = 1
+    # ow.file_factor_x = 1e-3
+    # ow.file_factor_y = 1e-3
+    # ow.file_factor_z = 1e-3
+
+
+
+    # OASYS hdf5
+    # ow.set_input_file("/users/srio/OASYS1.2/shadow3-scripts/METROLOGY/ring256.h5")
+    # ow.set_input_file("/users/srio/Downloads/dabam2d-001.h5")
+    ow.set_input_file("https://raw.githubusercontent.com/srio/dabam2d/main/data/dabam2d-001.h5")
+    ow.file_in_type = 2
+    ow.n_axis_0 = 0
+    ow.n_axis_1 = 0
+    ow.invert_axes_names = 0
+    ow.extract_profile1D = 1
+
 
 
     ow.show()
@@ -676,3 +738,5 @@ if __name__ == "__main__":
     # o1.plot_triangulation()
     # o1.plot_interpolated()
     # o1.plot_surface_image()
+
+

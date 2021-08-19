@@ -2,6 +2,7 @@ import numpy
 
 from scipy import interpolate
 from scipy import spatial
+from scipy.interpolate import interp2d, RectBivariateSpline
 
 import matplotlib.pylab as plt
 import matplotlib as mpl
@@ -12,6 +13,10 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
 from oasys.util.oasys_util import write_surface_file
+
+from oasys.widgets import congruence
+import oasys.util.oasys_util as OU
+
 
 def write_generic_h5_surface(s, xx, yy, filename='presurface.hdf5',subgroup_name="surface_file"):
     # import h5py
@@ -45,6 +50,8 @@ class FEA_File():
         self.x_interpolated = None  # 1D array
         self.y_interpolated = None  # 1D array
         self.Z_INTERPOLATED = None  # 2D array
+
+        self.file_in_type = None
 
     @classmethod
     def process_file(cls, filename_in, n_axis_0=301, n_axis_1=51,
@@ -109,7 +116,12 @@ class FEA_File():
     def set_filename(self,filename):
         self.filename = filename
 
+    def set_file_in_type(self, value):
+        self.file_in_type = value
+
     def load_multicolumn_file(self,skiprows=0,factorX=1.0,factorY=1.0,factorZ=1.0,file_in_type=0):
+        self.set_file_in_type(file_in_type)
+        print("Reading file/url: %s" % self.filename)
         if file_in_type == 0: # ALS
             node = numpy.loadtxt(self.filename, skiprows=skiprows, dtype=numpy.float64)
 
@@ -132,6 +144,51 @@ class FEA_File():
             self.Xdeformation = factorX * node[:, 3]  # X=x in m
             self.Ydeformation = factorY * node[:, 4]  # Y=z in m
             self.Zdeformation = factorZ * node[:, 5]  # Z=uy vertical displacement in m
+
+        elif file_in_type == 2: # HDF5 Oasys surface file
+
+            if self.filename[0:4] == "http" or self.filename[0:3] == "ftp":
+                import urllib.request
+                filehandle, _ = urllib.request.urlretrieve(self.filename)
+                print("Reading local file doenloaded from url: %s" % filehandle)
+            else:
+                filehandle = self.filename
+
+            self.surface_file_name = congruence.checkDir(filehandle)
+            # if not os.path.isfile(file_name): raise ValueError("File " + file_name + " not existing")
+            # import h5py
+            # file = h5py.File(filehandle, 'r')
+            # xx = file["surface_file" + "/X"][()]
+            # yy = file["surface_file" + "/Y"][()]
+            # zz = file["surface_file" + "/Z"][()]
+            # file.close()
+            # return xx.copy(), yy.copy(), zz.copy()
+
+            xx, yy, zz = OU.read_surface_file(filehandle)
+
+
+            ZZ = zz.copy().T
+            XX = numpy.outer(xx, numpy.ones_like(yy))
+            YY = numpy.outer(numpy.ones_like(xx), yy)
+
+            # Coordinates
+
+
+            self.Xdeformation = factorX * XX.flatten()  # X=x in m
+            self.Ydeformation = factorY * YY.flatten()  # Y=z in m
+            self.Zdeformation = factorZ * ZZ.flatten()  # Z=uy vertical displacement in m
+
+            self.Xundeformed = numpy.zeros_like(self.Xdeformation) # factorX * XX.flatten() * 0.0 # X=x in m
+            self.Yundeformed = numpy.zeros_like(self.Ydeformation) # factorY * YY.flatten() * 0.0 # Y=z in m
+            self.Zundeformed = numpy.zeros_like(self.Zdeformation) # factorZ * ZZ.flatten() * 0.0  # Z=uy vertical displacement in m
+
+            #
+            # this file type does not need interpolation as it comes in a regular grid
+            #
+
+            self.x_interpolated = factorX * xx
+            self.y_interpolated = factorY * yy
+            self.Z_INTERPOLATED = factorZ * ZZ
 
     def Xdeformed(self):
         return self.Xundeformed + self.Xdeformation
@@ -182,6 +239,8 @@ class FEA_File():
                self.Ydeformed().min(), self.Ydeformed().max(), \
                self.Zdeformed().min(), self.Zdeformed().max()
 
+    def get_dimensions(self):
+        return self.Xundeformed.size, self.Yundeformed.size, self.Zundeformed.size
 
     def replicate_raw_data(self,flag):
 
@@ -250,24 +309,56 @@ class FEA_File():
         :param remove_nan: 0=No, 1=Yes (replace with minimum height) 2=Yes (replace with 0)
         :return:
         """
-        if self.tri is None:
-            self.triangulate()
 
-        lim = self.get_limits_deformed()
-        self.x_interpolated = numpy.linspace(lim[0],lim[1],nx)
-        self.y_interpolated = numpy.linspace(lim[2],lim[3],ny)
+        # if input file is OASYS h5, the grid is regular so no need of triangulation
 
-        X_INTERPOLATED =  self.get_Xinterpolated_mesh()
-        Y_INTERPOLATED =  self.get_Yinterpolated_mesh()
+        if self.file_in_type == 2:
+            if nx <= 0 or ny <=0:
+                # nothing to do
+                print("Skip interpolation")
+            else: # interpolate one by one along Y
+                lim = self.get_limits_deformed()
+                print("interpolation limits: xmin, xmax, ymin, ymax", lim[0:4])
+                x_interpolated = numpy.linspace(lim[0], lim[1], nx)
+                y_interpolated = numpy.linspace(lim[2], lim[3], ny)
 
-        self.P = numpy.array([X_INTERPOLATED.flatten(), Y_INTERPOLATED.flatten() ]).transpose()
+                f = RectBivariateSpline(self.x_interpolated,
+                             self.y_interpolated,
+                             self.Z_INTERPOLATED)
+                Z_INTERPOLATED = f(x_interpolated, y_interpolated)
 
-        if remove_nan ==2:
-            self.Z_INTERPOLATED = interpolate.griddata(self.triPi, self.Zdeformed(), self.P, rescale=True, method = "cubic", fill_value=0.0 ).reshape([nx,ny])
-        elif remove_nan ==1:
-            self.Z_INTERPOLATED = interpolate.griddata(self.triPi, self.Zdeformed(), self.P, rescale=True, method = "cubic", fill_value=self.Zdeformed().min() ).reshape([nx,ny])
-        elif remove_nan == 0:
-            self.Z_INTERPOLATED = interpolate.griddata(self.triPi, self.Zdeformed(), self.P, rescale=True, method="cubic").reshape([nx, ny])
+                print("original dimensions f0r interpolation", self.Z_INTERPOLATED.shape)
+
+                print("interpolated dimensions", Z_INTERPOLATED.shape)
+
+                # overwrite interpolated data
+                self.x_interpolated = x_interpolated
+                self.y_interpolated = y_interpolated
+                self.Z_INTERPOLATED = Z_INTERPOLATED
+
+
+
+        else:
+
+
+            if self.tri is None:
+                self.triangulate()
+
+            lim = self.get_limits_deformed()
+            self.x_interpolated = numpy.linspace(lim[0],lim[1],nx)
+            self.y_interpolated = numpy.linspace(lim[2],lim[3],ny)
+
+            X_INTERPOLATED =  self.get_Xinterpolated_mesh()
+            Y_INTERPOLATED =  self.get_Yinterpolated_mesh()
+
+            self.P = numpy.array([X_INTERPOLATED.flatten(), Y_INTERPOLATED.flatten() ]).transpose()
+
+            if remove_nan ==2:
+                self.Z_INTERPOLATED = interpolate.griddata(self.triPi, self.Zdeformed(), self.P, rescale=True, method = "cubic", fill_value=0.0 ).reshape([nx,ny])
+            elif remove_nan ==1:
+                self.Z_INTERPOLATED = interpolate.griddata(self.triPi, self.Zdeformed(), self.P, rescale=True, method = "cubic", fill_value=self.Zdeformed().min() ).reshape([nx,ny])
+            elif remove_nan == 0:
+                self.Z_INTERPOLATED = interpolate.griddata(self.triPi, self.Zdeformed(), self.P, rescale=True, method="cubic").reshape([nx, ny])
 
 
     def plot_interpolated(self, show=True):
@@ -445,7 +536,6 @@ if __name__ == "__main__":
     #              filename_out="/home/manuel/Oasys/s4.h5", invert_axes_names=True,
     #              detrend=1, reset_height_method=1, do_plot=False)
 
-
     # o1 = FEA_File()
     # o1.set_filename("C:/Users/Manuel/Oasys/dispCOSMIC_M1_H_XOPPY.txt")
     # o1.load_multicolumn_file()
@@ -454,23 +544,16 @@ if __name__ == "__main__":
     # # X, Y, Z = o1.get_undeformed()
     # surface_plot( X,Y,Z)
 
-
-
-
-
-
-
-
-
     # o1.plot_triangulation()
     # o1.plot_interpolated()
     # o1.plot_surface_image()
 
-    o1 = FEA_File.process_file("C:/Users/Manuel/Oasys/TENDER DCM Performance/disp2000.txt", n_axis_0=801, n_axis_1=801,
-                 filename_out="", invert_axes_names=True,
-                 detrend=1, reset_height_method=2,
-                 replicate_raw_data_flag=3,do_plot=False)
-    o1.plot_surface_image()
+
+    # o1 = FEA_File.process_file("C:/Users/Manuel/Oasys/TENDER DCM Performance/disp2000.txt", n_axis_0=801, n_axis_1=801,
+    #              filename_out="", invert_axes_names=True,
+    #              detrend=1, reset_height_method=2,
+    #              replicate_raw_data_flag=3,do_plot=False)
+    # o1.plot_surface_image()
     # # plot(o1.x_interpolated, o1.Z_INTERPOLATED[:,o1.y_interpolated.size//2]) #, o1.y_interpolated
     # x0, y0, z0 = o1.get_undeformed()
     # x, y, z = o1.get_deformed()
@@ -503,4 +586,28 @@ if __name__ == "__main__":
     #              detrend=0, reset_height_method=0,
     #              replicate_raw_data_flag=3,do_plot=False)
 
-    #
+    fea_file_object = FEA_File()
+    fea_file_object.set_filename("/users/srio/OASYS1.2/shadow3-scripts/METROLOGY/ring256.h5")
+    fea_file_object.load_multicolumn_file(skiprows=0,
+                                               file_in_type=2,
+                                               factorX=1.0,
+                                               factorY=1.0,
+                                               factorZ=1.0)
+
+    fea_file_object.interpolate(0, 0, remove_nan=0)
+    print(fea_file_object.x_interpolated.shape,
+          fea_file_object.y_interpolated.shape,
+          fea_file_object.Z_INTERPOLATED.shape,)
+    plot_image(fea_file_object.Z_INTERPOLATED, fea_file_object.x_interpolated, fea_file_object.y_interpolated,
+               aspect='auto', title="No interpolation", show=0)
+
+
+    fea_file_object.interpolate(70, 800, remove_nan=0)
+    # fea_file_object.plot_surface_image()
+    print(fea_file_object.x_interpolated.shape,
+          fea_file_object.y_interpolated.shape,
+          fea_file_object.Z_INTERPOLATED.shape,)
+
+    plot_image(fea_file_object.Z_INTERPOLATED, fea_file_object.x_interpolated, fea_file_object.y_interpolated,
+               aspect='auto', title="Interpolated")
+
