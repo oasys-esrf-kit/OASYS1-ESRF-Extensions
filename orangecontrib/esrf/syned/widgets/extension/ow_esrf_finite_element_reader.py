@@ -417,9 +417,6 @@ class FiniteElementReader(OWWidget): #ow_automatic_element.AutomaticElement):
         if self.fea_file_object.does_interpolated_have_nan():
             self.fea_file_object.remove_borders_in_interpolated_data()
 
-        if self.sigma_flag == 1:
-            self.fea_file_object.gaussian_filter(sigma_axis0=self.sigma_axis0,sigma_axis1=self.sigma_axis1)
-
         if self.detrended == 0:
             pass
         elif self.detrended == 1:
@@ -431,12 +428,17 @@ class FiniteElementReader(OWWidget): #ow_automatic_element.AutomaticElement):
         elif self.detrended == 4:
             self.fea_file_object.detrend_best_circle(axis=1, fitting_domain_ratio=self.detrended_fit_range)
 
+
         if self.reset_height_method == 0:
             pass
         elif self.reset_height_method == 1:
             self.fea_file_object.reset_height_to_minimum()
         elif self.reset_height_method == 2:
             self.fea_file_object.reset_height_to_central_value()
+
+        if self.sigma_flag == 1:
+            self.fea_file_object.gaussian_filter(sigma_axis0=self.sigma_axis0,sigma_axis1=self.sigma_axis1)
+
 
         self.set_file_out()
         self.fea_file_object.write_h5_surface(filename=self.file_out, invert_axes_names=self.invert_axes_names)

@@ -28,7 +28,7 @@ class OWstepper1D(WofryWidget):
     id = "LoopStepper1D"
     description = "Loop stepper 1D"
     icon = "icons/stepper.png"
-    priority = 15
+    priority = 160
 
     category = "Wofry Tools"
     keywords = ["data", "file", "load", "read"]
