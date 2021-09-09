@@ -401,6 +401,7 @@ class OWUndulatorCoherentModeDecomposition1D(WofryWidget):
 
 
         self.progressBarInit()
+        self.progressBarSet(15)
 
         self.check_fields()
 

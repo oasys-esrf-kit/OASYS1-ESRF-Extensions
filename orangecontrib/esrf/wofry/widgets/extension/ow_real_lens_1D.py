@@ -396,7 +396,7 @@ class OWWORealLens1D(OWWOOpticalElement1D):
 
     def do_plot_results(self, progressBarValue=80): # OVERWRITTEN
 
-        super().do_plot_results(progressBarValue)
+        super().do_plot_results(progressBarValue, closeProgressBar=False)
         if not self.view_type == 0:
             if not self.wavefront_to_plot is None:
 

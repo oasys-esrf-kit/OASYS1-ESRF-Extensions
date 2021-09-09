@@ -123,7 +123,7 @@ class OWWOOpticalElement1D(WofryWidget, WidgetDecorator):
 
 
         self.tab_bas = oasysgui.createTabPage(self.tabs_setting, "O.E. Setting")
-        self.tab_pro = oasysgui.createTabPage(self.tabs_setting, "Propagation Setting")
+
 
         oasysgui.lineEdit(self.tab_bas, self, "oe_name", "O.E. Name", labelWidth=260, valueType=str, orientation="horizontal")
 
@@ -137,6 +137,12 @@ class OWWOOpticalElement1D(WofryWidget, WidgetDecorator):
 
         self.draw_specific_box()
 
+        self.create_propagation_setting_tab()
+
+
+    def create_propagation_setting_tab(self):
+
+        self.tab_pro = oasysgui.createTabPage(self.tabs_setting, "Propagation Setting")
         gui.comboBox(self.tab_pro, self, "propagator", label="Propagator", labelWidth=260,
                      items=self.propagators_list,
                      callback=self.set_Propagator,
@@ -418,7 +424,7 @@ class OWWOOpticalElement1D(WofryWidget, WidgetDecorator):
             tab.setFixedHeight(self.IMAGE_HEIGHT)
             tab.setFixedWidth(self.IMAGE_WIDTH)
 
-    def do_plot_results(self, progressBarValue=80):
+    def do_plot_results(self, progressBarValue=80, closeProgressBar=True):
 
         if not self.wavefront_to_plot is None:
 
@@ -465,7 +471,7 @@ class OWWOOpticalElement1D(WofryWidget, WidgetDecorator):
             # for i in range(len(self.get_titles())):
             #     self.plot_canvas[i].resetZoom()
 
-            self.progressBarFinished()
+            if closeProgressBar: self.progressBarFinished()
 
     def receive_syned_data(self, data):
         if not data is None:
