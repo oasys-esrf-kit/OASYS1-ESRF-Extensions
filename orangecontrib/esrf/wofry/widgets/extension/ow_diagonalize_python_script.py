@@ -123,7 +123,7 @@ class DiagonalizePythonScript(widget.OWWidget):
         gui.separator(self.controlArea)
 
         gen_box = oasysgui.widgetBox(self.controlArea, "Scan modes", addSpace=False, orientation="vertical", width=self.CONTROL_AREA_WIDTH-5)
-        oasysgui.lineEdit(gen_box, self, "mode_index_max", "Max mode (index)", labelWidth=150, valueType=int,
+        oasysgui.lineEdit(gen_box, self, "mode_index_max", "Number of modes", labelWidth=150, valueType=int,
                           orientation="horizontal", callback=self.refresh_script)
 
         gen_box = oasysgui.widgetBox(self.controlArea, "Script file", addSpace=False, orientation="vertical", width=self.CONTROL_AREA_WIDTH-5)

@@ -259,6 +259,7 @@ class OWMirror1D(OWWOOpticalElement1D):
     def get_titles(self):
         titles = super().get_titles()
         titles.append("O.E. Profile")
+        titles.append("Footprint")
         return titles
 
     def do_plot_results(self, progressBarValue=80): # OVERWRITTEN
@@ -279,6 +280,20 @@ class OWMirror1D(OWWOOpticalElement1D):
                                  title=self.get_titles()[4],
                                  xtitle="Spatial Coordinate along o.e. [m]",
                                  ytitle="Profile Height [$\mu$m]")
+
+
+                x, y, amplitude = self.get_optical_element().get_footprint(self.input_data.get_wavefront())
+                self.plot_data1D(x=x,
+                                 y=numpy.abs(amplitude)**2,
+                                 progressBarValue=progressBarValue + 10,
+                                 tabs_canvas_index=5,
+                                 plot_canvas_index=5,
+                                 calculate_fwhm=False,
+                                 title=self.get_titles()[5],
+                                 xtitle="Spatial Coordinate along o.e. [m]",
+                                 ytitle="Intensity")
+
+
 
                 self.plot_canvas[0].resetZoom()
 

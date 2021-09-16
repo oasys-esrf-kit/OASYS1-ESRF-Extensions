@@ -46,20 +46,12 @@ class WOMirror1D(Mirror, OpticalElementDecorator):
         p_focus                        = self._keywords_at_creation["p_focus"]
         q_focus                        = self._keywords_at_creation["q_focus"]
         grazing_angle_in               = self._keywords_at_creation["grazing_angle_in"]
-        p_distance                     = self._keywords_at_creation["p_distance"]
-        q_distance                     = self._keywords_at_creation["q_distance"]
-        zoom_factor                    = self._keywords_at_creation["zoom_factor"]
         error_flag                     = self._keywords_at_creation["error_flag"]
         error_file                     = self._keywords_at_creation["error_file"]
         error_file_oversampling_factor = self._keywords_at_creation["error_file_oversampling_factor"]
         mirror_length                  = self._keywords_at_creation["mirror_length"]
         mirror_points                  = self._keywords_at_creation["mirror_points"]
-        write_profile                  = self._keywords_at_creation["write_profile"]
 
-
-
-        x1 = input_wavefront.get_abscissas()
-        field1 = input_wavefront.get_complex_amplitude()
 
         if error_flag == 0:  # no profile file
             x2_oe = numpy.linspace(-0.5 * mirror_length, 0.5 * mirror_length,
@@ -102,59 +94,33 @@ class WOMirror1D(Mirror, OpticalElementDecorator):
         return x2_oe, y2_oe
 
 
+    def get_footprint(self, input_wavefront):
+
+        grazing_angle_in   = self._keywords_at_creation["grazing_angle_in"]
+        p_distance         = self._keywords_at_creation["p_distance"]
+
+        # TODO avoid recalculation??
+        x2_oe, y2_oe = self.get_height_profile(input_wavefront)
+
+        field2  = self.propagator1D_offaxis_up_to_mirror(input_wavefront, x2_oe, y2_oe,
+                                                    p_distance, grazing_angle_in)
+
+        return x2_oe, y2_oe, field2
+
+
 
     def applyOpticalElement(self, input_wavefront, parameters=None, element_index=None):
 
 
-        shape              = self._keywords_at_creation["shape"]
-        p_focus            = self._keywords_at_creation["p_focus"]
-        q_focus            = self._keywords_at_creation["q_focus"]
         grazing_angle_in   = self._keywords_at_creation["grazing_angle_in"]
         p_distance         = self._keywords_at_creation["p_distance"]
         q_distance         = self._keywords_at_creation["q_distance"]
         zoom_factor        = self._keywords_at_creation["zoom_factor"]
-        error_flag         = self._keywords_at_creation["error_flag"]
-        error_file         = self._keywords_at_creation["error_file"]
-        error_file_oversampling_factor = self._keywords_at_creation["error_file_oversampling_factor"]
-        mirror_length      = self._keywords_at_creation["mirror_length"]
-        mirror_points      = self._keywords_at_creation["mirror_points"]
         write_profile      = self._keywords_at_creation["write_profile"]
-
-        # x1 = input_wavefront.get_abscissas()
-        # field1 = input_wavefront.get_complex_amplitude()
-        #
-        # if error_flag == 0:  # no profile file
-        #     x2_oe = numpy.linspace(-0.5 * mirror_length, 0.5 * mirror_length,
-        #                            mirror_points)  # x1 / numpy.sin(grazing_angle_in)
-        #     y2_oe = numpy.zeros_like(x2_oe)
-        # else:
-        #     a = numpy.loadtxt(error_file)
-        #     x2_oe = a[:, 0]
-        #     y2_oe = a[:, 1]
-        #
-        # if shape == 0:
-        #     height = numpy.zeros_like(x2_oe)
-        # elif shape == 1:
-        #     ccc = S4Conic.initialize_as_sphere_from_focal_distances(p_focus, q_focus, grazing_angle_in)
-        #     height = ccc.height(x2_oe)
-        #     print(ccc.info())
-        #     y2_oe += height
-        # elif shape == 2:
-        #     ccc = S4Conic.initialize_as_ellipsoid_from_focal_distances(p_focus, q_focus, grazing_angle_in)
-        #     height = ccc.height(x2_oe)
-        #     print(ccc.info())
-        #     y2_oe += height
-        # elif shape == 3:
-        #     ccc = S4Conic.initialize_as_paraboloid_from_focal_distances(p_focus, q_focus, grazing_angle_in)
-        #     height = ccc.height(x2_oe)
-        #     print(ccc.info())
-        #     y2_oe += height
-        # else:
-        #     raise Exception("Wrong shape")
 
         x2_oe, y2_oe = self.get_height_profile(input_wavefront)
 
-        output_wavefront = self.propagator1D_offaxis(input_wavefront, x2_oe, y2_oe,
+        output_wavefront, x2_oe, y2_oe, field2  = self.propagator1D_offaxis(input_wavefront, x2_oe, y2_oe,
                                                     p_distance, q_distance,
                                                     grazing_angle_in,
                                                     zoom_factor=zoom_factor, normalize_intensities=True)
@@ -182,7 +148,7 @@ class WOMirror1D(Mirror, OpticalElementDecorator):
         wavelength = input_wavefront.get_wavelength()
 
         x1_oe = -p * numpy.cos(theta_grazing_in) + x1 * numpy.sin(theta_grazing_in)
-        y1_oe = p * numpy.sin(theta_grazing_in) + x1 * numpy.cos(theta_grazing_in)
+        y1_oe =  p * numpy.sin(theta_grazing_in) + x1 * numpy.cos(theta_grazing_in)
 
         # field2 is the electric field in the mirror
         field2 = goFromToSequential(field1, x1_oe, y1_oe, x2_oe, y2_oe,
@@ -190,7 +156,7 @@ class WOMirror1D(Mirror, OpticalElementDecorator):
 
         x3 = x1 * zoom_factor
 
-        x3_oe = q * numpy.cos(theta_grazing_out) + x3 * numpy.sin(theta_grazing_out)
+        x3_oe = q * numpy.cos(theta_grazing_out) - x3 * numpy.sin(theta_grazing_out)
         y3_oe = q * numpy.sin(theta_grazing_out) + x3 * numpy.cos(theta_grazing_out)
 
         # field2 is the electric field in the image plane
@@ -199,12 +165,30 @@ class WOMirror1D(Mirror, OpticalElementDecorator):
 
         output_wavefront = GenericWavefront1D.initialize_wavefront_from_arrays(x3, field3 / numpy.sqrt(zoom_factor), wavelength=wavelength)
 
-        return output_wavefront
+        return output_wavefront, x2_oe, y2_oe, field2
+
+    @classmethod
+    def propagator1D_offaxis_up_to_mirror(cls, input_wavefront, x2_oe, y2_oe, p, theta_grazing_in,
+                                          normalize_intensities=False):
+
+
+        x1 = input_wavefront.get_abscissas()
+        field1 = input_wavefront.get_complex_amplitude()
+        wavelength = input_wavefront.get_wavelength()
+
+        x1_oe = -p * numpy.cos(theta_grazing_in) + x1 * numpy.sin(theta_grazing_in)
+        y1_oe =  p * numpy.sin(theta_grazing_in) + x1 * numpy.cos(theta_grazing_in)
+
+        # field2 is the electric field in the mirror
+        field2 = goFromToSequential(field1, x1_oe, y1_oe, x2_oe, y2_oe,
+                                    wavelength=wavelength, normalize_intensities=normalize_intensities)
+
+        return field2
 
 
     @classmethod
     def create_from_keywords(cls,
-                name="Real Lens",
+                name="mirror 1D",
                 shape=0,
                 p_focus=1.0,
                 q_focus=1.0,
