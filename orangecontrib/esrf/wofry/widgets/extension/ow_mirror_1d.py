@@ -52,6 +52,7 @@ class OWMirror1D(OWWOOpticalElement1D):
     grazing_angle_in = Setting(1.5e-3)
 
     shape = Setting(1)
+    flip = Setting(0)
     p_focus = Setting(1.0)
     q_focus = Setting(1.0)
     error_flag = Setting(0)
@@ -80,6 +81,9 @@ class OWMirror1D(OWWOOpticalElement1D):
         gui.comboBox(box_reflector, self, "shape", label="Reflector shape",
                      items=["Flat","Circle","Ellipse","Parabola"], sendSelectedValue=False, orientation="horizontal",
                      callback=self.set_visible)
+
+        gui.comboBox(box_reflector, self, "flip", label="Flip mirror (up-down,left-right)",
+                     items=["No","Yes"], sendSelectedValue=False, orientation="horizontal")
 
         self.box_focal_id = oasysgui.widgetBox(box_reflector, "", addSpace=True, orientation="vertical")
         oasysgui.lineEdit(self.box_focal_id, self, "p_focus", "Focal entrance arm [m]",
@@ -178,6 +182,7 @@ class OWMirror1D(OWWOOpticalElement1D):
         return WOMirror1D.create_from_keywords(
                     name                         =self.oe_name,
                     shape=self.shape,
+                    flip=self.flip,
                     p_focus=self.p_focus,
                     q_focus=self.q_focus,
                     grazing_angle_in=self.grazing_angle_in,

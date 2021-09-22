@@ -113,6 +113,7 @@ class WOMirror1D(Mirror, OpticalElementDecorator):
 
 
         grazing_angle_in   = self._keywords_at_creation["grazing_angle_in"]
+        flip               = self._keywords_at_creation["flip"]
         p_distance         = self._keywords_at_creation["p_distance"]
         q_distance         = self._keywords_at_creation["q_distance"]
         zoom_factor        = self._keywords_at_creation["zoom_factor"]
@@ -123,7 +124,9 @@ class WOMirror1D(Mirror, OpticalElementDecorator):
         output_wavefront, x2_oe, y2_oe, field2  = self.propagator1D_offaxis(input_wavefront, x2_oe, y2_oe,
                                                     p_distance, q_distance,
                                                     grazing_angle_in,
-                                                    zoom_factor=zoom_factor, normalize_intensities=True)
+                                                    zoom_factor=zoom_factor,
+                                                    normalize_intensities=True,
+                                                    flip=flip)
 
         # output files
         if write_profile:
@@ -138,7 +141,7 @@ class WOMirror1D(Mirror, OpticalElementDecorator):
 
     @classmethod
     def propagator1D_offaxis(cls, input_wavefront, x2_oe, y2_oe, p, q, theta_grazing_in, theta_grazing_out=None,
-                             zoom_factor=1.0, normalize_intensities=False):
+                             zoom_factor=1.0, normalize_intensities=False, flip=0):
 
         if theta_grazing_out is None:
             theta_grazing_out = theta_grazing_in
@@ -147,8 +150,12 @@ class WOMirror1D(Mirror, OpticalElementDecorator):
         field1 = input_wavefront.get_complex_amplitude()
         wavelength = input_wavefront.get_wavelength()
 
-        x1_oe = -p * numpy.cos(theta_grazing_in) + x1 * numpy.sin(theta_grazing_in)
-        y1_oe =  p * numpy.sin(theta_grazing_in) + x1 * numpy.cos(theta_grazing_in)
+        if flip == 0:
+            x1_oe = -p * numpy.cos(theta_grazing_in) + x1 * numpy.sin(theta_grazing_in)
+            y1_oe =  p * numpy.sin(theta_grazing_in) + x1 * numpy.cos(theta_grazing_in)
+        else:
+            x1_oe =  p * numpy.cos(theta_grazing_in) + x1 * numpy.sin(theta_grazing_in)
+            y1_oe =  p * numpy.sin(theta_grazing_in) - x1 * numpy.cos(theta_grazing_in)
 
         # field2 is the electric field in the mirror
         field2 = goFromToSequential(field1, x1_oe, y1_oe, x2_oe, y2_oe,
@@ -156,14 +163,30 @@ class WOMirror1D(Mirror, OpticalElementDecorator):
 
         x3 = x1 * zoom_factor
 
-        x3_oe = q * numpy.cos(theta_grazing_out) - x3 * numpy.sin(theta_grazing_out)
-        y3_oe = q * numpy.sin(theta_grazing_out) + x3 * numpy.cos(theta_grazing_out)
+        if flip == 0:
+            x3_oe = q * numpy.cos(theta_grazing_out) - x3 * numpy.sin(theta_grazing_out)
+            y3_oe = q * numpy.sin(theta_grazing_out) + x3 * numpy.cos(theta_grazing_out)
+        else:
+            x3_oe = -q * numpy.cos(theta_grazing_out) - x3 * numpy.sin(theta_grazing_out)
+            y3_oe =  q * numpy.sin(theta_grazing_out) - x3 * numpy.cos(theta_grazing_out)
 
-        # field2 is the electric field in the image plane
+
+
+
+        # field3 is the electric field in the image plane
         field3 = goFromToSequential(field2, x2_oe, y2_oe, x3_oe, y3_oe,
                                     wavelength=wavelength, normalize_intensities=normalize_intensities)
 
-        output_wavefront = GenericWavefront1D.initialize_wavefront_from_arrays(x3, field3 / numpy.sqrt(zoom_factor), wavelength=wavelength)
+
+        # overpass the problem that scale must be positive!!!!
+        if (x3[1] - x3[0]) > 0: # usual case
+            output_wavefront = GenericWavefront1D.initialize_wavefront_from_arrays(x3, field3 / numpy.sqrt(zoom_factor),
+                                                                                   wavelength=wavelength)
+        else:
+            output_wavefront = GenericWavefront1D.initialize_wavefront_from_arrays(
+                numpy.flip(x3),
+                numpy.flip(field3 / numpy.sqrt(zoom_factor)),
+                wavelength=wavelength)
 
         return output_wavefront, x2_oe, y2_oe, field2
 
@@ -190,6 +213,7 @@ class WOMirror1D(Mirror, OpticalElementDecorator):
     def create_from_keywords(cls,
                 name="mirror 1D",
                 shape=0,
+                flip=0,
                 p_focus=1.0,
                 q_focus=1.0,
                 grazing_angle_in=0.003,
@@ -207,6 +231,7 @@ class WOMirror1D(Mirror, OpticalElementDecorator):
         keywords_at_creation = {}
         keywords_at_creation["name"]                           = name
         keywords_at_creation["shape"]                          = shape
+        keywords_at_creation["flip"]                           = flip
         keywords_at_creation["p_focus"]                        = p_focus
         keywords_at_creation["q_focus"]                        = q_focus
         keywords_at_creation["grazing_angle_in"]               = grazing_angle_in
@@ -241,6 +266,7 @@ class WOMirror1D(Mirror, OpticalElementDecorator):
         txt += "\noptical_element = WOMirror1D.create_from_keywords("
         txt += "\n    name='%s'," % self._keywords_at_creation["name"]
         txt += "\n    shape=%d," % self._keywords_at_creation["shape"]
+        txt += "\n    flip=%d," % self._keywords_at_creation["flip"]
         txt += "\n    p_focus=%g," % self._keywords_at_creation["p_focus"]
         txt += "\n    q_focus=%g," % self._keywords_at_creation["q_focus"]
         txt += "\n    grazing_angle_in=%g," % self._keywords_at_creation["grazing_angle_in"]
