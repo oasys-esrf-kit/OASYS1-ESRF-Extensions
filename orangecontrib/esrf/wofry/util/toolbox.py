@@ -55,9 +55,6 @@ class WOToolbox1D(OpticalElement, OpticalElementDecorator):
     def applyOpticalElement(self, input_wavefront, parameters=None, element_index=None):
         # return wavefront
 
-        print("\n\n\n ==========  parameters from optical element : ")
-        print(self.info())
-
         sigma = input_wavefront.get_complex_amplitude(polarization=Polarization.SIGMA)
         try:
             pi = input_wavefront.get_complex_amplitude(polarization=Polarization.PI)

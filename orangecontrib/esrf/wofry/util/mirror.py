@@ -178,15 +178,8 @@ class WOMirror1D(Mirror, OpticalElementDecorator):
                                     wavelength=wavelength, normalize_intensities=normalize_intensities)
 
 
-        # overpass the problem that scale must be positive!!!!
-        if (x3[1] - x3[0]) > 0: # usual case
-            output_wavefront = GenericWavefront1D.initialize_wavefront_from_arrays(x3, field3 / numpy.sqrt(zoom_factor),
+        output_wavefront = GenericWavefront1D.initialize_wavefront_from_arrays(x3, field3 / numpy.sqrt(zoom_factor),
                                                                                    wavelength=wavelength)
-        else:
-            output_wavefront = GenericWavefront1D.initialize_wavefront_from_arrays(
-                numpy.flip(x3),
-                numpy.flip(field3 / numpy.sqrt(zoom_factor)),
-                wavelength=wavelength)
 
         return output_wavefront, x2_oe, y2_oe, field2
 
