@@ -1,8 +1,13 @@
+import numpy
+
+from PyQt5.QtWidgets import QMessageBox, QLabel, QSizePolicy
+
 from orangewidget.settings import Setting
 from orangewidget import gui
 
 from oasys.widgets import gui as oasysgui
 from oasys.widgets import congruence
+from oasys.util.oasys_util import TriggerIn, TriggerOut, EmittingStream
 from oasys.util.oasys_util import write_surface_file, read_surface_file
 from oasys.util.oasys_objects import OasysSurfaceData
 
@@ -13,6 +18,8 @@ from orangecontrib.wofry.util.wofry_objects import WofryData
 from orangecontrib.esrf.wofry.widgets.gui.ow_optical_element_1d import OWWOOpticalElement1D
 from orangecontrib.esrf.wofry.util.thin_object import WOThinObject1D #TODO from wofryimpl....
 
+
+
 class OWWOThinObject1D(OWWOOpticalElement1D):
 
     name = "ThinObject1D"
@@ -20,6 +27,10 @@ class OWWOThinObject1D(OWWOOpticalElement1D):
     icon = "icons/thinb1d.png"
     priority = 6
 
+    inputs = [("WofryData", WofryData, "set_input"),
+              ("DABAM 1D Profile", numpy.ndarray, "receive_dabam_profile"),
+              ("Trigger", TriggerOut, "receive_trigger_signal"),
+              WidgetDecorator.syned_input_data()[0]]
 
     material = Setting(1)
     refraction_index_delta = Setting(5.3e-7)
@@ -103,6 +114,45 @@ class OWWOThinObject1D(OWWOOpticalElement1D):
     def receive_specific_syned_data(self, optical_element):
         pass
 
+    def receive_dabam_profile(self, dabam_profile):
+        if not dabam_profile is None:
+            try:
+                file_name = "dabam_profile_" + str(id(self)) + ".dat"
+
+                file = open(file_name, "w")
+
+                for element in dabam_profile:
+                    file.write(str(element[0]) + " " + str(element[1]) + "\n")
+
+                file.flush()
+                file.close()
+
+                self.file_with_thickness_mesh = file_name
+
+            except Exception as exception:
+                QMessageBox.critical(self, "Error", exception.args[0], QMessageBox.Ok)
+
+                if self.IS_DEVELOP: raise exception
+
+    def receive_trigger_signal(self, trigger):
+
+        if trigger and trigger.new_object == True:
+            if trigger.has_additional_parameter("variable_name"):
+                variable_name = trigger.get_additional_parameter("variable_name").strip()
+                variable_display_name = trigger.get_additional_parameter("variable_display_name").strip()
+                variable_value = trigger.get_additional_parameter("variable_value")
+                variable_um = trigger.get_additional_parameter("variable_um")
+
+                if "," in variable_name:
+                    variable_names = variable_name.split(",")
+
+                    for variable_name in variable_names:
+                        setattr(self, variable_name.strip(), variable_value)
+                else:
+                    setattr(self, variable_name, variable_value)
+
+                self.propagate_wavefront()
+
 
 
     #
@@ -172,7 +222,7 @@ if __name__ == "__main__":
 
     a = QApplication(sys.argv)
     ow = OWWOThinObject1D()
-    ow.file_with_thickness_mesh = "/home/srio/Downloads/SRW_M_thk_res_workflow_a_FC_CDn01.txt"
+    ow.file_with_thickness_mesh = "/users/srio/Oasys/dabam_profile_139821049876720.dat"
     ow.set_input(get_example_wofry_data())
 
 

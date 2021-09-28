@@ -129,8 +129,10 @@ class OWWOOpticalElement1D(WofryWidget, WidgetDecorator):
 
         self.coordinates_box = oasysgui.widgetBox(self.tab_bas, "Coordinates", addSpace=True, orientation="vertical")
 
-        oasysgui.lineEdit(self.coordinates_box, self, "p", "Distance from previous Continuation Plane [m]", labelWidth=280, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.coordinates_box, self, "q", "Distance to next Continuation Plane [m]", labelWidth=280, valueType=float, orientation="horizontal")
+        tmp = oasysgui.lineEdit(self.coordinates_box, self, "p", "Distance from previous Continuation Plane [m]", labelWidth=280, valueType=float, orientation="horizontal")
+        tmp.setToolTip("p")
+        tmp = oasysgui.lineEdit(self.coordinates_box, self, "q", "Distance to next Continuation Plane [m]", labelWidth=280, valueType=float, orientation="horizontal")
+        tmp.setToolTip("q")
         # Commented srio (not yet implemented) TODO: implement it!
         # oasysgui.lineEdit(self.coordinates_box, self, "angle_radial", "Incident Angle (to normal) [deg]", labelWidth=280, valueType=float, orientation="horizontal")
         # oasysgui.lineEdit(self.coordinates_box, self, "angle_azimuthal", "Rotation along Beam Axis [deg]", labelWidth=280, valueType=float, orientation="horizontal")
@@ -158,24 +160,29 @@ class OWWOOpticalElement1D(WofryWidget, WidgetDecorator):
         self.integral_box = oasysgui.widgetBox(self.tab_pro, "", addSpace=False, orientation="vertical", height=90)
 
 
-        oasysgui.lineEdit(self.integral_box, self, "magnification_x", "Magnification Factor for interval",
+        tmp = oasysgui.lineEdit(self.integral_box, self, "magnification_x", "Magnification Factor for interval",
                           labelWidth=260, valueType=float, orientation="horizontal")
-        oasysgui.lineEdit(self.integral_box, self, "magnification_N", "Magnification Factor for N points",
+        tmp.setToolTip("magnification_x")
+
+        tmp = oasysgui.lineEdit(self.integral_box, self, "magnification_N", "Magnification Factor for N points",
                           labelWidth=260, valueType=float, orientation="horizontal")
+        tmp.setToolTip("magnification_N")
 
         # Fresnel zoom
         self.zoom_box = oasysgui.widgetBox(self.tab_pro, "", addSpace=False, orientation="vertical", height=90)
 
-        oasysgui.lineEdit(self.zoom_box, self, "magnification_x", "Magnification Factor for interval",
+        tmp = oasysgui.lineEdit(self.zoom_box, self, "magnification_x", "Magnification Factor for interval",
                           labelWidth=260, valueType=float, orientation="horizontal")
+        tmp.setToolTip("magnification_x")
 
 
         # Fresnel Sacled zoom
 
         self.zoom_scaled_box = oasysgui.widgetBox(self.tab_pro, "", addSpace=False, orientation="vertical")
 
-        oasysgui.lineEdit(self.zoom_scaled_box, self, "magnification_x", "Magnification Factor for interval",
+        tmp = oasysgui.lineEdit(self.zoom_scaled_box, self, "magnification_x", "Magnification Factor for interval",
                           labelWidth=260, valueType=float, orientation="horizontal")
+        tmp.setToolTip("magnification_x")
 
         gui.comboBox(self.zoom_scaled_box, self, "scaled_guess_R", label="Guess wavefront curvature", labelWidth=260,
                      items=["No","Yes"],

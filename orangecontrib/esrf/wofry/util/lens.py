@@ -474,23 +474,25 @@ class WOLens1D(Lens, OpticalElementDecorator):
             self.get_refraction_index(input_wavefront.get_photon_energy())
 
         # this is for info...
-        radius = self._keywords_at_creation["radius"                        ]
+        radius = self._keywords_at_creation["radius"]
         number_of_curved_surfaces  = self._keywords_at_creation["number_of_curved_surfaces" ]
 
-        n_lenses = self._keywords_at_creation["n_lenses"                      ]
-        F = radius / (number_of_curved_surfaces * n_lenses * refraction_index_delta)
+        n_lenses = self._keywords_at_creation["n_lenses"]
 
-        print("\n\nRadius of curvature R = %g um" % (1e6 * radius))
-        print("Number of lenses N: %d" % n_lenses)
-        print("Number of curved refractive surfaces in a lens Nd = %d" % (number_of_curved_surfaces))
-        print("Focal distance F = R / (Nd N delta) = %g m" % (F))
-        # end info.
+        if number_of_curved_surfaces > 0:
+            F = radius / (number_of_curved_surfaces * n_lenses * refraction_index_delta)
+
+            print("\n\nRadius of curvature R = %g um" % (1e6 * radius))
+            print("Number of lenses N: %d" % n_lenses)
+            print("Number of curved refractive surfaces in a lens Nd = %d" % (number_of_curved_surfaces))
+            print("Focal distance F = R / (Nd N delta) = %g m" % (F))
+            # end info.
 
 
 
-        error_flag = self._keywords_at_creation["error_flag"                    ]
-        error_file = self._keywords_at_creation["error_file"                    ]
-        error_edge_management = self._keywords_at_creation["error_edge_management"         ]
+        error_flag = self._keywords_at_creation["error_flag"]
+        error_file = self._keywords_at_creation["error_file"]
+        error_edge_management = self._keywords_at_creation["error_edge_management"]
 
         output_wavefront = input_wavefront.duplicate()
         abscissas_on_lens, lens_thickness = self.get_surface_thickness_mesh(input_wavefront=input_wavefront)

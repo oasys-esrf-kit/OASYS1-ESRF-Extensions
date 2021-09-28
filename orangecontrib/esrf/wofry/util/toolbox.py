@@ -26,8 +26,9 @@ class WOToolbox1D(OpticalElement, OpticalElementDecorator):
                  name="Undefined",
                  shift_center=0.0,
                  crop_factor=1.0,
-                 change_photon_energy=0, # 0=No, 1=Yes
-                 new_photon_energy=0.0, # if change_photon_energy, the new photon energy in eV
+                 abscissas_factor=1.0,  # abscissas_factor abscissas: 0=N0, 1=Yes
+                 change_photon_energy=0,  # 0=No, 1=Yes
+                 new_photon_energy=0.0,  # if change_photon_energy, the new photon energy in eV
                  ):
 
         super().__init__(
@@ -35,6 +36,7 @@ class WOToolbox1D(OpticalElement, OpticalElementDecorator):
 
         self._shift_center = shift_center
         self._crop_factor = crop_factor
+        self._abscissas_factor = abscissas_factor
         self._change_photon_energy = change_photon_energy
         self._new_photon_energy = new_photon_energy
 
@@ -42,6 +44,7 @@ class WOToolbox1D(OpticalElement, OpticalElementDecorator):
         self._set_support_text([
                     ("name",                       "Name" ,                                "" ),
                     ("crop_factor",                "Crop factor",                          "" ),
+                    ("abscissas_factor",           "Abscissas factor",                     ""),
                     ("change_photon_energy",       "Change photon energy",                 "(flag)" ),
                     ("new_photon_energy",          "New photon energy",                    "(if change_photon_energy>0)" ),
             ] )
@@ -51,6 +54,9 @@ class WOToolbox1D(OpticalElement, OpticalElementDecorator):
 
     def get_crop_factor(self):
         return self._crop_factor
+
+    def get_abscissas_factor(self):
+        return self._abscissas_factor
 
     def applyOpticalElement(self, input_wavefront, parameters=None, element_index=None):
         # return wavefront
@@ -92,6 +98,8 @@ class WOToolbox1D(OpticalElement, OpticalElementDecorator):
         else:
             pass
 
+        if self.get_abscissas_factor() != 1.0:
+            xnew *= self.get_abscissas_factor()
 
         output_wavefront = GenericWavefront1D.initialize_wavefront_from_arrays(
             xnew, sigma, y_array_pi=pi, wavelength=input_wavefront.get_wavelength())
@@ -106,8 +114,8 @@ class WOToolbox1D(OpticalElement, OpticalElementDecorator):
         txt += "\nfrom orangecontrib.esrf.wofry.util.toolbox import WOToolbox1D #TODO update"
         txt += "\n"
 
-        txt += "\noptical_element = WOToolbox1D(name='%s',crop_factor=%g,shift_center=%g,change_photon_energy=%d,new_photon_energy=%g)" % \
-               (self.get_name(), self.get_crop_factor(), self.get_shift_center(), self._change_photon_energy, self._new_photon_energy)
+        txt += "\noptical_element = WOToolbox1D(name='%s',crop_factor=%g,abscissas_factor=%d,shift_center=%g,change_photon_energy=%d,new_photon_energy=%g)" % \
+               (self.get_name(), self.get_crop_factor(), self.get_flip(), self.get_shift_center(), self._change_photon_energy, self._new_photon_energy)
 
         txt += "\n"
         return txt
@@ -151,15 +159,16 @@ if __name__ == "__main__":
         input_wavefront.set_wavelength(1e-10)
         input_wavefront.set_gaussian(sigma_x=0.001, amplitude=1, shift=0)
 
-        optical_element = WOToolbox1D(name='test', shift_center=0.002, crop_factor=0.5,
+        optical_element = WOToolbox1D(name='test', shift_center=0.002, crop_factor=0.6, abscissas_factor=1,
                                       change_photon_energy=0, new_photon_energy=0.0)
 
 
         # no drift in this element
         output_wavefront = optical_element.applyOpticalElement(input_wavefront)
-
         #
         # ---- plots -----
         #
-        plot(output_wavefront.get_abscissas(), output_wavefront.get_intensity(),
-                   title='OPTICAL ELEMENT NR 1')
+        plot(input_wavefront.get_abscissas(), input_wavefront.get_intensity(),
+            output_wavefront.get_abscissas(), output_wavefront.get_intensity(),
+                   title='OPTICAL ELEMENT NR 1', legend=['input',
+                                                         'output'])
