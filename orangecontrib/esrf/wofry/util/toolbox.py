@@ -115,7 +115,7 @@ class WOToolbox1D(OpticalElement, OpticalElementDecorator):
         txt += "\n"
 
         txt += "\noptical_element = WOToolbox1D(name='%s',crop_factor=%g,abscissas_factor=%d,shift_center=%g,change_photon_energy=%d,new_photon_energy=%g)" % \
-               (self.get_name(), self.get_crop_factor(), self.get_flip(), self.get_shift_center(), self._change_photon_energy, self._new_photon_energy)
+               (self.get_name(), self.get_crop_factor(), self.get_abscissas_factor(), self.get_shift_center(), self._change_photon_energy, self._new_photon_energy)
 
         txt += "\n"
         return txt
