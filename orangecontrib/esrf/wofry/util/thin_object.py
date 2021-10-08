@@ -81,12 +81,12 @@ class WOThinObject(ThinObject, OpticalElementDecorator):
         refraction_index_delta = 1 - refraction_index.real
         att_coefficient = 4*numpy.pi * (xraylib.Refractive_Index(element, photon_energy/1000, density)).imag / wave_length
 
-        print("\n\n\n ==========  parameters recovered from xraylib : ")
-        print("Element: %s" % element)
-        print("        density = %g " % density)
-        print("Photon energy = %g eV" % (photon_energy))
-        print("Refracion index delta = %g " % (refraction_index_delta))
-        print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
+        # print("\n\n\n ==========  parameters recovered from xraylib : ")
+        # print("Element: %s" % element)
+        # print("        density = %g " % density)
+        # print("Photon energy = %g eV" % (photon_energy))
+        # print("Refracion index delta = %g " % (refraction_index_delta))
+        # print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
 
         return refraction_index_delta, att_coefficient
 
@@ -195,12 +195,13 @@ class WOThinObject1D(ThinObject, OpticalElementDecorator):
         refraction_index_delta = 1 - refraction_index.real
         att_coefficient = 4*numpy.pi * (xraylib.Refractive_Index(element, photon_energy/1000, density)).imag / wave_length
 
-        print("\n\n\n ==========  parameters recovered from xraylib : ")
-        print("Element: %s" % element)
-        print("        density = %g " % density)
-        print("Photon energy = %g eV" % (photon_energy))
-        print("Refracion index delta = %g " % (refraction_index_delta))
-        print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
+        if False:
+            print("\n\n\n ==========  parameters recovered from xraylib : ")
+            print("Element: %s" % element)
+            print("        density = %g " % density)
+            print("Photon energy = %g eV" % (photon_energy))
+            print("Refracion index delta = %g " % (refraction_index_delta))
+            print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
 
         return refraction_index_delta, att_coefficient
 

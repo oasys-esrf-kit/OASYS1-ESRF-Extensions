@@ -35,8 +35,9 @@ class WOLens(Lens, OpticalElementDecorator):
         if self.get_material() == "External":
             refraction_index_delta = self._keywords_at_creation["refraction_index_delta"]
             att_coefficient = self._keywords_at_creation["att_coefficient"]
-            print("\n\n\nRefracion index delta = %g " % (refraction_index_delta))
-            print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
+            if self._keywords_at_creation["verbose"]:
+                print("\n\n\nRefracion index delta = %g " % (refraction_index_delta))
+                print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
             return refraction_index_delta, att_coefficient
 
         if self.get_material() == "Be": # Be
@@ -55,12 +56,13 @@ class WOLens(Lens, OpticalElementDecorator):
         refraction_index_delta = 1 - refraction_index.real
         att_coefficient = 4*numpy.pi * (xraylib.Refractive_Index(element, photon_energy/1000, density)).imag / wave_length
 
-        print("\n\n\n ==========  parameters recovered from xraylib : ")
-        print("Element: %s" % element)
-        print("        density = %g " % density)
-        print("Photon energy = %g eV" % (photon_energy))
-        print("Refracion index delta = %g " % (refraction_index_delta))
-        print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
+        if self._keywords_at_creation["verbose"]:
+            print("\n\n\n ==========  parameters recovered from xraylib : ")
+            print("Element: %s" % element)
+            print("        density = %g " % density)
+            print("Photon energy = %g eV" % (photon_energy))
+            print("Refracion index delta = %g " % (refraction_index_delta))
+            print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
 
         return refraction_index_delta, att_coefficient
 
@@ -71,23 +73,25 @@ class WOLens(Lens, OpticalElementDecorator):
 
         photon_energy = wavefront.get_photon_energy()
 
-        #
-        print("\n\n\n ==========  parameters in use : ")
+
 
         refraction_index_delta, att_coefficient = \
             self.get_refraction_index(photon_energy=photon_energy)
 
         # this is for info...
-        number_of_curved_surfaces = self._keywords_at_creation["number_of_curved_surfaces"]
-        lens_radius = self._keywords_at_creation["lens_radius"]
-        n_lenses = self._keywords_at_creation["n_lenses"]
+        #
+        if self._keywords_at_creation["verbose"]:
+            print("\n\n\n ==========  parameters in use : ")
+            number_of_curved_surfaces = self._keywords_at_creation["number_of_curved_surfaces"]
+            lens_radius = self._keywords_at_creation["lens_radius"]
+            n_lenses = self._keywords_at_creation["n_lenses"]
 
-        print("\n\nRadius of curvature R = %g um" % (1e6 * lens_radius))
-        print("Number of lenses N: %d" % n_lenses)
-        print("Number of curved refractive surfaces in a lens Nd = %d" % (number_of_curved_surfaces))
-        if number_of_curved_surfaces != 0:
-            F = lens_radius / (number_of_curved_surfaces * n_lenses * refraction_index_delta)
-            print("Focal distance F = R / (Nd N delta) = %g m" % (F))
+            print("\n\nRadius of curvature R = %g um" % (1e6 * lens_radius))
+            print("Number of lenses N: %d" % n_lenses)
+            print("Number of curved refractive surfaces in a lens Nd = %d" % (number_of_curved_surfaces))
+            if number_of_curved_surfaces != 0:
+                F = lens_radius / (number_of_curved_surfaces * n_lenses * refraction_index_delta)
+                print("Focal distance F = R / (Nd N delta) = %g m" % (F))
         # end info...
 
 
@@ -107,17 +111,18 @@ class WOLens(Lens, OpticalElementDecorator):
         _axis_x = wavefront.get_coordinate_x()
         _axis_y = wavefront.get_coordinate_y()
 
-        print("\n\n\n ==========  parameters recovered for barc4ro.proj_thick_2D_crl : ")
-        print(">>> _aperture = ", _aperture)
-        print(">>> _apert_h = ", _apert_h)
-        print(">>> _apert_v = ", _apert_v)
-        print(">>> _wall_thick:  min. wall thickness between 'holes' [m]= ", _wall_thickness)
-        print(">>> _n: number of lenses (/holes) = ", _n)
-        print(">>> _r_min: radius (on tip of parabola for parabolic shape) [m] = ", _r_min)
-        print(">>> _shape: 1- parabolic, 2- circular (spherical) = ", _shape)
-        print(">>> _foc_plane: plane of focusing: 1- horizontal, 2- vertical, 3- both = ", _foc_plane)
-        print(">>> _axis_x : from, to, n = ", _axis_x.min(), _axis_x.max(), _axis_x.size)
-        print(">>> _axis_y : from, to, n = ", _axis_y.min(), _axis_y.max(), _axis_y.size)
+        if self._keywords_at_creation["verbose"]:
+            print("\n\n\n ==========  parameters recovered for barc4ro.proj_thick_2D_crl : ")
+            print(">>> _aperture = ", _aperture)
+            print(">>> _apert_h = ", _apert_h)
+            print(">>> _apert_v = ", _apert_v)
+            print(">>> _wall_thick:  min. wall thickness between 'holes' [m]= ", _wall_thickness)
+            print(">>> _n: number of lenses (/holes) = ", _n)
+            print(">>> _r_min: radius (on tip of parabola for parabolic shape) [m] = ", _r_min)
+            print(">>> _shape: 1- parabolic, 2- circular (spherical) = ", _shape)
+            print(">>> _foc_plane: plane of focusing: 1- horizontal, 2- vertical, 3- both = ", _foc_plane)
+            print(">>> _axis_x : from, to, n = ", _axis_x.min(), _axis_x.max(), _axis_x.size)
+            print(">>> _axis_y : from, to, n = ", _axis_y.min(), _axis_y.max(), _axis_y.size)
 
 
         x, y, lens_thickness = proj_thick_2D_crl(_foc_plane, _shape, _apert_h, _apert_v, _r_min, _n,
@@ -220,6 +225,7 @@ class WOLens(Lens, OpticalElementDecorator):
                              aperture_shape=0,
                              aperture_dimension_h=500e-6,
                              aperture_dimension_v=1000e-6,
+                             verbose=1,
                              ):
         if number_of_curved_surfaces == 0:
             surface_shape1 = Plane()
@@ -270,6 +276,7 @@ class WOLens(Lens, OpticalElementDecorator):
         keywords_at_creation["aperture_shape"]                = aperture_shape
         keywords_at_creation["aperture_dimension_h"]          = aperture_dimension_h
         keywords_at_creation["aperture_dimension_v"]          = aperture_dimension_v
+        keywords_at_creation["verbose"]                       = verbose
 
         out = WOLens(name=name,
                       surface_shape1=surface_shape1,
@@ -304,6 +311,7 @@ class WOLens(Lens, OpticalElementDecorator):
         txt += "\n    aperture_shape=%d,"            % self._keywords_at_creation["aperture_shape"]
         txt += "\n    aperture_dimension_h=%g,"      % self._keywords_at_creation["aperture_dimension_h"]
         txt += "\n    aperture_dimension_v=%g)"      % self._keywords_at_creation["aperture_dimension_v"]
+        txt += "\n    verbose=%d)"                   % self._keywords_at_creation["verbose"]
         txt += "\n"
         return txt
 
@@ -455,37 +463,41 @@ class WOLens1D(Lens, OpticalElementDecorator):
         refraction_index_delta = 1 - refraction_index.real
         att_coefficient = 4*numpy.pi * (xraylib.Refractive_Index(element, photon_energy/1000, density)).imag / wave_length
 
-        print("\n\n\n ==========  parameters recovered from xraylib : ")
-        print("Element: %s" % element)
-        print("        density = %g " % density)
-        print("Photon energy = %g eV" % (photon_energy))
-        print("Refracion index delta = %g " % (refraction_index_delta))
-        print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
+        if self._keywords_at_creation["verbose"]:
+            print("\n\n\n ==========  parameters recovered from xraylib : ")
+            print("Element: %s" % element)
+            print("        density = %g " % density)
+            print("Photon energy = %g eV" % (photon_energy))
+            print("Refracion index delta = %g " % (refraction_index_delta))
+            print("Attenuation coeff mu = %g m^-1" % (att_coefficient))
 
         return refraction_index_delta, att_coefficient
 
 
     def applyOpticalElement(self, input_wavefront, parameters=None, element_index=None):
 
-        #
-        print("\n\n\n ==========  parameters in use : ")
+
 
         refraction_index_delta, att_coefficient = \
             self.get_refraction_index(input_wavefront.get_photon_energy())
 
         # this is for info...
-        radius = self._keywords_at_creation["radius"]
-        number_of_curved_surfaces  = self._keywords_at_creation["number_of_curved_surfaces" ]
+        if self._keywords_at_creation["verbose"]:
+            #
+            print("\n\n\n ==========  parameters in use : ")
 
-        n_lenses = self._keywords_at_creation["n_lenses"]
+            radius = self._keywords_at_creation["radius"]
+            number_of_curved_surfaces  = self._keywords_at_creation["number_of_curved_surfaces" ]
 
-        if number_of_curved_surfaces > 0:
-            F = radius / (number_of_curved_surfaces * n_lenses * refraction_index_delta)
+            n_lenses = self._keywords_at_creation["n_lenses"]
 
-            print("\n\nRadius of curvature R = %g um" % (1e6 * radius))
-            print("Number of lenses N: %d" % n_lenses)
-            print("Number of curved refractive surfaces in a lens Nd = %d" % (number_of_curved_surfaces))
-            print("Focal distance F = R / (Nd N delta) = %g m" % (F))
+            if number_of_curved_surfaces > 0:
+                F = radius / (number_of_curved_surfaces * n_lenses * refraction_index_delta)
+
+                print("\n\nRadius of curvature R = %g um" % (1e6 * radius))
+                print("Number of lenses N: %d" % n_lenses)
+                print("Number of curved refractive surfaces in a lens Nd = %d" % (number_of_curved_surfaces))
+                print("Focal distance F = R / (Nd N delta) = %g m" % (F))
             # end info.
 
 
@@ -549,6 +561,7 @@ class WOLens1D(Lens, OpticalElementDecorator):
                              wt_offset_bfs                  =0,
                              offset_bfs                     =0,
                              tilt_bfs                       =0,
+                             verbose                        =1,
                              ):
 
 
@@ -578,6 +591,7 @@ class WOLens1D(Lens, OpticalElementDecorator):
         keywords_at_creation["wt_offset_bfs"                 ] = wt_offset_bfs
         keywords_at_creation["offset_bfs"                    ] = offset_bfs
         keywords_at_creation["tilt_bfs"                      ] = tilt_bfs
+        keywords_at_creation["verbose"                       ] = verbose
 
 
         return WOLens1D(name=name, material=material, thickness=wall_thickness, keywords_at_creation=keywords_at_creation)
@@ -614,7 +628,8 @@ class WOLens1D(Lens, OpticalElementDecorator):
         txt += "\n    tilt_ffs=%g," % self._keywords_at_creation["tilt_ffs"]
         txt += "\n    wt_offset_bfs=%g," % self._keywords_at_creation["wt_offset_bfs"]
         txt += "\n    offset_bfs=%g," % self._keywords_at_creation["offset_bfs"]
-        txt += "\n    tilt_bfs=%g)" % self._keywords_at_creation["tilt_bfs"]
+        txt += "\n    tilt_bfs=%g," % self._keywords_at_creation["tilt_bfs"]
+        txt += "\n    verbose=%d)" % self._keywords_at_creation["verbose"]
         txt += "\n"
         return txt
 

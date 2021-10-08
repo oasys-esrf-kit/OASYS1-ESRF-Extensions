@@ -268,15 +268,12 @@ class TallyCoherentModes(Tally):
 
     def get_occupation(self):
         ev = self.get_eigenvalues()
-        nmodes = self.get_number_of_calls()
         return  numpy.arange(ev.size), ev / ev.sum()
-
 
 
     def calculate_coherent_fraction(self, do_plot=False):
         if self.eigenvalues is None:
             self.diagonalize()
-        # eigenvalues, eigenvectors, cross_spectral_density = self.diagonalize(do_plot=do_plot)
         cf = self.eigenvalues[0] / self.eigenvalues.sum()
         return cf, self.eigenvalues, self.eigenvectors, self.cross_spectral_density
 
@@ -303,7 +300,6 @@ class TallyCoherentModes(Tally):
         abscissas = self.get_abscissas()
         eigenvalues = self.get_eigenvalues()
         eigenvectors = self.get_eigenvectors()
-        csd = self.get_cross_pectral_density()
 
         spectral_density = self.get_spectral_density() # numpy.zeros_like(abscissas)
         fwhm, quote, coordinates = get_fwhm(spectral_density, 1e6 * abscissas)
@@ -341,9 +337,6 @@ class TallyCoherentModes(Tally):
         # plot intensity
         #
         abscissas = self.get_abscissas()
-        eigenvalues = self.get_eigenvalues()
-        eigenvectors = self.get_eigenvectors()
-        csd = self.get_cross_pectral_density()
 
         spectral_density = self.get_spectral_density()
         fwhm, quote, coordinates = get_fwhm(spectral_density, 1e6 * abscissas)
