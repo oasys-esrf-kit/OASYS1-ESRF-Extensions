@@ -187,10 +187,10 @@ class OWID19ws(XoppyWidget,WidgetDecorator):
         self.show_at(self.unitFlags()[idx], box1)
 
     def calculateGAP(self):
-        self.GAP=(-1 / 0.02677) * numpy.log(self.KY / (93.4 * 2.89408 * self.PERIOD * 0.01))
+        self.GAP=numpy.round((-1 / 0.02677) * numpy.log(self.KY / (93.4 * 2.89408 * self.PERIOD * 0.01)), 5)
 
     def calculateKY(self):
-        self.KY=(93.4 * 0.01 * self.PERIOD * (2.3333 * numpy.exp(-0.02473 * self.GAP) + 1.189 * numpy.exp(-0.059691 * self.GAP)))
+        self.KY=numpy.round((93.4 * 0.01 * self.PERIOD * (2.3333 * numpy.exp(-0.02473 * self.GAP) + 1.189 * numpy.exp(-0.059691 * self.GAP))), 5)
 
 
     def unitLabels(self):

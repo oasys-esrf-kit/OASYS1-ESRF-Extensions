@@ -104,25 +104,25 @@ class OWEBS(OWWidget):
     auto_energy = Setting(0.0)
     auto_harmonic_number = Setting(1)
 
-    K_horizontal       = Setting(1.0)
-    K_vertical         = Setting(1.0)
-    period_length      = Setting(0.010)
+    K_horizontal       = Setting(0.5)
+    K_vertical         = Setting(0.5)
+    period_length      = Setting(0.018)
     number_of_periods  = Setting(10)
 
     ebs_id_index = Setting(0)
     gap_mm = Setting(0.0)
 
     gap_min = Setting(5.0)
-    gap_max = Setting(20.0)
+    gap_max = Setting(30.0)
     harmonic_max = Setting(3)
 
-    a0 = Setting(20.0)
-    a1 = Setting(0.2)
-    a2 = Setting(0.0)
-    a3 = Setting(0.0)
-    a4 = Setting(0.0)
-    a5 = Setting(0.0)
-    a6 = Setting(0.0)
+    a0 = Setting('2.083')
+    a1 = Setting('1.0054')
+    a2 = Setting('')
+    a3 = Setting('')
+    a4 = Setting('')
+    a5 = Setting('')
+    a6 = Setting('')
 
     # data_url = 'ftp://ftp.esrf.eu/pub/scisoft/syned/resources/jsrund.csv'
     # create it in nice with the ID app: /segfs/tango/bin/jsrund
@@ -283,13 +283,13 @@ class OWEBS(OWWidget):
                           callback=self.update)
 
         left_box_00 = oasysgui.widgetBox(left_box_0, "Gap parametrization", addSpace=False, orientation="vertical")
-        oasysgui.lineEdit(left_box_00, self, "a0", "a0", labelWidth=260, valueType=float, orientation="horizontal", callback=self.set_K)
-        oasysgui.lineEdit(left_box_00, self, "a1", "a1", labelWidth=260, valueType=float, orientation="horizontal", callback=self.set_K)
-        oasysgui.lineEdit(left_box_00, self, "a2", "a2", labelWidth=260, valueType=float, orientation="horizontal", callback=self.set_K)
-        oasysgui.lineEdit(left_box_00, self, "a3", "a3", labelWidth=260, valueType=float, orientation="horizontal", callback=self.set_K)
-        oasysgui.lineEdit(left_box_00, self, "a4", "a4", labelWidth=260, valueType=float, orientation="horizontal", callback=self.set_K)
-        oasysgui.lineEdit(left_box_00, self, "a5", "a5", labelWidth=260, valueType=float, orientation="horizontal", callback=self.set_K)
-        oasysgui.lineEdit(left_box_00, self, "a6", "a6", labelWidth=260, valueType=float, orientation="horizontal", callback=self.set_K)
+        oasysgui.lineEdit(left_box_00, self, "a0", "a0", labelWidth=260, valueType=str, orientation="horizontal", callback=self.set_K)
+        oasysgui.lineEdit(left_box_00, self, "a1", "a1", labelWidth=260, valueType=str, orientation="horizontal", callback=self.set_K)
+        oasysgui.lineEdit(left_box_00, self, "a2", "a2", labelWidth=260, valueType=str, orientation="horizontal", callback=self.set_K)
+        oasysgui.lineEdit(left_box_00, self, "a3", "a3", labelWidth=260, valueType=str, orientation="horizontal", callback=self.set_K)
+        oasysgui.lineEdit(left_box_00, self, "a4", "a4", labelWidth=260, valueType=str, orientation="horizontal", callback=self.set_K)
+        oasysgui.lineEdit(left_box_00, self, "a5", "a5", labelWidth=260, valueType=str, orientation="horizontal", callback=self.set_K)
+        oasysgui.lineEdit(left_box_00, self, "a6", "a6", labelWidth=260, valueType=str, orientation="horizontal", callback=self.set_K)
 
         self.initializeTabs()
 
@@ -408,6 +408,7 @@ class OWEBS(OWWidget):
         self.update()
 
     def update(self):
+        self.check_data()
         self.update_info()
         self.update_plots()
 
@@ -462,13 +463,13 @@ class OWEBS(OWWidget):
             "url": self.data_url,
             "id": id,
             "gap": "%4.3f" % self.calculate_gap_from_K(),
-            "a0": "%4.3f" % self.a0,
-            "a1": "%4.3f" % self.a1,
-            "a2": "%4.3f" % self.a2,
-            "a3": "%4.3f" % self.a3,
-            "a4": "%4.3f" % self.a4,
-            "a5": "%4.3f" % self.a5,
-            "a6": "%4.3f" % self.a6,
+            "a0": "%s" % str(self.a0),
+            "a1": "%s" % str(self.a1),
+            "a2": "%s" % str(self.a2),
+            "a3": "%s" % str(self.a3),
+            "a4": "%s" % str(self.a4),
+            "a5": "%s" % str(self.a5),
+            "a6": "%s" % str(self.a6),
             }
 
         self.info_id.setText(self.info_template().format_map(info_parameters))
@@ -507,6 +508,10 @@ Using gap parametrization:
     a4: {a4}
     a5: {a5}
     a6: {a6}
+
+Note on calculation: 
+A = [a0,a1,a2,...] = [B_1, B_2,..., alpha_1, alpha_2,...]
+Bmax = Sum[B_i * exp( -pi * alpha_i * (gap[mm] / id_period[mm]) )] with i from 1 to the semilength of A. 
 
 Resonances:
 
@@ -564,13 +569,51 @@ Approximated coherent fraction at 1st harmonic:
 
     def populate_gap_parametrization(self):
         index = self.ebs_id_index - 1
-        self.a0 = self.data_dict["a0"][index]
-        self.a1 = self.data_dict["a1"][index]
-        self.a2 = self.data_dict["a2"][index]
-        self.a3 = self.data_dict["a3"][index]
-        self.a4 = self.data_dict["a4"][index]
-        self.a5 = self.data_dict["a5"][index]
-        self.a6 = self.data_dict["a6"][index]
+        if self.data_dict["a0"][index] is None:
+            self.a0 = ''
+        else:
+            self.a0 = self.data_dict["a0"][index]
+
+
+        if self.data_dict["a1"][index] is None:
+            self.a1 = ''
+        else:
+            self.a1 = self.data_dict["a1"][index]
+
+        if self.data_dict["a2"][index] is None:
+            self.a2 = ''
+        else:
+            self.a2 = self.data_dict["a2"][index]
+
+        if self.data_dict["a3"][index] is None:
+            self.a3 = ''
+        else:
+            self.a3 = self.data_dict["a3"][index]
+
+        if self.data_dict["a4"][index] is None:
+            self.a4 = ''
+        else:
+            self.a4 = self.data_dict["a4"][index]
+
+        if self.data_dict["a5"][index] is None:
+            self.a5 = ''
+        else:
+            self.a5= self.data_dict["a5"][index]
+
+        if self.data_dict["a6"][index] is None:
+            self.a6 = ''
+        else:
+            self.a6 = self.data_dict["a6"][index]
+
+
+
+        # self.a0 = self.data_dict["a0"][index]
+        # self.a1 = self.data_dict["a1"][index]
+        # self.a2 = self.data_dict["a2"][index]
+        # self.a3 = self.data_dict["a3"][index]
+        # self.a4 = self.data_dict["a4"][index]
+        # self.a5 = self.data_dict["a5"][index]
+        # self.a6 = self.data_dict["a6"][index]
 
     def populate_settings_after_setting_K(self):
 
@@ -750,17 +793,48 @@ Approximated coherent fraction at 1st harmonic:
     def calculate_K_from_gap(self, gap_mm=None):
 
         if gap_mm is None: gap_mm = self.gap_mm
+        id_period_mm  = self.period_length * 1e3
+        id_name = self.get_id_list()[self.ebs_id_index]
 
-        # index = self.ebs_id_index - 1
-        id_period_mm  = self.period_length * 1e3 # xxxx data_dict["id_period_mm"][index]
+        try:
+            a0 = float(self.a0)
+        except:
+            a0 = None
 
-        Bmax = numpy.zeros_like(gap_mm)
-        Bmax += self.a1 * numpy.exp(-1 * numpy.pi * (gap_mm - self.a0) / id_period_mm)
-        Bmax += self.a2 * numpy.exp(-2 * numpy.pi * (gap_mm - self.a0) / id_period_mm)
-        Bmax += self.a3 * numpy.exp(-3 * numpy.pi * (gap_mm - self.a0) / id_period_mm)
-        Bmax += self.a4 * numpy.exp(-4 * numpy.pi * (gap_mm - self.a0) / id_period_mm)
-        Bmax += self.a5 * numpy.exp(-5 * numpy.pi * (gap_mm - self.a0) / id_period_mm)
-        Bmax += self.a6 * numpy.exp(-6 * numpy.pi * (gap_mm - self.a0) / id_period_mm)
+        try:
+            a1 = float(self.a1)
+        except:
+            a1 = None
+
+        try:
+            a2 = float(self.a2)
+        except:
+            a2 = None
+
+        try:
+            a3 = float(self.a3)
+        except:
+            a3 = None
+
+        try:
+            a4 = float(self.a4)
+        except:
+            a4 = None
+
+        try:
+            a5 = float(self.a5)
+        except:
+            a5 = None
+
+        try:
+            a6 = float(self.a6)
+        except:
+            a6 = None
+
+
+        Bmax = self.calculate_B_from_gap_and_A_vector(
+            gap_mm, id_period_mm, id_name,
+            a0=a0, a1=a1, a2=a2, a3=a3, a4=a4, a5=a5, a6=a6)
 
         Kmax = Bmax * (id_period_mm * 1e-3) * codata.e / (2 * numpy.pi * codata.m_e * codata.c)
 
@@ -772,8 +846,26 @@ Approximated coherent fraction at 1st harmonic:
         gap_mm_array = numpy.linspace( self.gap_min * 0.9, self.gap_max * 1.1, 1000)
         K_array = self.calculate_K_from_gap(gap_mm_array)
 
-        if ((Kvalue < K_array.min()) or (Kvalue > K_array.max())):
-            raise Exception("Cannot interpolate...")
+        # if ((Kvalue < K_array.min()) or (Kvalue > K_array.max())):
+        #     print("K: %g, gap_max: %g; K_array min:%g, max:%g" % (Kvalue, self.gap_max, K_array.min(), K_array.max()))
+        #     raise Exception("Cannot interpolate...")
+
+        if Kvalue < K_array.min():
+            if ConfirmDialog.confirmed(self, message="K=%g is smaller than minimum=%g. Set to minimum?" % (Kvalue, K_array.min())):
+                Kvalue = K_array.min()
+                self.K_vertical = Kvalue
+                self.populate_settings_after_setting_K()
+                self.update()
+
+        if Kvalue > K_array.max():
+            if ConfirmDialog.confirmed(self, message="K=%g is larger than maximum=%g. Set to maximum?" % (Kvalue, K_array.max())):
+                Kvalue = K_array.max()
+                self.K_vertical = Kvalue
+                self.populate_settings_after_setting_K()
+                self.update()
+
+
+
 
         gap_interpolated = numpy.interp(Kvalue, numpy.flip(K_array), numpy.flip(gap_mm_array))
 
@@ -906,12 +998,41 @@ Approximated coherent fraction at 1st harmonic:
         self.electron_beam_divergence_h = xp
         self.electron_beam_divergence_v = yp
 
+    def calculate_B_from_gap_and_A_vector(self, id_gap_mm, id_period_mm, id_name,
+                       a0=None, a1=None, a2=None, a3=None, a4=None, a5=None, a6=None,
+                       check_elliptical=True):
+
+        if check_elliptical:
+            if "HU" in id_name:
+                ConfirmDialog.confirmed(self, message="Helical/Apple undulators not implemented in this app (wrong results)")
+
+        if "CPMU" in id_name:
+            B  = a0 * numpy.exp(-numpy.pi * a3 * id_gap_mm / id_period_mm)
+            B += a1 * numpy.exp(-numpy.pi * a4 * id_gap_mm / id_period_mm)
+            B += a2 * numpy.exp(-numpy.pi * a5 * id_gap_mm / id_period_mm)
+
+        elif "HU" in id_name:  # this is for apple undulator... It is applied also (WRONG!) to helical undulators
+            reference_gap = 20.0
+            B = a0 * numpy.exp(-numpy.pi * (id_gap_mm - reference_gap) / id_period_mm)
+        else:
+            if (a2 is None) and (a3 is None): # only one "harmonic"
+                B = a0 * numpy.exp(-numpy.pi * a1 * id_gap_mm / id_period_mm)
+            else:
+                if (a4 is None) and (a5 is None):  # 2 "harmonics"
+                    B = a0 * numpy.exp(-numpy.pi * a2 * id_gap_mm / id_period_mm)
+                    B += a1 * numpy.exp(-numpy.pi * a3 * id_gap_mm / id_period_mm)
+                else: # 3 harmonics
+                    B = a0 * numpy.exp(-numpy.pi * a3 * id_gap_mm / id_period_mm)
+                    B += a1 * numpy.exp(-numpy.pi * a4 * id_gap_mm / id_period_mm)
+                    B += a2 * numpy.exp(-numpy.pi * a5 * id_gap_mm / id_period_mm)
+
+        return B
 
     def get_data_dictionary_csv(self):
         url = self.data_url
 
-        tofloat = lambda s: numpy.array(['0.0' if v == '' else v for v in s]).astype(float)
-
+        # tofloat = lambda s: numpy.array(['0.0' if v == '' else v for v in s]).astype(float)
+        tofloat = lambda s: [None if v == '' else float(v) for v in s]
         try:
             filename = url # 'ftp://ftp.esrf.eu/pub/scisoft/syned/resources/jsrund.csv'
             ishift = 1
@@ -922,15 +1043,17 @@ Approximated coherent fraction at 1st harmonic:
                                  case_sensitive=True, defaultfmt='f%i', unpack=None, usemask=False, loose=True, \
                                  invalid_raise=True, max_rows=None, encoding='bytes')
 
+            number_of_ids = len(a)
             straight_section = a[:, 0].astype(int)
             id_name = a[:, 1]
-            # for i in range(straight_section.size):
-            #     id_name[i] = "ID%02d %s" % (straight_section[i], id_name[i])
             id_period = 1e-3 * a[:, 2 + ishift].astype(float)
             id_period_mm = a[:, 2 + ishift].astype(float)
             id_length = 1e-3 * a[:, 3 + ishift].astype(float)
 
             id_minimum_gap_mm = tofloat(a[:, 4 + ishift])
+            for i in range(number_of_ids):
+                if id_minimum_gap_mm[i] is None:
+                    id_minimum_gap_mm[i] = 30.0 # set to arbitrary value ** Some values are missing!!!**
 
             a0 = tofloat(a[:, 5 + ishift])
             a1 = tofloat(a[:, 6 + ishift])
@@ -940,39 +1063,35 @@ Approximated coherent fraction at 1st harmonic:
             a5 = tofloat(a[:, 10 + ishift])
             a6 = tofloat(a[:, 11 + ishift])
 
-            Bmax = numpy.zeros_like(a0)
-            Bmax += a1 * numpy.exp(-1 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
-            Bmax += a2 * numpy.exp(-2 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
-            Bmax += a3 * numpy.exp(-3 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
-            Bmax += a4 * numpy.exp(-4 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
-            Bmax += a5 * numpy.exp(-5 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
-            Bmax += a6 * numpy.exp(-6 * numpy.pi * (id_minimum_gap_mm - a0) / id_period_mm)
 
-            Kmax = Bmax * id_period * codata.e / (2 * numpy.pi * codata.m_e * codata.c)
+            Bmax = []
+            Kmax = []
+            for i in range(number_of_ids):
+                Bmax_i = self.calculate_B_from_gap_and_A_vector(
+                    id_minimum_gap_mm[i], id_period_mm[i], id_name[i],
+                    a0=a0[i], a1=a1[i], a2=a2[i], a3=a3[i], a4=a4[i], a5=a5[i], a6=a5[i],
+                    check_elliptical=False)
+                Bmax.append(Bmax_i)
+                Kmax.append(Bmax_i * id_period[i] * codata.e / (2 * numpy.pi * codata.m_e * codata.c))
 
-            # print("\n\n%5s  %10s  %15s %15s %15s %15s" % ("sect", "name", "Gmin", "Bmax", "Kmax", "a0"))
-            # print("%5s  %10s  %15s %15s %15s %15s" % ("====", "====", "====", "====", "====", "===="))
-            # for i in range(Bmax.size):
-            #     print("%5d  %10s  %15.3f %15.3f %15.3f %15.3f" % (
-            #     straight_section[i], id_name[i], id_minimum_gap_mm[i], Bmax[i], Kmax[i], a0[i]))
 
             out_dict = {}
             out_dict["straight_section"] = straight_section.tolist()
             out_dict["id_name"] = id_name.tolist()
-            out_dict["id_minimum_gap_mm"] = id_minimum_gap_mm.tolist()
-            out_dict["Bmax"] = Bmax.tolist()
-            out_dict["Kmax"] = Kmax.tolist()
+            out_dict["id_minimum_gap_mm"] = id_minimum_gap_mm
+            out_dict["Bmax"] = Bmax
+            out_dict["Kmax"] = Kmax
             out_dict["straight_section"] = straight_section.tolist()
             out_dict["id_period"] = id_period.tolist()
             out_dict["id_period_mm"] = id_period_mm.tolist()
             out_dict["id_length"] = id_length.tolist()
-            out_dict["a0"] = a0.tolist()
-            out_dict["a1"] = a1.tolist()
-            out_dict["a2"] = a2.tolist()
-            out_dict["a3"] = a3.tolist()
-            out_dict["a4"] = a4.tolist()
-            out_dict["a5"] = a5.tolist()
-            out_dict["a6"] = a6.tolist()
+            out_dict["a0"] = a0
+            out_dict["a1"] = a1
+            out_dict["a2"] = a2
+            out_dict["a3"] = a3
+            out_dict["a4"] = a4
+            out_dict["a5"] = a5
+            out_dict["a6"] = a6
 
         except:
             out_dict = {}
