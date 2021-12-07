@@ -15,6 +15,7 @@ from oasys.widgets.gui import ConfirmDialog
 from orangecontrib.xoppy.util.python_script import PythonScript
 
 from syned.beamline.beamline import Beamline
+from oasys.widgets import congruence
 
 
 class PowerLoadPythonScript(widget.OWWidget):
@@ -34,6 +35,9 @@ class PowerLoadPythonScript(widget.OWWidget):
 
     json_file_name = Setting("beamline.json")
     excel_file_name = Setting("id_components_test_abs_pow.csv")
+    e_min = Setting(500)
+    e_max = Setting(150000)
+    e_points = Setting(200)
 
     #
     #
@@ -105,6 +109,14 @@ class PowerLoadPythonScript(widget.OWWidget):
         oasysgui.lineEdit(box3, self, "excel_file_name", "Excel File for results", labelWidth=150, valueType=str,
                           orientation="horizontal")
 
+        oasysgui.lineEdit(box3, self, "e_min", "Photon Energy Min [eV]", labelWidth=150, valueType=float,
+                          orientation="horizontal", callback=self.refresh_script)
+
+        oasysgui.lineEdit(box3, self, "e_max", "Photon Energy Max [eV]", labelWidth=150, valueType=float,
+                          orientation="horizontal", callback=self.refresh_script)
+        oasysgui.lineEdit(box3, self, "e_points", "Photon Energy Points", labelWidth=150, valueType=int,
+                          orientation="horizontal", callback=self.refresh_script)
+
 
         #
         #
@@ -130,11 +142,14 @@ class PowerLoadPythonScript(widget.OWWidget):
         out_box = oasysgui.widgetBox(tab_out, "System Output", addSpace=True, orientation="horizontal", height=self.IMAGE_WIDTH - 45)
         out_box.layout().addWidget(self.xoppy_output)
 
-        #############################
+        #############################        
 
         gui.rubber(self.controlArea)
 
         self.process_showers()
+    
+    def check_fields(self):
+            self.e_min = congruence.checkPositiveNumber(self.e_min, "Photon Energy Min")
 
     def set_input(self, syned_data):
 
@@ -176,6 +191,9 @@ class PowerLoadPythonScript(widget.OWWidget):
         dict_parameters = {
             "json_file_name": self.json_file_name,
             "excel_file_name": self.excel_file_name,
+            "e_min": self.e_min,
+            "e_max": self.e_max,
+            "e_points": self.e_points            
         }
 
 
@@ -197,33 +215,63 @@ class PowerLoadPythonScript(widget.OWWidget):
 # ---------------------------------------------------------------------------
 import numpy as np
 import pandas as pd
-from xoppylib.xoppy_undulators import xoppy_calc_undulator_power_density
-from xoppylib.fit_gaussian2d import fit_gaussian2d
-from xoppylib.xoppy_undulators import xoppy_calc_undulator_spectrum
-from xoppylib.xoppy_xraylib_util import xpower_calc
+from orangecontrib.xoppy.util.xoppy_undulators import xoppy_calc_undulator_power_density
+from orangecontrib.xoppy.util.fit_gaussian2d import fit_gaussian2d
+from orangecontrib.xoppy.util.xoppy_undulators import xoppy_calc_undulator_spectrum
+from orangecontrib.xoppy.util.xoppy_xraylib_util import xpower_calc
 import scipy.constants as codata
-#codata_mee = codata.codata.physical_constants["electron mass energy equivalent in MeV"][0]
 
 from syned.util.json_tools import load_from_json_file
 from syned.beamline.optical_elements.absorbers.filter import Filter
 from syned.beamline.optical_elements.absorbers.slit import Slit
 from syned.beamline.shape import Rectangle
 
-def load_elements(file_name):
-
+def load_elements_from_excel_file(file_name):
     # Brief function to load the excel file as pandas dataframe
-
+    # and a dictionary for the source
 
     data_frame = pd.read_excel(file_name, header=1, skiprows=0)
 
-    return data_frame
+    id_dict = dict()
+    id_dict["ELECTRONENERGY"] = 6.0
+    id_dict["ELECTRONENERGYSPREAD"] = 0.0009339
+    id_dict["ELECTRONCURRENT"] = 0.2
+    id_dict["ELECTRONBEAMSIZEH"] = 3.01836e-05
+    id_dict["ELECTRONBEAMSIZEV"] = 3.63641e-06
+    id_dict["ELECTRONBEAMDIVERGENCEH"] = 4.36821e-06
+    id_dict["ELECTRONBEAMDIVERGENCEV"] = 1.37498e-06
+    id_dict["PERIODID"] = 0.016
+    id_dict["NPERIODS"] = 125
+    id_dict["KV"] = 2.076
+    id_dict["KH"] = 0.0
+    id_dict["KPHASE"] = 0.0
+    id_dict["GAPH"] = 0.010
+    id_dict["GAPV"] = 0.010
+    id_dict["HSLITPOINTS"] = 201
+    id_dict["VSLITPOINTS"] = 201
+    id_dict["METHOD"] = 2
+    id_dict["USEEMITTANCES"] = 1
+    id_dict["MASK_FLAG"] = 0
+    id_dict["MASK_ROT_H_DEG"] = 0.0
+    id_dict["MASK_ROT_V_DEG"] = 0.0
+    id_dict["MASK_H_MIN"] = -1000.0
+    id_dict["MASK_H_MAX"] = 1000.0
+    id_dict["MASK_V_MIN"] = -1000.0
+    id_dict["MASK_V_MAX"] = 1000.0
+    id_dict["GAPH_CENTER"] = 0.0
+    id_dict["GAPV_CENTER"] = 0.0
+    id_dict["PHOTONENERGYMIN"] = {e_min}
+    id_dict["PHOTONENERGYMAX"] = {e_max}
+    id_dict["PHOTONENERGYPOINTS"] = {e_points}
+
+    return data_frame, id_dict
+
 
 def load_elements_from_json_file(file_name=""):
-
-    #
+    # Loading data frame and dict from JSON
     beamline = load_from_json_file(file_name)
 
-    # print(beamline.info())
+    #print(beamline.info())
 
     # print(tmp.get_light_source().info())
     element = ["CPMU18"]
@@ -237,11 +285,13 @@ def load_elements_from_json_file(file_name=""):
     density = [None]
 
     dist_cumulated = 0.0
-    for i,element_i in enumerate(beamline.get_beamline_elements()):
+    for i, element_i in enumerate(beamline.get_beamline_elements()):
         oe_i = element_i.get_optical_element()
 
+        print(oe_i.get_name())
+
         element.append(oe_i.get_name())
-        indices.append(i)
+        indices.append(i+1)
 
         coor = element_i.get_coordinates()
         dist_cumulated += coor.p()
@@ -254,15 +304,14 @@ def load_elements_from_json_file(file_name=""):
         else:
             type1.append('unknown')
 
-
         shape = oe_i.get_boundary_shape()
         if isinstance(shape, Rectangle):
             x_left, x_right, y_bottom, y_top = shape.get_boundaries()
             h.append(x_right - x_left)
             v.append(y_top - y_bottom)
         else:
-            h.append(None)
-            v.append(None)
+            h.append(0.008)
+            v.append(0.008)
 
         if isinstance(oe_i, Filter):
             thickness.append(oe_i.get_thickness() * 1e3)
@@ -282,24 +331,60 @@ def load_elements_from_json_file(file_name=""):
         else:
             density.append(None)
 
-
-    print("element: ",element)
+    print("index: ", indices)
+    print("element: ", element)
     print("dist_to_source", dist_to_source)
     print("type: ", type1)
-    print("h: ",h)
-    print("v: ",v)
-    print("thickness: ",thickness)
+    print("h: ", h)
+    print("v: ", v)
+    print("thickness: ", thickness)
     print("formula: ", formula)
     print("density: ", density)
 
-    titles = ["element", "dist_to_source", "type", "h", "v" "thickness", "formula", "density"]
+    titles = ["element", "dist_to_source", "type", "h", "v", "thickness", "formula", "density"]
 
-    data_frame = [titles, element, dist_to_source, type1, h, v, thickness, formula, density]
+    data_frame = pd.DataFrame(list(zip(element, dist_to_source, type1, h, v, thickness, formula, density)),
+                              columns =titles)
 
-    return data_frame
-    
+    # Defining the id parameters in a dictionary (from JSON)#
+
+    id_dict = dict()
+    id_dict["ELECTRONENERGY"] = beamline.get_light_source().get_electron_beam().energy()
+    id_dict["ELECTRONENERGYSPREAD"] = beamline.get_light_source().get_electron_beam()._energy_spread
+    id_dict["ELECTRONCURRENT"] = beamline.get_light_source().get_electron_beam().current()
+    x, xp, y, yp = beamline.get_light_source().get_electron_beam().get_sigmas_all()
+    id_dict["ELECTRONBEAMSIZEH"] = x
+    id_dict["ELECTRONBEAMSIZEV"] = y
+    id_dict["ELECTRONBEAMDIVERGENCEH"] = xp
+    id_dict["ELECTRONBEAMDIVERGENCEV"] = yp
+    id_dict["PERIODID"] = beamline.get_light_source().get_magnetic_structure()._period_length
+    id_dict["NPERIODS"] = int(beamline.get_light_source().get_magnetic_structure()._number_of_periods)
+    id_dict["KV"] = beamline.get_light_source().get_magnetic_structure()._K_vertical
+    id_dict["KH"] = beamline.get_light_source().get_magnetic_structure()._K_horizontal
+    id_dict["KPHASE"] = 0.0
+    id_dict["GAPH"] = 0.010
+    id_dict["GAPV"] = 0.010
+    id_dict["HSLITPOINTS"] = 201
+    id_dict["VSLITPOINTS"] = 201
+    id_dict["METHOD"] = 2
+    id_dict["USEEMITTANCES"] = 1
+    id_dict["MASK_FLAG"] = 0
+    id_dict["MASK_ROT_H_DEG"] = 0.0
+    id_dict["MASK_ROT_V_DEG"] = 0.0
+    id_dict["MASK_H_MIN"] = -1000.0
+    id_dict["MASK_H_MAX"] = 1000.0
+    id_dict["MASK_V_MIN"] = -1000.0
+    id_dict["MASK_V_MAX"] = 1000.0
+    id_dict["GAPH_CENTER"] = 0.0
+    id_dict["GAPV_CENTER"] = 0.0
+    id_dict["PHOTONENERGYMIN"] = {e_min}
+    id_dict["PHOTONENERGYMAX"] = {e_max}
+    id_dict["PHOTONENERGYPOINTS"] = {e_points}
+
+    return data_frame, id_dict
+
+
 def ap_projections(df):
-
     # This function calculates all the projection on each element due the upstream elements,
     # it returns a new dataframe that includes two columns of the minimum projection on each element,
     # which is the beam projection at the given element
@@ -308,10 +393,9 @@ def ap_projections(df):
     v_proj = []
 
     # for the source
-
     h_proj.append(0)
     v_proj.append(0)
-
+    # this takes out the source row
     sub_df = df.iloc[1:]
     sub_df.reset_index(drop=True, inplace=True)
 
@@ -332,7 +416,6 @@ def ap_projections(df):
             h_proj.append(np.around(np.min(h_temp), 4))
             v_proj.append(np.around(np.min(v_temp), 4))
 
-
     # Creates a data frame with the projections info
     tmp = dict()
     tmp['h_proj'] = h_proj
@@ -340,12 +423,12 @@ def ap_projections(df):
     df2 = pd.DataFrame(tmp)
 
     # merges with the original dataframe
-    new_df = pd.concat([df,df2], axis=1)
+    new_df = pd.concat([df, df2], axis=1)
 
     return new_df
 
-def get_full_aperture (id_dict, dataframe):
 
+def get_full_aperture(id_dict, dataframe):
     # From the id dictionary, this function calculates the full power density at the first element position
     # in order to get the full aperture size (6*sigma)
 
@@ -364,7 +447,7 @@ def get_full_aperture (id_dict, dataframe):
         KV=id_dict["KV"],
         KH=id_dict["KH"],
         KPHASE=id_dict["KPHASE"],
-        DISTANCE =distance,
+        DISTANCE=distance,
         GAPH=id_dict["GAPH"],
         GAPV=id_dict["GAPV"],
         HSLITPOINTS=id_dict["HSLITPOINTS"],
@@ -378,8 +461,8 @@ def get_full_aperture (id_dict, dataframe):
         MASK_H_MAX=id_dict["MASK_H_MAX"],
         MASK_V_MIN=id_dict["MASK_V_MIN"],
         MASK_V_MAX=id_dict["MASK_V_MAX"],
-        h5_file= None,
-        h5_entry_name= None,
+        h5_file=None,
+        h5_entry_name=None,
         h5_initialize=False,
     )
 
@@ -387,21 +470,21 @@ def get_full_aperture (id_dict, dataframe):
     s_x = np.around(fit_parameters[3], 2)
     s_y = np.around(fit_parameters[4], 2)
 
-    full_h = np.around(6* s_x, 2)
+    # Here it takes the full aperture as 6x horizontal and vertical sigmas
+
+    full_h = np.around(6 * s_x, 2)
     full_v = np.around(6 * s_y, 2)
 
-    #srio print(f'At the dataframe.element[1] the beam has sigma x = s_x' f' mm and sigma y = s_y mm')
+    # srio print(f'At the dataframe.element[1] the beam has sigma x = s_x' f' mm and sigma y = s_y mm')
 
-    #srio print(f'Therefore the full opening is defined as 6 x sigma: full_h mm and full_v mm')
+    # srio print(f'Therefore the full opening is defined as 6 x sigma: full_h mm and full_v mm')
 
-    return distance, full_h , full_v
+    return distance, full_h, full_v
 
 
-def calcul_spectrum(id_dict, dist, h_slit, v_slit, *args, window = False):
-
+def calcul_spectrum(id_dict, dist, h_slit, v_slit, df, *up_win_list, window=False):
     # From 1D undulator spectrum this function uses the id dict and element characteristics to calculates the
     #    full power through the element
-
 
     energy, flux, spectral_power, cumulated_power = xoppy_calc_undulator_spectrum(
         ELECTRONENERGY=id_dict["ELECTRONENERGY"],
@@ -427,41 +510,45 @@ def calcul_spectrum(id_dict, dist, h_slit, v_slit, *args, window = False):
         METHOD=id_dict["METHOD"],
         USEEMITTANCES=id_dict["USEEMITTANCES"])
 
-
     if window:
 
-        thick = float(args[0])
-        formula = str(args[1])
-        density = float(args[2])
+        # from the list of windows elements read the parameters #
+        thick = []
+        formula = []
+        density = []
+        flags = []
 
-        out_dict = xpower_calc(energies=energy, source=spectral_power, substance=[formula], flags=[0],
-                               dens=[density], thick=[thick], output_file=None)
+        for element in up_win_list[0]:
+            print('the index is', element)
+            thick.append(float(df.thickness[int(element)]))
+            formula.append(str(df.formula[int(element)]))
+            density.append(float(df.density[int(element)]))
+            flags.append(0)
 
-        tot_power = np.trapz(out_dict['data'][6], x=energy, axis=-1)
+        out_dict = xpower_calc(energies=energy, source=spectral_power, substance=formula, flags=flags,
+                               dens=density, thick=thick, output_file=None)
 
-        flux = out_dict['data'][6]/ 1.602176634e-19 / 1e3 #TODO: Intead of this number uses the corrrect way from codata
-
-        flux_phot_sec = flux/(0.001 * energy)
-
+        tot_power = np.trapz(out_dict['data'][-1], x=energy, axis=-1)
+        flux = out_dict['data'][-1] / codata.e / 1e3
+        flux_phot_sec = flux / (0.001 * energy)
         tot_phot_sec = np.trapz(flux_phot_sec, x=energy, axis=-1)
 
         return tot_power, tot_phot_sec
 
     else:
 
-        tot_power = np.trapz(spectral_power, x=energy, axis = -1)
-        tot_phot_sec = np.trapz(flux/(0.001*energy), x = energy, axis = -1)
+        tot_power = np.trapz(spectral_power, x=energy, axis=-1)
+        tot_phot_sec = np.trapz(flux / (0.001 * energy), x=energy, axis=-1)
 
         return tot_power, tot_phot_sec
 
 
 def dif_totals(in_pow, in_phsec, out_pow, out_phsec):
-
     # Short function to calculates the absorbed power just by a subtraction
 
     if out_pow > in_pow:
 
-        # If the element aperture is larger than the beam, depending on the energy steps and numerical 
+        # If the element aperture is larger than the beam, depending on the energy steps and numerical
         # calculations, sometimes the outcoming power is bigger than the incoming, which does not make sense!
         # so this is just to prevent that error and gives zero absortion in the element
 
@@ -470,8 +557,8 @@ def dif_totals(in_pow, in_phsec, out_pow, out_phsec):
 
     elif out_pow <= in_pow:
 
-         abs_pow = in_pow - out_pow
-         abs_phsec = in_phsec - out_phsec
+        abs_pow = in_pow - out_pow
+        abs_phsec = in_phsec - out_phsec
     else:
         raise RuntimeError('Error reading the total power')
 
@@ -479,18 +566,17 @@ def dif_totals(in_pow, in_phsec, out_pow, out_phsec):
 
 
 def run_calculations(df, id_dict):
-
     # Main function that depends on the above ones, it uses as an input the dataframe fo the elements and the id dictionary
-    
+
     # Loads the data frame with the elements characteristics
-    df1 = df # srio !!!  load_elements('id_components_test.xlsx')
-      
+    df1 = df  # srio !!!  load_elements('id_components_test.xlsx')
+
     # calculates the projections on each element due upstream apertures
     new_df = ap_projections(df1)
 
     # get the distance and apertures of full aperture for the specific id
     distance, full_ap_h, full_ap_v = get_full_aperture(id_dict, new_df)
-    
+
     # output lists
     abs_pow = []
     abs_phosec = []
@@ -499,70 +585,69 @@ def run_calculations(df, id_dict):
     for i, type in enumerate(df.type):
 
         # this is to get the window index to compare is the element has a upstream window
-        # TODO: consider the option of having two windows (which is normally not the case for ESRF-FE's )
-
-        win_index = df.index[df['type'] == 'window'].tolist()
+        win_indexs = df.index[df['type'] == 'window'].tolist()
 
         if type == 'source':
 
-            #srio print(f">>>>>>>>>> Calculating for element new_df.element[i]")
+            print(">>>>>>>>>> Calculating for element:", new_df.element[i])
             # For the source, it gets te total power just by analytic equation
-            codata_mee = codata.m_e * codata.c**2 / codata.e
+            codata_mee = codata.m_e * codata.c ** 2 / codata.e
             gamma = id_dict['ELECTRONENERGY'] * 1e9 / codata_mee
 
-            p_tot = (id_dict['NPERIODS']/6) * codata.value('characteristic impedance of vacuum') * \
-                    id_dict['ELECTRONCURRENT'] * codata.e * 2 * np.pi * codata.c * gamma**2 * \
-                    (id_dict['KV']**2 + id_dict['KH']**2) / id_dict['PERIODID']
+            p_tot = (id_dict['NPERIODS'] / 6) * codata.value('characteristic impedance of vacuum') * id_dict[
+                'ELECTRONCURRENT'] * codata.e * 2 * np.pi * codata.c * gamma ** 2 * (
+                    id_dict['KV'] ** 2 + id_dict['KH'] ** 2) / id_dict['PERIODID']
 
             abs_pow.append(0.0)
             abs_phosec.append(0.0)
             transm_power.append(p_tot)
 
 
-        elif (type == 'slit' and i == 1):
+        elif type == 'slit' and i == 1:
 
-            # This is for the first slit which is normally the mask
+            # This is for the first slit which is normally the FE mask
 
-            #srio print(f">>>>>>>>>> Calculating for element new_df.element[i]")
+            print(">>>>>>>>>> Calculating for first element:", new_df.element[i])
 
-            p_imp, phsec_imp = calcul_spectrum(id_dict, distance, full_ap_h, full_ap_v)
-            p_trans, phsec_trans = calcul_spectrum(id_dict, new_df.dist_to_source[i], new_df.h[i], new_df.v[i])
+            p_imp, phsec_imp = calcul_spectrum(id_dict, distance, full_ap_h, full_ap_v, new_df)
+            p_trans, phsec_trans = calcul_spectrum(id_dict, new_df.dist_to_source[i], new_df.h[i], new_df.v[i], new_df)
 
             abs_pow.append(dif_totals(p_imp, phsec_imp, p_trans, phsec_trans)[0])
             abs_phosec.append(dif_totals(p_imp, phsec_imp, p_trans, phsec_trans)[1])
             transm_power.append(p_trans)
 
 
-        elif (type == 'slit' and i > 1 and i < win_index[0]):
+        elif type == 'slit' and i > 1 and all(j > i for j in win_indexs):
 
             # Slit that does not have an upstream window
 
-            #srio print(f">>>>>>>>>> Calculating for element new_df.element[i]")
+            print(">>>>>>>>>> Calculating for slit without any upstream slit:", new_df.element[i])
 
-            p_imp, phsec_imp = calcul_spectrum(id_dict, new_df.dist_to_source[i], new_df.h_proj[i], new_df.v_proj[i])
+            p_imp, phsec_imp = calcul_spectrum(id_dict, new_df.dist_to_source[i], new_df.h_proj[i], new_df.v_proj[i],
+                                               new_df)
+
             p_trans, phsec_trans = calcul_spectrum(id_dict, new_df.dist_to_source[i], np.min([new_df.h_proj[i],
-                                                   new_df.h[i]]), np.min([new_df.v_proj[i], new_df.v[i]]))
+                                                   new_df.h[i]]), np.min([new_df.v_proj[i], new_df.v[i]]), new_df)
 
             abs_pow.append(dif_totals(p_imp, phsec_imp, p_trans, phsec_trans)[0])
             abs_phosec.append(dif_totals(p_imp, phsec_imp, p_trans, phsec_trans)[1])
             transm_power.append(p_trans)
 
 
-        elif (type == 'slit' and i > 1 and i > win_index[0]):
+        elif type == 'slit' and i > 1 and any(j < i for j in win_indexs):
 
-            # Slit with an usptream window
-            # TODO: It might be worty to have the optin of more than one window
+            # Slit with an upstream window
 
-            #srio print(f">>>>>>>>>> Calculating for element new_df.element[i]")
+            print(">>>>>>>>>> Calculating for slit with at least one upstream window:", new_df.element[i])
+
+            up_win_list = list(item for item in win_indexs if item < i)
 
             p_imp, phsec_imp = calcul_spectrum(id_dict, new_df.dist_to_source[i], new_df.h_proj[i],
-                                               new_df.v_proj[i], new_df.thickness[win_index[0]],
-                                               new_df.formula[win_index[0]], new_df.density[win_index[0]],
-                                               window=True)
+                                               new_df.v_proj[i],new_df, up_win_list, window=True)
+
             p_trans, phsec_trans = calcul_spectrum(id_dict, new_df.dist_to_source[i], np.min([new_df.h_proj[i],
-                                                   new_df.h[i]]), np.min([new_df.v_proj[i], new_df.v[i]]),
-                                                   new_df.thickness[win_index[0]], new_df.formula[win_index[0]],
-                                                   new_df.density[win_index[0]], window=True)
+                                                   new_df.h[i]]), np.min([new_df.v_proj[i], new_df.v[i]]), new_df,
+                                                   up_win_list, window=True)
 
             abs_pow.append(dif_totals(p_imp, phsec_imp, p_trans, phsec_trans)[0])
             abs_phosec.append(dif_totals(p_imp, phsec_imp, p_trans, phsec_trans)[1])
@@ -571,9 +656,10 @@ def run_calculations(df, id_dict):
 
         elif type == 'absorber':
 
-            #srio print(f">>>>>>>>>> Calculating for element new_df.element[i]")
+            print(">>>>>>>>>> Calculating for element:", new_df.element[i])
 
-            p_imp, phsec_imp = calcul_spectrum(id_dict, new_df.dist_to_source[i], new_df.h_proj[i], new_df.v_proj[i])
+            p_imp, phsec_imp = calcul_spectrum(id_dict, new_df.dist_to_source[i], new_df.h_proj[i],
+                                               new_df.v_proj[i])
 
             abs_pow.append(p_imp)
             abs_phosec.append(phsec_imp)
@@ -581,83 +667,66 @@ def run_calculations(df, id_dict):
 
         elif type == 'window':
 
-            # directly for the window
+            # none upstream window
 
-            #srio print(f">>>>>>>>>> Calculating for element new_df.element[i]")
+            if win_indexs and i == win_indexs[0]:
 
-            p_imp, phsec_imp = calcul_spectrum(id_dict, new_df.dist_to_source[i], new_df.h_proj[i], new_df.v_proj[i])
+                # This gets the index for this only window
+                up_win_list = list(item for item in win_indexs if item <= i)
 
-            p_trans, phsec_trans = calcul_spectrum(id_dict, new_df.dist_to_source[i], new_df.h_proj[i], new_df.v_proj[i],
-                                               new_df.thickness[i], new_df.formula[i], new_df.density[i], window=True)
+                print(">>>>>>>>>> Calculating for (first) window, without any upstream window:", new_df.element[i])
 
-            abs_pow.append(dif_totals(p_imp, phsec_imp, p_trans, phsec_trans)[0])
-            abs_phosec.append(dif_totals(p_imp, phsec_imp, p_trans, phsec_trans)[1])
-            transm_power.append(p_trans)
+                p_imp, phsec_imp = calcul_spectrum(id_dict, new_df.dist_to_source[i], new_df.h_proj[i], new_df.v_proj[i], new_df)
+
+                p_trans, phsec_trans = calcul_spectrum(id_dict, new_df.dist_to_source[i], new_df.h_proj[i],
+                                                       new_df.v_proj[i],new_df, up_win_list, window=True)
+
+                abs_pow.append(dif_totals(p_imp, phsec_imp, p_trans, phsec_trans)[0])
+                abs_phosec.append(dif_totals(p_imp, phsec_imp, p_trans, phsec_trans)[1])
+                transm_power.append(p_trans)
+
+            elif win_indexs and any(j < i for j in win_indexs):
+                # This gets the list of all upstream windows
+                up_win_list = list(item for item in win_indexs if item < i)
+                # This gets the list of all upstream windows including itself
+                includ_win_list = list(item for item in win_indexs if item <= i)
+
+                print(">>>>>>>>>> Calculating for window with at least one upstream window:", new_df.element[i])
+
+                p_imp, phsec_imp = calcul_spectrum(id_dict, new_df.dist_to_source[i], new_df.h_proj[i],
+                                                   new_df.v_proj[i], new_df, up_win_list, window=True)
+
+                p_trans, phsec_trans = calcul_spectrum(id_dict, new_df.dist_to_source[i], new_df.h_proj[i],
+                                                       new_df.v_proj[i], new_df, includ_win_list, window=True)
+
+                abs_pow.append(dif_totals(p_imp, phsec_imp, p_trans, phsec_trans)[0])
+                abs_phosec.append(dif_totals(p_imp, phsec_imp, p_trans, phsec_trans)[1])
+                transm_power.append(p_trans)
 
         else:
+            raise RuntimeError('The following type sis not included', new_df.type[i])
 
-            # srio raise RuntimeError(F'Element must have type this element new_df.type[i] has not been reconized')
-            raise RuntimeError()
-            
     # Creates a data frame with the absorbed power and absorbed photons info
     tmp = dict()
     tmp['abs_pow'] = abs_pow
     tmp['abs_photonsec'] = abs_phosec
     tmp['transm_power'] = transm_power
     df2 = pd.DataFrame(tmp)
-
-    #print(df2)
-
     # merges with the original dataframe
-    full_df = pd.concat([new_df,df2], axis=1)
+    full_df = pd.concat([new_df, df2], axis=1)
 
     return full_df
 
 
 if True:
 
-    # df1 = load_elements('/Users/srio/Oasys/id_components_test.xlsx')
-    df1 = load_elements_from_json_file('{json_file_name}')
-    
-    # Defining the id parameters in a dictionary (from json?)#
-
-    id_dict = dict()
-    id_dict["ELECTRONENERGY"] = 6.0
-    id_dict["ELECTRONENERGYSPREAD"] = 0.00093339
-    id_dict["ELECTRONCURRENT"] = 0.2
-    id_dict["ELECTRONBEAMSIZEH"] = 3.01836e-05
-    id_dict["ELECTRONBEAMSIZEV"] = 3.63641e-06
-    id_dict["ELECTRONBEAMDIVERGENCEH"] = 4.36821e-06
-    id_dict["ELECTRONBEAMDIVERGENCEV"] = 1.37498e-06
-    id_dict["PERIODID"] = 0.016
-    id_dict["NPERIODS"] = 125.0
-    id_dict["KV"] = 2.079
-    id_dict["KH"] = 0.0
-    id_dict["KPHASE"] = 0.0
-    id_dict["GAPH"] = 0.010
-    id_dict["GAPV"] = 0.010
-    id_dict["HSLITPOINTS"] = 201
-    id_dict["VSLITPOINTS"] = 201
-    id_dict["METHOD"] = 2
-    id_dict["USEEMITTANCES"] = 1
-    id_dict["MASK_FLAG"] = 0
-    id_dict["MASK_ROT_H_DEG"] = 0.0
-    id_dict["MASK_ROT_V_DEG"] = 0.0
-    id_dict["MASK_H_MIN"] = -1000.0
-    id_dict["MASK_H_MAX"] = 1000.0
-    id_dict["MASK_V_MIN"] = -1000.0
-    id_dict["MASK_V_MAX"] = 1000.0
-    id_dict["GAPH_CENTER"] = 0.0
-    id_dict["GAPV_CENTER"] = 0.0
-    id_dict["PHOTONENERGYMIN"] = 500
-    id_dict["PHOTONENERGYMAX"] = 200000
-    id_dict["PHOTONENERGYPOINTS"] = 1000
+    df1, id_dict = load_elements_from_json_file('{json_file_name}')
 
     full_df = run_calculations(df1, id_dict)
 
     full_df.to_csv('{excel_file_name}')
 
-    print(full_df)
+    print(full_df) 
 
 """
 
@@ -670,15 +739,13 @@ if True:
         self.xoppy_output.ensureCursorVisible()
 
 
-
-
 if __name__ == "__main__":
     import sys
     from syned.util.json_tools import load_from_json_file
 
     a = QApplication(sys.argv)
     ow = PowerLoadPythonScript()
-    ow.set_input(load_from_json_file("/Users/srio/Oasys/id03.json"))
+    ow.set_input(load_from_json_file("N:/OASYS/Tools_XOPPY/beamline.json"))
     ow.show()
     a.exec_()
     ow.saveSettings()

@@ -6,13 +6,13 @@ except AttributeError:
     from setuptools import find_packages, setup
 
 NAME = 'OASYS1-ESRF-Extensions'
-VERSION = '0.0.50'
+VERSION = '0.0.51'
 ISRELEASED = True
 
 DESCRIPTION = 'OASYS extension for the ESRF'
 README_FILE = os.path.join(os.path.dirname(__file__), 'README.md')
 LONG_DESCRIPTION = open(README_FILE).read()
-AUTHOR = 'Manuel Sanchez del Rio, Juan reyes-Herrera, Luca Rebuffi'
+AUTHOR = 'Manuel Sanchez del Rio, Juan Reyes-Herrera, Luca Rebuffi'
 AUTHOR_EMAIL = 'srio@esrf.eu'
 URL = 'https://github.com/oasys-esrf-kit/OASYS1-ESRF-Extensions'
 DOWNLOAD_URL = 'https://github.com/oasys-esrf-kit/OASYS1-ESRF-Extensions'
