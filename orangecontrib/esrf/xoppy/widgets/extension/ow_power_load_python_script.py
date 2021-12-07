@@ -475,10 +475,6 @@ def get_full_aperture(id_dict, dataframe):
     full_h = np.around(6 * s_x, 2)
     full_v = np.around(6 * s_y, 2)
 
-    # srio print(f'At the dataframe.element[1] the beam has sigma x = s_x' f' mm and sigma y = s_y mm')
-
-    # srio print(f'Therefore the full opening is defined as 6 x sigma: full_h mm and full_v mm')
-
     return distance, full_h, full_v
 
 
@@ -518,8 +514,7 @@ def calcul_spectrum(id_dict, dist, h_slit, v_slit, df, *up_win_list, window=Fals
         density = []
         flags = []
 
-        for element in up_win_list[0]:
-            print('the index is', element)
+        for element in up_win_list[0]:            
             thick.append(float(df.thickness[int(element)]))
             formula.append(str(df.formula[int(element)]))
             density.append(float(df.density[int(element)]))
@@ -595,7 +590,7 @@ def run_calculations(df, id_dict):
             gamma = id_dict['ELECTRONENERGY'] * 1e9 / codata_mee
 
             p_tot = (id_dict['NPERIODS'] / 6) * codata.value('characteristic impedance of vacuum') * id_dict[
-                'ELECTRONCURRENT'] * codata.e * 2 * np.pi * codata.c * gamma ** 2 * (
+                    'ELECTRONCURRENT'] * codata.e * 2 * np.pi * codata.c * gamma ** 2 * (
                     id_dict['KV'] ** 2 + id_dict['KH'] ** 2) / id_dict['PERIODID']
 
             abs_pow.append(0.0)
