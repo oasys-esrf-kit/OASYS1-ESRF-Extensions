@@ -950,7 +950,7 @@ Approximated coherent fraction at 1st harmonic:
         elif self.type_of_properties == 3:
             electron_beam.set_moments_all(0,0,0,0,0,0)
 
-        return LightSource(name="EBS lightsource",
+        return LightSource(name=self.get_id_list()[self.ebs_id_index],
                            electron_beam = electron_beam,
                            magnetic_structure = self.get_magnetic_structure())
 
