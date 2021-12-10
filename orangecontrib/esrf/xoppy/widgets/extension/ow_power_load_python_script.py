@@ -34,9 +34,9 @@ class PowerLoadPythonScript(widget.OWWidget):
     outputs = []
 
     json_file_name = Setting("beamline.json")
-    excel_file_name = Setting("id_components_test_abs_pow.csv")
+    excel_file_name = Setting("id_components_test_abs_pow.csv")    
     e_min = Setting(500)
-    e_max = Setting(150000)
+    e_max = Setting(100000)
     e_points = Setting(200)
 
     #
@@ -79,8 +79,7 @@ class PowerLoadPythonScript(widget.OWWidget):
 
         if show_automatic_box :
             gui.checkBox(self.general_options_box, self, 'is_automatic_run', 'Automatic Execution')
-
-
+            
         #
         #
         #
@@ -93,7 +92,7 @@ class PowerLoadPythonScript(widget.OWWidget):
         palette = QPalette(button.palette()) # make a copy of the palette
         palette.setColor(QPalette.ButtonText, QColor('Dark Blue'))
         button.setPalette(palette) # assign new palette
-        button.setFixedHeight(45)
+        button.setFixedHeight(45)        
 
 
         gui.separator(self.controlArea)
@@ -104,19 +103,19 @@ class PowerLoadPythonScript(widget.OWWidget):
 
         box3 = gui.widgetBox(gen_box, orientation="vertical")
         oasysgui.lineEdit(box3, self, "json_file_name", "Json File with beamline", labelWidth=150, valueType=str,
-                          orientation="horizontal")
+                          orientation="horizontal", callback=self.refresh_script)
 
         oasysgui.lineEdit(box3, self, "excel_file_name", "Excel File for results", labelWidth=150, valueType=str,
-                          orientation="horizontal")
+                          orientation="horizontal", callback=self.refresh_script)
 
         oasysgui.lineEdit(box3, self, "e_min", "Photon Energy Min [eV]", labelWidth=150, valueType=float,
                           orientation="horizontal", callback=self.refresh_script)
 
         oasysgui.lineEdit(box3, self, "e_max", "Photon Energy Max [eV]", labelWidth=150, valueType=float,
                           orientation="horizontal", callback=self.refresh_script)
+
         oasysgui.lineEdit(box3, self, "e_points", "Photon Energy Points", labelWidth=150, valueType=int,
                           orientation="horizontal", callback=self.refresh_script)
-
 
         #
         #
@@ -149,7 +148,10 @@ class PowerLoadPythonScript(widget.OWWidget):
         self.process_showers()
     
     def check_fields(self):
-            self.e_min = congruence.checkPositiveNumber(self.e_min, "Photon Energy Min")
+            self.e_min = congruence.checkPositiveNumber(self.e_min, "Photon Energy Min [eV]")
+            self.e_max = congruence.checkPositiveNumber(self.e_max, "Photon Energy Max [eV]")
+            congruence.checkLessThan(self.e_min, self.e_max, "Photon Energy Min [eV]", "Photon Energy Max [eV]")
+            self.e_points = congruence.checkPositiveNumber(self.e_points, "Photon Energy Points")
 
     def set_input(self, syned_data):
 
@@ -167,15 +169,17 @@ class PowerLoadPythonScript(widget.OWWidget):
 
     def execute_script(self):
 
-        self._script = str(self.pythonScript.toPlainText())
+        
+        self._script = str(self.pythonScript.toPlainText())  
         self.console.write("\nRunning script:\n")
-        self.console.push("exec(_script)")
-        self.console.new_prompt(sys.ps1)
+        self.console.push("exec(_script)")        
+        self.console.new_prompt(sys.ps1)       
+        
 
-
-    def refresh_script(self):
+    def refresh_script(self):        
 
         self.xoppy_output.setText("")
+        self.check_fields()
 
         sys.stdout = EmittingStream(textWritten=self.writeStdOut)
 
@@ -187,17 +191,16 @@ class PowerLoadPythonScript(widget.OWWidget):
                                           self.json_file_name),
                                           title="Cannot create file")
 
-        # write python script
+        # write Python script #
         dict_parameters = {
             "json_file_name": self.json_file_name,
-            "excel_file_name": self.excel_file_name,
+            "excel_file_name": self.excel_file_name,            
             "e_min": self.e_min,
             "e_max": self.e_max,
             "e_points": self.e_points            
         }
 
-
-        self.xoppy_script.set_code(self.script_template().format_map(dict_parameters))
+        self.xoppy_script.set_code(self.script_template().format_map(dict_parameters))    
 
 
     def script_template(self):
@@ -211,7 +214,7 @@ class PowerLoadPythonScript(widget.OWWidget):
 # ---------------------------------------------------------------------------
 # Script to get the power absorbed by each element in a FE for a given source and elements position
 # ---------------------------------------------------------------------------
-# Imports
+# Imports # # xoppylib could be used as well #
 # ---------------------------------------------------------------------------
 import numpy as np
 import pandas as pd
@@ -227,8 +230,8 @@ from syned.beamline.optical_elements.absorbers.slit import Slit
 from syned.beamline.shape import Rectangle
 
 def load_elements_from_excel_file(file_name):
-    # Brief function to load the excel file as pandas dataframe
-    # and a dictionary for the source
+    # Brief function to load the excel file as pandas dataframe #
+    # and a dictionary for the source #
 
     data_frame = pd.read_excel(file_name, header=1, skiprows=0)
 
@@ -268,13 +271,9 @@ def load_elements_from_excel_file(file_name):
 
 
 def load_elements_from_json_file(file_name=""):
-    # Loading data frame and dict from JSON
+    # Loading data frame and dict from JSON #
     beamline = load_from_json_file(file_name)
-
-    #print(beamline.info())
-
-    # print(tmp.get_light_source().info())
-    element = ["CPMU18"]
+    element = [beamline.get_light_source().get_name()]
     indices = [0]
     dist_to_source = [0.0]
     type1 = ['source']
@@ -286,9 +285,7 @@ def load_elements_from_json_file(file_name=""):
 
     dist_cumulated = 0.0
     for i, element_i in enumerate(beamline.get_beamline_elements()):
-        oe_i = element_i.get_optical_element()
-
-        print(oe_i.get_name())
+        oe_i = element_i.get_optical_element()        
 
         element.append(oe_i.get_name())
         indices.append(i+1)
@@ -331,22 +328,12 @@ def load_elements_from_json_file(file_name=""):
         else:
             density.append(None)
 
-    print("index: ", indices)
-    print("element: ", element)
-    print("dist_to_source", dist_to_source)
-    print("type: ", type1)
-    print("h: ", h)
-    print("v: ", v)
-    print("thickness: ", thickness)
-    print("formula: ", formula)
-    print("density: ", density)
-
     titles = ["element", "dist_to_source", "type", "h", "v", "thickness", "formula", "density"]
 
     data_frame = pd.DataFrame(list(zip(element, dist_to_source, type1, h, v, thickness, formula, density)),
                               columns =titles)
 
-    # Defining the id parameters in a dictionary (from JSON)#
+    # Defining the id parameters in a dictionary (from JSON) #
 
     id_dict = dict()
     id_dict["ELECTRONENERGY"] = beamline.get_light_source().get_electron_beam().energy()
@@ -357,10 +344,10 @@ def load_elements_from_json_file(file_name=""):
     id_dict["ELECTRONBEAMSIZEV"] = y
     id_dict["ELECTRONBEAMDIVERGENCEH"] = xp
     id_dict["ELECTRONBEAMDIVERGENCEV"] = yp
-    id_dict["PERIODID"] = beamline.get_light_source().get_magnetic_structure()._period_length
-    id_dict["NPERIODS"] = int(beamline.get_light_source().get_magnetic_structure()._number_of_periods)
-    id_dict["KV"] = beamline.get_light_source().get_magnetic_structure()._K_vertical
-    id_dict["KH"] = beamline.get_light_source().get_magnetic_structure()._K_horizontal
+    id_dict["PERIODID"] = beamline.get_light_source().get_magnetic_structure().period_length()
+    id_dict["NPERIODS"] = int(beamline.get_light_source().get_magnetic_structure().number_of_periods())
+    id_dict["KV"] = beamline.get_light_source().get_magnetic_structure().K_vertical()
+    id_dict["KH"] = beamline.get_light_source().get_magnetic_structure().K_horizontal()
     id_dict["KPHASE"] = 0.0
     id_dict["GAPH"] = 0.010
     id_dict["GAPV"] = 0.010
@@ -539,13 +526,13 @@ def calcul_spectrum(id_dict, dist, h_slit, v_slit, df, *up_win_list, window=Fals
 
 
 def dif_totals(in_pow, in_phsec, out_pow, out_phsec):
-    # Short function to calculates the absorbed power just by a subtraction
+    # Short function to calculates the absorbed power just by a subtraction #
 
     if out_pow > in_pow:
 
-        # If the element aperture is larger than the beam, depending on the energy steps and numerical
-        # calculations, sometimes the outcoming power is bigger than the incoming, which does not make sense!
-        # so this is just to prevent that error and gives zero absortion in the element
+        # If the element aperture is larger than the beam, depending on the energy steps and numerical #
+        # calculations, sometimes the outcoming power is bigger than the incoming, which does not make sense! #
+        # so this is just to prevent that error and gives zero absortion in the element #
 
         abs_pow = 0.0
         abs_phsec = 0.0
@@ -561,15 +548,15 @@ def dif_totals(in_pow, in_phsec, out_pow, out_phsec):
 
 
 def run_calculations(df, id_dict):
-    # Main function that depends on the above ones, it uses as an input the dataframe fo the elements and the id dictionary
+    # Main function that depends on the above ones, it uses as an input the dataframe fo the elements and the id dictionary #
 
-    # Loads the data frame with the elements characteristics
+    # Loads the data frame with the elements characteristics #
     df1 = df  # srio !!!  load_elements('id_components_test.xlsx')
 
-    # calculates the projections on each element due upstream apertures
+    # calculates the projections on each element from upstream apertures #
     new_df = ap_projections(df1)
 
-    # get the distance and apertures of full aperture for the specific id
+    # get the distance and apertures of full aperture for the specific id #
     distance, full_ap_h, full_ap_v = get_full_aperture(id_dict, new_df)
 
     # output lists
@@ -579,7 +566,7 @@ def run_calculations(df, id_dict):
 
     for i, type in enumerate(df.type):
 
-        # this is to get the window index to compare is the element has a upstream window
+        # this is to get the window index to compare is the element has a upstream window #
         win_indexs = df.index[df['type'] == 'window'].tolist()
 
         if type == 'source':
@@ -600,7 +587,7 @@ def run_calculations(df, id_dict):
 
         elif type == 'slit' and i == 1:
 
-            # This is for the first slit which is normally the FE mask
+            # This is for the first slit which is normally the FE mask #
 
             print(">>>>>>>>>> Calculating for first element:", new_df.element[i])
 
@@ -614,7 +601,7 @@ def run_calculations(df, id_dict):
 
         elif type == 'slit' and i > 1 and all(j > i for j in win_indexs):
 
-            # Slit that does not have an upstream window
+            # Slit that does not have an upstream window #
 
             print(">>>>>>>>>> Calculating for slit without any upstream slit:", new_df.element[i])
 
@@ -631,7 +618,7 @@ def run_calculations(df, id_dict):
 
         elif type == 'slit' and i > 1 and any(j < i for j in win_indexs):
 
-            # Slit with an upstream window
+            # Slit with an upstream window #
 
             print(">>>>>>>>>> Calculating for slit with at least one upstream window:", new_df.element[i])
 
@@ -703,9 +690,9 @@ def run_calculations(df, id_dict):
 
     # Creates a data frame with the absorbed power and absorbed photons info
     tmp = dict()
-    tmp['abs_pow'] = abs_pow
+    tmp['abs_pow [W]'] = abs_pow
     tmp['abs_photonsec'] = abs_phosec
-    tmp['transm_power'] = transm_power
+    tmp['trans_power [W]'] = transm_power
     df2 = pd.DataFrame(tmp)
     # merges with the original dataframe
     full_df = pd.concat([new_df, df2], axis=1)
