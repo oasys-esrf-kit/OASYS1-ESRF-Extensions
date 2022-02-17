@@ -1007,9 +1007,9 @@ Approximated coherent fraction at 1st harmonic:
                 ConfirmDialog.confirmed(self, message="Helical/Apple undulators not implemented in this app (wrong results)")
 
         if "CPMU" in id_name:
-            B  = a0 * numpy.exp(-numpy.pi * a3 * id_gap_mm / id_period_mm)
-            B += a1 * numpy.exp(-numpy.pi * a4 * id_gap_mm / id_period_mm)
-            B += a2 * numpy.exp(-numpy.pi * a5 * id_gap_mm / id_period_mm)
+            B  = a0 * numpy.exp(-numpy.pi * a3 * 1 * id_gap_mm / id_period_mm)
+            B += a1 * numpy.exp(-numpy.pi * a4 * 2 * id_gap_mm / id_period_mm)
+            B += a2 * numpy.exp(-numpy.pi * a5 * 3 * id_gap_mm / id_period_mm)
 
         elif "HU" in id_name:  # this is for apple undulator... It is applied also (WRONG!) to helical undulators
             reference_gap = 20.0
@@ -1019,12 +1019,12 @@ Approximated coherent fraction at 1st harmonic:
                 B = a0 * numpy.exp(-numpy.pi * a1 * id_gap_mm / id_period_mm)
             else:
                 if (a4 is None) and (a5 is None):  # 2 "harmonics"
-                    B = a0 * numpy.exp(-numpy.pi * a2 * id_gap_mm / id_period_mm)
-                    B += a1 * numpy.exp(-numpy.pi * a3 * id_gap_mm / id_period_mm)
+                    B =  a0 * numpy.exp(-numpy.pi * a2 * 1 * id_gap_mm / id_period_mm)
+                    B += a1 * numpy.exp(-numpy.pi * a3 * 2 * id_gap_mm / id_period_mm)
                 else: # 3 harmonics
-                    B = a0 * numpy.exp(-numpy.pi * a3 * id_gap_mm / id_period_mm)
-                    B += a1 * numpy.exp(-numpy.pi * a4 * id_gap_mm / id_period_mm)
-                    B += a2 * numpy.exp(-numpy.pi * a5 * id_gap_mm / id_period_mm)
+                    B =  a0 * numpy.exp(-numpy.pi * a3 * 1 * id_gap_mm / id_period_mm)
+                    B += a1 * numpy.exp(-numpy.pi * a4 * 2 * id_gap_mm / id_period_mm)
+                    B += a2 * numpy.exp(-numpy.pi * a5 * 3 * id_gap_mm / id_period_mm)
 
         return B
 
