@@ -34,17 +34,17 @@ class Monochromator(XoppyWidget):
 
     SOURCE = Setting(2)
     TYPE = Setting(0)
-    ENER_SELECTED = (8000)
+    ENER_SELECTED = Setting(8000)
     # HARMONIC = Setting (15000)
     H_MILLER = Setting (1)
     K_MILLER = Setting (1)
     L_MILLER = Setting (1)
-    THICK = (15)
+    THICK = Setting(15)
     ENER_MIN = Setting(10000.0)
     ENER_MAX = Setting(200000.0)
     ENER_N = Setting(2000)
     SOURCE_FILE = Setting("?")
-    FILE_DUMP = 0
+    FILE_DUMP = Setting(0)
 
     def build_gui(self):
 
