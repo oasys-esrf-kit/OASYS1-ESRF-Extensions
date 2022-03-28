@@ -213,7 +213,7 @@ class OWUndulatorCoherentModeDecomposition1D(WofryWidget):
                                             addSpace=True, orientation="vertical")
 
 
-        self.le_sigma_h = oasysgui.lineEdit(self.emittances_box_h, self, "sigma_h", "Size RMS H",
+        self.le_sigma_h = oasysgui.lineEdit(self.emittances_box_h, self, "sigma_h", "Size RMS H [m]",
                             labelWidth=250, tooltip="sigma_h",
                             valueType=float, orientation="horizontal")
         oasysgui.lineEdit(self.emittances_box_h, self, "sigma_divergence_h", "Divergence RMS H [rad]",
@@ -221,7 +221,7 @@ class OWUndulatorCoherentModeDecomposition1D(WofryWidget):
                             valueType=float, orientation="horizontal")
 
 
-        self.le_sigma_v = oasysgui.lineEdit(self.emittances_box_v, self, "sigma_v", "Size RMS V",
+        self.le_sigma_v = oasysgui.lineEdit(self.emittances_box_v, self, "sigma_v", "Size RMS V [m]",
                             labelWidth=250, tooltip="sigma_v",
                             valueType=float, orientation="horizontal")
         oasysgui.lineEdit(self.emittances_box_v, self, "sigma_divergence_v", "Divergence RMS V [rad]",
