@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtGui import QPalette, QColor, QFont
-from PyQt5.QtWidgets import QApplication, QFileDialog
+from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QRect
 from PyQt5.QtGui import QTextCursor
 
@@ -9,7 +9,7 @@ from orangewidget.settings import Setting
 
 from oasys.widgets import gui as oasysgui
 from oasys.widgets import widget
-from oasys.util.oasys_util import TriggerIn, TriggerOut, EmittingStream
+from oasys.util.oasys_util import EmittingStream
 from oasys.widgets.gui import ConfirmDialog
 
 from orangecontrib.xoppy.util.python_script import PythonScript
@@ -218,10 +218,11 @@ class PowerLoadPythonScript(widget.OWWidget):
 # ---------------------------------------------------------------------------
 import numpy as np
 import pandas as pd
-from orangecontrib.xoppy.util.xoppy_undulators import xoppy_calc_undulator_power_density
-from orangecontrib.xoppy.util.fit_gaussian2d import fit_gaussian2d
-from orangecontrib.xoppy.util.xoppy_undulators import xoppy_calc_undulator_spectrum
-from orangecontrib.xoppy.util.xoppy_xraylib_util import xpower_calc
+import xraylib
+from xoppylib.sources.xoppy_undulators import xoppy_calc_undulator_spectrum, xoppy_calc_undulator_power_density
+from xoppylib.fit_gaussian2d import fit_gaussian2d
+from xoppylib.power.xoppy_calc_power import xoppy_calc_power
+
 import scipy.constants as codata
 
 from syned.util.json_tools import load_from_json_file
@@ -507,8 +508,8 @@ def calcul_spectrum(id_dict, dist, h_slit, v_slit, df, *up_win_list, window=Fals
             density.append(float(df.density[int(element)]))
             flags.append(0)
 
-        out_dict = xpower_calc(energies=energy, source=spectral_power, substance=formula, flags=flags,
-                               dens=density, thick=thick, output_file=None)
+        out_dict = xoppy_calc_power(energies=energy, source=spectral_power, substance=formula, flags=flags,
+                               dens=density, thick=thick, material_constants_library=xraylib)
 
         tot_power = np.trapz(out_dict['data'][-1], x=energy, axis=-1)
         flux = out_dict['data'][-1] / codata.e / 1e3

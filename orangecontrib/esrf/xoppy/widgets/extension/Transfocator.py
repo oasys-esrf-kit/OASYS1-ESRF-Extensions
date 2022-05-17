@@ -1,12 +1,13 @@
 import sys
 import numpy
+import xraylib
 from PyQt5.QtWidgets import QApplication, QMessageBox, QSizePolicy
 
 from orangewidget import gui
 from orangewidget.settings import Setting
 from oasys.widgets import gui as oasysgui, congruence
 from oasys.widgets.exchange import DataExchangeObject
-from orangecontrib.xoppy.util.xoppy_xraylib_util import xpower_calc
+from xoppylib.power.xoppy_calc_power import xoppy_calc_power
 
 from oasys.widgets.exchange import DataExchangeObject
 from orangecontrib.xoppy.widgets.gui.ow_xoppy_widget import XoppyWidget
@@ -120,7 +121,6 @@ class Transfocator(XoppyWidget):
         gui.button(file_box_id, self, "...", callback=self.select_input_file, width=25)
         self.show_at(self.unitFlags()[idx], box1)
 
-
         #widget index 10
         idx += 1
         box1 = gui.widgetBox(box)
@@ -135,14 +135,10 @@ class Transfocator(XoppyWidget):
         self.input_spectrum = None
 
 
-
-
     def select_input_file(self):
         self.file_id.setText(oasysgui.selectFileFromDialog(self, self.SOURCE_FILE,
                                     "Open 2-columns file with spectral power",
                                     file_extension_filter="ascii dat (*.dat *.txt *spec)"))
-
-
 
     def unitLabels(self):
          return ['Input beam:', 'Number of Lens','Element','Thickness [mm]',
@@ -151,7 +147,6 @@ class Transfocator(XoppyWidget):
                  'To energy [eV]:',
                  'Energy points:  ',
                  'File with input beam spectral power:',"Dump file"]
-
 
     def unitFlags(self):
          return ['True','True','True','True',
@@ -258,8 +253,6 @@ class Transfocator(XoppyWidget):
             #raise exception
 
 
-
-
     def check_fields(self):
         self.NUMBER_LENS = congruence.checkStrictlyPositiveNumber(self.NUMBER_LENS, "Number of Lens")
         self.THICK = congruence.checkStrictlyPositiveNumber(self.THICK, "Thickness")
@@ -277,11 +270,8 @@ class Transfocator(XoppyWidget):
     def extract_data_from_xoppy_output(self, calculation_output):
         return calculation_output
 
-
     def get_data_exchange_widget_name(self):
         return "POWER"
-
-
 
     def getTitles(self):
         return ['Input Beam','Transmitivity','Absorption','Intensity']
@@ -292,14 +282,11 @@ class Transfocator(XoppyWidget):
     def getYTitles(self):
         return ["Source",'Transmitivity','Absorption',"Intensity"]
 
-
     def getVariablesToPlot(self):
         return [(0, 1),(0, 2),(0, 3),(0, 4)]
 
     def getLogPlot(self):
-        return [(False,False),(False, False),(False, False),(False,False) ]
-
-
+        return [(False,False),(False, False),(False, False),(False,False)]
 
 
     def xoppy_calc_xpower(self):
@@ -319,7 +306,6 @@ class Transfocator(XoppyWidget):
             thick.append(self.THICK)
             dens.append(self.DENS)
             flags.append(0)
-
 
 
         if self.SOURCE == 0:
@@ -349,9 +335,8 @@ class Transfocator(XoppyWidget):
         else:
             output_file = "Transfo.spec"
 
-        out_dictionary = xpower_calc(energies=energies, source=source, substance=substance,
-                                     flags=flags, dens=dens, thick=thick, angle=[], roughness=[],
-                                     output_file=output_file)
+        out_dictionary = xoppy_calc_power(energies=energies, source=source, substance=substance, nelements=len(substance), 
+                                          flags=flags, dens=dens, thick=thick, angle=[], roughness=[], material_constants_library=xraylib)
 
         try:
             print(out_dictionary["info"])
@@ -362,14 +347,14 @@ class Transfocator(XoppyWidget):
         Result.append((out_dictionary['data'][0]).tolist())
         Result.append((out_dictionary['data'][1]).tolist())
         for k in range(self.NUMBER_LENS):
-            list.append(out_dictionary['data'][4 + 5*k])
+            list.append(out_dictionary['data'][4 + 6*k])
         Result.append(List_Product(list))
 
         for k in range(len(Result[0])):
             Result_Absorption.append(1-Result[-1][k])
         Result.append(Result_Absorption)
 
-        Result.append((out_dictionary['data'][5*len(substance)+1]).tolist())
+        Result.append((out_dictionary['data'][6*len(substance)+1]).tolist())
         cumulated_data['data']=numpy.array(Result)
 
         #send exchange
@@ -379,7 +364,6 @@ class Transfocator(XoppyWidget):
         except:
             pass
         return calculated_data
-
 
 
 def List_Product(list):
@@ -395,10 +379,7 @@ def List_Product(list):
 
 if __name__ == "__main__":
 
-
     from oasys.widgets.exchange import DataExchangeObject
-
-
 
     input_data_type = "POWER"
 
@@ -412,7 +393,7 @@ if __name__ == "__main__":
 
     elif input_data_type == "POWER3D":
         # create unulator_radiation xoppy exchange data
-        from orangecontrib.xoppy.util.xoppy_undulators import xoppy_calc_undulator_radiation
+        from xoppylib.sources.xoppy_undulators import xoppy_calc_undulator_radiation
 
         e, h, v, p, code = xoppy_calc_undulator_radiation(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.001,ELECTRONCURRENT=0.2,\
                                            ELECTRONBEAMSIZEH=0.000395,ELECTRONBEAMSIZEV=9.9e-06,\
@@ -427,8 +408,6 @@ if __name__ == "__main__":
         received_data = DataExchangeObject("XOPPY", "UNDULATOR_RADIATION")
         received_data.add_content("xoppy_data", [p, e, h, v])
         received_data.add_content("xoppy_code", code)
-
-
 
 
     app = QApplication(sys.argv)

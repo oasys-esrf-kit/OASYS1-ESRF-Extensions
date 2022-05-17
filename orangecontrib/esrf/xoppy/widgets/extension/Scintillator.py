@@ -1,12 +1,13 @@
 import sys
 import numpy
+import xraylib
 from PyQt5.QtWidgets import QApplication, QMessageBox, QSizePolicy
 
 from orangewidget import gui
 from orangewidget.settings import Setting
 from oasys.widgets import gui as oasysgui, congruence
 from oasys.widgets.exchange import DataExchangeObject
-from orangecontrib.xoppy.util.xoppy_xraylib_util import xpower_calc
+from xoppylib.power.xoppy_calc_power import xoppy_calc_power
 
 from oasys.widgets.exchange import DataExchangeObject
 from orangecontrib.xoppy.widgets.gui.ow_xoppy_widget import XoppyWidget
@@ -384,10 +385,10 @@ class Scintillator(XoppyWidget):
             output_file = None
         else:
             output_file = "Scinti.spec"
+            
 
-        out_dictionary = xpower_calc(energies=energies, source=source, substance=substance,
-                                     flags=flags, dens=dens, thick=thick, angle=[], roughness=[],
-                                     output_file=output_file)
+        out_dictionary = xoppy_calc_power(energies=energies, source=source, substance=substance,
+                                     flags=flags, dens=dens, thick=thick, angle=[], roughness=[], material_constants_library=xraylib)
 
         L=[]
         for k in range (5):
@@ -435,10 +436,7 @@ def List_Product(list):
 
 if __name__ == "__main__":
 
-
     from oasys.widgets.exchange import DataExchangeObject
-
-
 
     input_data_type = "POWER"
 
@@ -452,7 +450,7 @@ if __name__ == "__main__":
 
     elif input_data_type == "POWER3D":
         # create unulator_radiation xoppy exchange data
-        from orangecontrib.xoppy.util.xoppy_undulators import xoppy_calc_undulator_radiation
+        from xoppylib.sources.xoppy_undulators import xoppy_calc_undulator_radiation
 
         e, h, v, p, code = xoppy_calc_undulator_radiation(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.001,ELECTRONCURRENT=0.2,\
                                            ELECTRONBEAMSIZEH=0.000395,ELECTRONBEAMSIZEV=9.9e-06,\
@@ -467,8 +465,6 @@ if __name__ == "__main__":
         received_data = DataExchangeObject("XOPPY", "UNDULATOR_RADIATION")
         received_data.add_content("xoppy_data", [p, e, h, v])
         received_data.add_content("xoppy_code", code)
-
-
 
 
     app = QApplication(sys.argv)

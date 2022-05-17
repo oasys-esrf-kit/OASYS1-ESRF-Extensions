@@ -1,12 +1,13 @@
 import sys
 import numpy
+import xraylib
 from PyQt5.QtWidgets import QApplication, QMessageBox, QSizePolicy
 
 from orangewidget import gui
 from orangewidget.settings import Setting
 from oasys.widgets import gui as oasysgui, congruence
 from oasys.widgets.exchange import DataExchangeObject
-from orangecontrib.xoppy.util.xoppy_xraylib_util import xpower_calc
+from xoppylib.power.xoppy_calc_power import xoppy_calc_power
 
 from oasys.widgets.exchange import DataExchangeObject
 from orangecontrib.xoppy.widgets.gui.ow_xoppy_widget import XoppyWidget
@@ -391,7 +392,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
                     if exchangeData.get_widget_name() =="UNDULATOR_RADIATION" or \
                         exchangeData.get_widget_name() =="POWER3D":
                         [p, e, h, v ] = spectrum
-                        tmp = p.sum(axis=2).sum(axis=1)*(h[1]-h[0])*(v[1]-v[0])*codata.e*1e3
+                        #tmp = p.sum(axis=2).sum(axis=1)*(h[1]-h[0])*(v[1]-v[0])*codata.e*1e3
                         spectrum = numpy.vstack((e,p.sum(axis=2).sum(axis=1)*(h[1]-h[0])*(v[1]-v[0])*
                                                  codata.e*1e3))
                         self.input_spectrum = spectrum
@@ -411,8 +412,6 @@ class OWID19AttenuatorsBox(XoppyWidget):
                 QMessageBox.Ok)
 
             #raise exception
-
-
 
 
     def check_fields(self):
@@ -439,7 +438,6 @@ class OWID19AttenuatorsBox(XoppyWidget):
     def extract_data_from_xoppy_output(self, calculation_output):
         return calculation_output
 
-
     def get_data_exchange_widget_name(self):
         return "POWER"
 
@@ -454,7 +452,6 @@ class OWID19AttenuatorsBox(XoppyWidget):
         if self.PLOT_SETS == 1: out = True
         if self.PLOT_SETS == 2: out = True
         return out
-
 
     def getTitles(self):
         titles = []
@@ -484,8 +481,8 @@ class OWID19AttenuatorsBox(XoppyWidget):
         if self.do_plot_intensity(): ytitles.append("Source")
         #if self.do_plot_local(): ytitles.append(" Total CS cm2/g")
         #if self.do_plot_local(): ytitles.append(" Mu cm^-1")
-        if self.do_plot_local(): ytitles.append(" Transmitivity")
-        if self.do_plot_local(): ytitles.append(" Absorption")
+        if self.do_plot_local(): ytitles.append("Transmitivity")
+        if self.do_plot_local(): ytitles.append("Absorption")
         if self.do_plot_intensity(): ytitles.append("Intensity")
 
         return ytitles
@@ -513,9 +510,6 @@ class OWID19AttenuatorsBox(XoppyWidget):
         if self.do_plot_intensity(): logplot.append((False, False))
 
         return logplot
-
-
-
 
     def Attenuators_Thickness(self):
         thick=[]
@@ -577,7 +571,8 @@ class OWID19AttenuatorsBox(XoppyWidget):
             substance = ['C','Al','Cu','Al','Cu','Cu','Mo','W','W','Au']
             thick     = self.Attenuators_Thickness()
             dens      = [3.508,2.7,8.96,2.7,8.96,8.96,10.20,19.3,19.3,19.3]
-            flags     =  [0,0,0,0,0,0,0,0,0,0]
+            flags     = [0,0,0,0,0,0,0,0,0,0]
+            
         if self.FLAG == 1:
             substance = ['C', 'Al', 'Cu','Mo', 'W','Au']
             thick = self.Attenuators_Thickness()
@@ -614,9 +609,9 @@ class OWID19AttenuatorsBox(XoppyWidget):
             output_file = None
         else:
             output_file = "power.spec"
-        out_dictionary = xpower_calc(energies=energies,source=source,substance=substance,
-                                     flags=flags,dens=dens,thick=thick,angle=[],roughness=[],output_file=output_file)
-
+        out_dictionary = xoppy_calc_power(energies=energies, source=source, substance=substance, nelements=len(substance),
+                                      flags=flags, dens=dens, thick=thick,angle=[],
+                                      roughness=[], FILE_DUMP = output_file, material_constants_library=xraylib)
 
         try:
             print(out_dictionary["info"])
@@ -631,7 +626,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
         for k in range(len(substance)):
             #list2.append(out_dictionary['data'][2 + 5*k])
             #list3.append(out_dictionary['data'][3 + 5*k])
-            list4.append(out_dictionary['data'][4 + 5*k])
+            list4.append(out_dictionary['data'][4 + 6*k])
         #Result.append(List_Product(list2))
         #Result.append(List_Product(list3))
         Result.append(List_Product(list4))
@@ -640,7 +635,7 @@ class OWID19AttenuatorsBox(XoppyWidget):
             Result_Absorption.append(1-Result[-1][k])
         Result.append(Result_Absorption)
 
-        Result.append((out_dictionary['data'][5*len(substance)+1]).tolist())
+        Result.append((out_dictionary['data'][6*len(substance)+1]).tolist())
         cumulated_data['data']=numpy.array(Result)
 
         #send exchange
@@ -663,10 +658,7 @@ def List_Product(list):
 
 if __name__ == "__main__":
 
-
     from oasys.widgets.exchange import DataExchangeObject
-
-
 
     input_data_type = "POWER"
 
@@ -680,7 +672,8 @@ if __name__ == "__main__":
 
     elif input_data_type == "POWER3D":
         # create unulator_radiation xoppy exchange data
-        from orangecontrib.xoppy.util.xoppy_undulators import xoppy_calc_undulator_radiation
+        
+        from xoppylib.sources.xoppy_undulators import xoppy_calc_undulator_radiation
 
         e, h, v, p, code = xoppy_calc_undulator_radiation(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.001,ELECTRONCURRENT=0.2,\
                                            ELECTRONBEAMSIZEH=0.000395,ELECTRONBEAMSIZEV=9.9e-06,\
@@ -695,8 +688,6 @@ if __name__ == "__main__":
         received_data = DataExchangeObject("XOPPY", "UNDULATOR_RADIATION")
         received_data.add_content("xoppy_data", [p, e, h, v])
         received_data.add_content("xoppy_code", code)
-
-
 
 
     app = QApplication(sys.argv)

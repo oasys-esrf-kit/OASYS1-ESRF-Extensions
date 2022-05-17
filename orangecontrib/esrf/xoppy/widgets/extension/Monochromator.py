@@ -8,10 +8,7 @@ from oasys.widgets import gui as oasysgui, congruence
 from oasys.widgets.exchange import DataExchangeObject
 from orangecontrib.xoppy.widgets.gui.ow_xoppy_widget import XoppyWidget
 
-
 import scipy.constants as codata
-
-
 
 from crystalpy.diffraction.GeometryType import BraggDiffraction, LaueDiffraction
 from crystalpy.diffraction.DiffractionSetup import DiffractionSetup
@@ -101,10 +98,6 @@ class Monochromator(XoppyWidget):
         gui.button(file_box_id, self, "...", callback=self.select_input_file, width=25)
         self.show_at(self.unitFlags()[idx], box1)
 
-
-
-
-
         box = oasysgui.widgetBox(box_main, "Monochromator", orientation="vertical", width=self.CONTROL_AREA_WIDTH-10)
         # widget index 2
         idx += 1
@@ -147,8 +140,6 @@ class Monochromator(XoppyWidget):
                           valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-
-
         # widget index 5
         idx += 1
         box1 = gui.widgetBox(box)
@@ -156,7 +147,6 @@ class Monochromator(XoppyWidget):
                                        label=self.unitLabels()[idx], addSpace=False,
                                        valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
-
 
         #widget index 10
         idx += 1
@@ -170,8 +160,6 @@ class Monochromator(XoppyWidget):
         self.show_at(self.unitFlags()[idx], box1)
 
         self.input_spectrum = None
-
-
 
 
     def select_input_file(self):
@@ -300,8 +288,6 @@ class Monochromator(XoppyWidget):
             #raise exception
 
 
-
-
     def check_fields(self):
         if self.TYPE  ==  1:
             self.ENER_SELECTED = congruence.checkPositiveNumber(self.ENER_SELECTED, "Energy Selected [eV]")
@@ -331,12 +317,8 @@ class Monochromator(XoppyWidget):
     def extract_data_from_xoppy_output(self, calculation_output):
         return calculation_output
 
-
     def get_data_exchange_widget_name(self):
         return "POWER"
-
-
-
 
     def getTitles(self):
         return ['Input Beam','Monochromator reflectivity','Transmitted intensity']
@@ -473,8 +455,8 @@ class Monochromator(XoppyWidget):
                                             harmonic*h_miller, harmonic*k_miller, harmonic*l_miller))
 
         return r
-    def xoppy_calc_mono(self):
 
+    def xoppy_calc_mono(self):
 
         if self.SOURCE == 0:
             if self.input_spectrum is None:
@@ -510,8 +492,6 @@ class Monochromator(XoppyWidget):
             Mono_Effect = self.calculate_laue_monochromator(energies=energies)
         else: #TODO:
             Mono_Effect = [1] * len(energies)
-
-
 
 
         # from srxraylib.plot.gol import plot
@@ -568,9 +548,7 @@ def List_Product(list):
 
 if __name__ == "__main__":
 
-
     from oasys.widgets.exchange import DataExchangeObject
-
 
 
     input_data_type = "POWER"
@@ -585,7 +563,7 @@ if __name__ == "__main__":
 
     elif input_data_type == "POWER3D":
         # create unulator_radiation xoppy exchange data
-        from orangecontrib.xoppy.util.xoppy_undulators import xoppy_calc_undulator_radiation
+        from xoppylib.sources.xoppy_undulators import xoppy_calc_undulator_radiation
 
         e, h, v, p, code = xoppy_calc_undulator_radiation(ELECTRONENERGY=6.04,ELECTRONENERGYSPREAD=0.001,ELECTRONCURRENT=0.2,\
                                            ELECTRONBEAMSIZEH=0.000395,ELECTRONBEAMSIZEV=9.9e-06,\
@@ -600,8 +578,6 @@ if __name__ == "__main__":
         received_data = DataExchangeObject("XOPPY", "UNDULATOR_RADIATION")
         received_data.add_content("xoppy_data", [p, e, h, v])
         received_data.add_content("xoppy_code", code)
-
-
 
 
     app = QApplication(sys.argv)
