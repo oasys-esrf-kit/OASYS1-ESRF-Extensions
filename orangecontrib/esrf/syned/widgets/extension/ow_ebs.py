@@ -35,7 +35,6 @@ HORIZONTAL = 2
 BOTH = 3
 
 
-
 class OWEBS(OWWidget):
 
     name = "ESRF-EBS ID Light Source"
@@ -260,8 +259,6 @@ class OWEBS(OWWidget):
                           labelWidth=250, valueType=int, orientation="horizontal",
                           callback=self.auto_set_undulator_V)
 
-
-
         ####################################################
 
 
@@ -311,13 +308,13 @@ class OWEBS(OWWidget):
         return out_list
 
     def titles(self):
-        return ["K vs Gap", "B vs Gap", "Gap vs resonance energy", "Power vs Gap"]
+        return ["K vs Gap", "B vs Gap", "Gap vs resonance energy", "Power vs Gap", "Power density peak at 30 m vs Gap"]
 
     def xtitles(self):
         return ['Gap [mm]'] * len(self.titles())
 
     def ytitles(self):
-        return ['K', 'B [T]', 'Photon energy [eV]', 'Power [W]']
+        return ['K', 'B [T]', 'Photon energy [eV]', 'Power [W]', 'Power density peak @ 30 m [W/mm$^2$]']
 
     def initializeTabs(self):
         self.tabs = oasysgui.tabWidget(self.mainArea)
@@ -327,6 +324,7 @@ class OWEBS(OWWidget):
                     oasysgui.createTabPage(self.tabs, "B vs Gap"),
                     oasysgui.createTabPage(self.tabs, "Resonance vs Gap"),
                     oasysgui.createTabPage(self.tabs, "Power vs Gap"),
+                    oasysgui.createTabPage(self.tabs, "Pow_dens_peak vs Gap"),
                     ]
 
         for tab in self.tab:
@@ -354,7 +352,7 @@ class OWEBS(OWWidget):
             self.plot_canvas[i].setInteractiveMode(mode='zoom')
 
 
-        for index in range(0, 4):
+        for index in range(0, 5):
             self.tab[index + 1].layout().addWidget(self.plot_canvas[index])
 
         self.tabs.setCurrentIndex(1)
@@ -606,7 +604,6 @@ Approximated coherent fraction at 1st harmonic:
             self.a6 = self.data_dict["a6"][index]
 
 
-
         # self.a0 = self.data_dict["a0"][index]
         # self.a1 = self.data_dict["a1"][index]
         # self.a2 = self.data_dict["a2"][index]
@@ -740,7 +737,14 @@ Approximated coherent fraction at 1st harmonic:
                self.ring_current * codata.e * 2 * numpy.pi * codata.c * self.gamma()**2 * \
                (Karray**2 + Karray_horizontal**2) / self.period_length
 
+        ### power density peak at 30 m, not yet implemented for helical undulators ###
+        dist_to_source = 30
+        
+        ### From: Undulators, Wigglers and their Applications - H. Onuki & P Elleaume ###
+        ### Chapter 3: Undulator radiation eqs. 68 and 69 ###
+        g_k = Karray * ((Karray**6) + (24/7)*(Karray**4) + 4*(Karray**2) + (16/7))/((1 + (Karray**2))**(7/2))
 
+        p_dens_peak = ((21 * (self.gamma()**2)) / (16 * numpy.pi * Karray) * ptot * g_k)/((dist_to_source * 1e3)**2)
 
         self.plot_graph(0, self.titles()[0], gap_mm, Karray, xtitle=self.xtitles()[0], ytitle=self.ytitles()[0])
         self.plot_graph(1, self.titles()[1], gap_mm, Bfield, xtitle=self.xtitles()[1], ytitle=self.ytitles()[1])
@@ -757,7 +761,6 @@ Approximated coherent fraction at 1st harmonic:
                                          symbol='', color=colors[i-1])
 
 
-
         self.plot_canvas[2].getLegendsDockWidget().setFixedHeight(150)
         self.plot_canvas[2].getLegendsDockWidget().setVisible(True)
         self.plot_canvas[2].setActiveCurve("harmonic 1")
@@ -767,6 +770,7 @@ Approximated coherent fraction at 1st harmonic:
         #
         self.plot_graph(3, self.titles()[3], gap_mm, ptot, xtitle=self.xtitles()[3], ytitle=self.ytitles()[3])
 
+        self.plot_graph(4, self.titles()[4], gap_mm, p_dens_peak, xtitle=self.xtitles()[4], ytitle=self.ytitles()[4])
 
 
     def calculate_resonance_energy(self, Karray):
@@ -787,7 +791,6 @@ Approximated coherent fraction at 1st harmonic:
         energy_in_ev = codata.h * frequency / codata.e
 
         return energy_in_ev * self.auto_harmonic_number
-
 
 
     def calculate_K_from_gap(self, gap_mm=None):
@@ -863,9 +866,6 @@ Approximated coherent fraction at 1st harmonic:
                 self.K_vertical = Kvalue
                 self.populate_settings_after_setting_K()
                 self.update()
-
-
-
 
         gap_interpolated = numpy.interp(Kvalue, numpy.flip(K_array), numpy.flip(gap_mm_array))
 
@@ -953,7 +953,6 @@ Approximated coherent fraction at 1st harmonic:
         return LightSource(name=self.get_id_list()[self.ebs_id_index],
                            electron_beam = electron_beam,
                            magnetic_structure = self.get_magnetic_structure())
-
 
     def callResetSettings(self):
         if ConfirmDialog.confirmed(parent=self, message="Confirm Reset of the Fields?"):
