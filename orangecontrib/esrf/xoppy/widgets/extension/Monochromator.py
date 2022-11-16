@@ -8,8 +8,6 @@ from oasys.widgets import gui as oasysgui, congruence
 from oasys.widgets.exchange import DataExchangeObject
 from orangecontrib.xoppy.widgets.gui.ow_xoppy_widget import XoppyWidget
 
-import scipy.constants as codata
-
 from crystalpy.diffraction.GeometryType import BraggDiffraction, LaueDiffraction
 from crystalpy.diffraction.DiffractionSetup import DiffractionSetup
 from crystalpy.diffraction.Diffraction import Diffraction
@@ -30,15 +28,14 @@ class Monochromator(XoppyWidget):
     inputs = [("ExchangeData", DataExchangeObject, "acceptExchangeData")]
 
     SOURCE = Setting(2)
-    TYPE = Setting(0)
+    TYPE = Setting(1)
     ENER_SELECTED = Setting(8000)
-    # HARMONIC = Setting (15000)
     H_MILLER = Setting (1)
     K_MILLER = Setting (1)
     L_MILLER = Setting (1)
     THICK = Setting(15)
-    ENER_MIN = Setting(10000.0)
-    ENER_MAX = Setting(200000.0)
+    ENER_MIN = Setting(7990)
+    ENER_MAX = Setting(8010)
     ENER_N = Setting(2000)
     SOURCE_FILE = Setting("?")
     FILE_DUMP = Setting(0)
@@ -65,7 +62,7 @@ class Monochromator(XoppyWidget):
         self.show_at(self.unitFlags()[idx], box1)
 
 
-        # widget index 6
+        # widget index 2
         idx += 1
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "ENER_MIN",
@@ -73,7 +70,7 @@ class Monochromator(XoppyWidget):
                           valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-        # widget index 7
+        # widget index 3
         idx += 1
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "ENER_MAX",
@@ -81,7 +78,7 @@ class Monochromator(XoppyWidget):
                           valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-        # widget index 8
+        # widget index 4
         idx += 1
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "ENER_N",
@@ -89,7 +86,7 @@ class Monochromator(XoppyWidget):
                           valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-        # widget index 9 ***********   File Browser ******************
+        # widget index 5 ***********   File Browser ******************
         idx += 1
         box1 = gui.widgetBox(box)
         file_box_id = oasysgui.widgetBox(box1, "", addSpace=False, orientation="horizontal")
@@ -99,16 +96,16 @@ class Monochromator(XoppyWidget):
         self.show_at(self.unitFlags()[idx], box1)
 
         box = oasysgui.widgetBox(box_main, "Monochromator", orientation="vertical", width=self.CONTROL_AREA_WIDTH-10)
-        # widget index 2
+        # widget index 6
         idx += 1
         box1 = gui.widgetBox(box)
         self.box_source = gui.comboBox(box1, self, "TYPE",
                                        label=self.unitLabels()[idx], addSpace=False,
-                                       items=['Empty','Bragg (double reflection)','Laue (single reflection)','Multilayer'],
+                                       items=['Empty','Si Bragg (double reflection)','Si Laue (single reflection)','Multilayer (not implemented)'],
                                        valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-        # widget index 3
+        # widget index 7
         idx += 1
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "ENER_SELECTED",
@@ -116,7 +113,7 @@ class Monochromator(XoppyWidget):
                           valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-        # widget index 4.1
+        # widget index 8
         idx += 1
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "H_MILLER",
@@ -124,7 +121,7 @@ class Monochromator(XoppyWidget):
                           valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-        # widget index 4.2
+        # widget index 9
         idx += 1
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "K_MILLER",
@@ -132,7 +129,7 @@ class Monochromator(XoppyWidget):
                           valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-        # widget index 4.3
+        # widget index 10
         idx += 1
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "L_MILLER",
@@ -140,7 +137,7 @@ class Monochromator(XoppyWidget):
                           valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-        # widget index 5
+        # widget index 11
         idx += 1
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "THICK",
@@ -148,7 +145,7 @@ class Monochromator(XoppyWidget):
                                        valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-        #widget index 10
+        #widget index 12
         idx += 1
         box1 = gui.widgetBox(box)
         gui.separator(box1, height=7)
@@ -203,63 +200,50 @@ class Monochromator(XoppyWidget):
 
         self.input_spectrum = None
         self.SOURCE = 0
-        # self.box_source.setCurrentIndex(self.SOURCE)
 
         try:
             if not exchangeData is None:
                 if exchangeData.get_program_name() == "XOPPY":
                     no_bandwidth = False
                     if exchangeData.get_widget_name() =="UNDULATOR_FLUX" :
-                        # self.SOURCE_FILE = "xoppy_undulator_flux"
                         no_bandwidth = True
                         index_flux = 2
                     elif exchangeData.get_widget_name() == "BM" :
                         if exchangeData.get_content("is_log_plot") == 1:
                             raise Exception("Logaritmic X scale of Xoppy Energy distribution not supported")
                         if exchangeData.get_content("calculation_type") == 0 and exchangeData.get_content("psi") == 0:
-                            # self.SOURCE_FILE = "xoppy_bm_flux"
                             no_bandwidth = True
                             index_flux = 6
                         else:
                             raise Exception("Xoppy result is not an Flux vs Energy distribution integrated in Psi")
                     elif exchangeData.get_widget_name() =="XWIGGLER" :
-                        # self.SOURCE_FILE = "xoppy_xwiggler_flux"
                         no_bandwidth = True
                         index_flux = 2
                     elif exchangeData.get_widget_name() =="WS" :
-                        # self.SOURCE_FILE = "xoppy_xwiggler_flux"
                         no_bandwidth = True
                         index_flux = 2
                     elif exchangeData.get_widget_name() =="XTUBES" :
-                        # self.SOURCE_FILE = "xoppy_xtubes_flux"
                         index_flux = 1
                         no_bandwidth = True
                     elif exchangeData.get_widget_name() =="XTUBE_W" :
-                        # self.SOURCE_FILE = "xoppy_xtube_w_flux"
                         index_flux = 1
                         no_bandwidth = True
                     elif exchangeData.get_widget_name() =="BLACK_BODY" :
-                        # self.SOURCE_FILE = "xoppy_black_body_flux"
                         no_bandwidth = True
                         index_flux = 2
 
                     elif exchangeData.get_widget_name() =="UNDULATOR_RADIATION" :
-                        # self.SOURCE_FILE = "xoppy_undulator_radiation"
                         no_bandwidth = True
                         index_flux = 1
                     elif exchangeData.get_widget_name() =="POWER" :
-                        # self.SOURCE_FILE = "xoppy_undulator_power"
                         no_bandwidth = True
                         index_flux = -1
                     elif exchangeData.get_widget_name() =="POWER3D" :
-                        # self.SOURCE_FILE = "xoppy_power3d"
                         no_bandwidth = True
                         index_flux = 1
 
                     else:
                         raise Exception("Xoppy Source not recognized")
-
-                    # self.SOURCE_FILE += "_" + str(id(self)) + ".dat"
 
                     spectrum = exchangeData.get_content("xoppy_data")
 
@@ -363,7 +347,9 @@ class Monochromator(XoppyWidget):
             nharmonics = 1
         print("Calculating %d harmonics" % nharmonics)
 
-        for harmonic in range(1,nharmonics+1):
+        for harmonic in range(1,nharmonics+1,2): # calculate only odd harmonics
+            print("\nCalculating harmonic: ", harmonic)
+            ri = numpy.zeros_like(energies)
             for i in range(energies.size):
                 try:
                     diffraction_setup_r = DiffractionSetup(geometry_type=BraggDiffraction(),  # GeometryType object
@@ -390,11 +376,14 @@ class Monochromator(XoppyWidget):
                     # perform the calculation
                     coeffs_r = diffraction.calculateDiffractedComplexAmplitudes(diffraction_setup_r, photon)
                     # note the power 4 to get intensity (**2) for a double reflection (**2)
+
                     r[i] += numpy.abs(coeffs_r['S'].complexAmplitude()) ** 4
+                    ri[i] = numpy.abs(coeffs_r['S'].complexAmplitude()) ** 4
                 except:
                     print("Failed to calculate reflectivity at E=%g eV for %d%d%d reflection" % (energy,
                                             harmonic*h_miller, harmonic*k_miller, harmonic*l_miller))
-
+            print("Max reflectivity: ", ri.max(), " at energy: ", energies[ri.argmax()])
+        print("\n\n\n")
         return r
 
     def calculate_laue_monochromator(self, h_miller=1, k_miller=1, l_miller=1,
@@ -422,7 +411,9 @@ class Monochromator(XoppyWidget):
             nharmonics = 1
         print("Calculating %d harmonics" % nharmonics)
 
-        for harmonic in range(1,nharmonics+1):
+        for harmonic in range(1, nharmonics+1, 2): # calculate only odd harmonics
+            print("\nCalculating harmonic: ", harmonic)
+            ri = numpy.zeros_like(energies)
             for i in range(energies.size):
                 try:
                     diffraction_setup_r = DiffractionSetup(geometry_type=LaueDiffraction(),  # GeometryType object
@@ -450,10 +441,12 @@ class Monochromator(XoppyWidget):
                     coeffs_r = diffraction.calculateDiffractedComplexAmplitudes(diffraction_setup_r, photon)
                     # note the power 2 to get intensity
                     r[i] += numpy.abs(coeffs_r['S'].complexAmplitude()) ** 2
+                    ri[i] = numpy.abs(coeffs_r['S'].complexAmplitude()) ** 2
                 except:
                     print("Failed to calculate reflectivity at E=%g eV for %d%d%d reflection" % (energy,
                                             harmonic*h_miller, harmonic*k_miller, harmonic*l_miller))
-
+            print("Max reflectivity: ", ri.max(), " at energy: ", energies[ri.argmax()])
+        print("\n\n\n")
         return r
 
     def xoppy_calc_mono(self):
@@ -481,21 +474,14 @@ class Monochromator(XoppyWidget):
                 raise
 
 
-        # Mono_Effect=[]
         if self.TYPE==0:
             Mono_Effect = [1] * len(energies)
-            # for k in range(len(energies)):
-            #     Mono_Effect.append(1)
         elif self.TYPE==1:
             Mono_Effect = self.calculate_bragg_dcm(energies=energies)
         elif self.TYPE==2:
             Mono_Effect = self.calculate_laue_monochromator(energies=energies)
         else: #TODO:
             Mono_Effect = [1] * len(energies)
-
-
-        # from srxraylib.plot.gol import plot
-        # plot(energies, Mono_Effect)
 
 
         Final_Spectrum=List_Product([source,Mono_Effect])
