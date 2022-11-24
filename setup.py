@@ -6,7 +6,7 @@ except AttributeError:
     from setuptools import find_packages, setup
 
 NAME = 'OASYS1-ESRF-Extensions'
-VERSION = '0.0.63'
+VERSION = '0.0.64'
 ISRELEASED = True
 
 DESCRIPTION = 'OASYS extension for the ESRF'
@@ -42,7 +42,7 @@ INSTALL_REQUIRES = (
     'oasys-barc4ro>=1.0.3',
     'pandas',
     'numba',
-    'shadow4>=0.1.4',
+    'shadow4>=0.1.5',
     'xoppylib>=1.0.11',
     'crystalpy',
 )
