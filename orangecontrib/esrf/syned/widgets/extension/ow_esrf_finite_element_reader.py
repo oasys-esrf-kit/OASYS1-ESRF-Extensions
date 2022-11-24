@@ -40,7 +40,7 @@ class FiniteElementReader(OWWidget): #ow_automatic_element.AutomaticElement):
     icon = "icons/hhlo.png"
     maintainer = "M. Sanchez del Rio"
     maintainer_email = "srio@esrf.eu"
-    priority = 1
+    priority = 10
     category = "Data File Tools"
     keywords = ["data", "file", "load", "read", "FEA", "Finite Elements"]
 
