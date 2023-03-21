@@ -21,7 +21,7 @@ from srxraylib.metrology.dabam import dabam, autocorrelationfunction
 from copy import copy
 from urllib.request import urlopen
 
-from shadow4tests.devel.wolter.wolter1 import recipe1, recipe2, recipe3, recipe4, rotate_and_shift_quartic
+from orangecontrib.esrf.shadow.util.wolter1 import recipe1, recipe2, recipe3, recipe4, rotate_and_shift_quartic
 # from orangecontrib.shadow.util.shadow_objects import ConicCoefficientsPreProcessorData # TODO to be added
 from orangecontrib.esrf.shadow.util.shadow_objects import ConicCoefficientsPreProcessorData
 

@@ -1,5 +1,5 @@
 import numpy
-from shadow4tests.devel.wolter.conic_penelope import ellipsoid, hyperboloid, paraboloid, rotate_and_shift_quartic, euler_rotation_matrix
+from orangecontrib.esrf.shadow.util.conic_penelope import ellipsoid, hyperboloid, paraboloid, rotate_and_shift_quartic, euler_rotation_matrix
 
 from orangecontrib.esrf.shadow.util.conics_from_factory_parameters import ellipsoid as fac_ellipsoid
 from orangecontrib.esrf.shadow.util.conics_from_factory_parameters import paraboloid as fac_paraboloid
