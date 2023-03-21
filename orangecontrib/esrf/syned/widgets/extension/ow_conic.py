@@ -25,16 +25,16 @@ from oasys.util.oasys_util import EmittingStream
 
 from shadow4.optical_surfaces.s4_conic import S4Conic
 
-from shadow4.devel.wolter.conics_from_factory_parameters import ellipsoid, hyperboloid, \
+from orangecontrib.esrf.shadow.util.conics_from_factory_parameters import ellipsoid, hyperboloid, \
     paraboloid_focusing, paraboloid_collimating
 
-from shadow4.devel.wolter.conics_from_factory_parameters import ken_ellipsoid, ken_hyperboloid, \
+from orangecontrib.esrf.shadow.util.conics_from_factory_parameters import ken_ellipsoid, ken_hyperboloid, \
     ken_paraboloid_focusing, ken_paraboloid_collimating
 
-from shadow4.devel.wolter.conic_penelope import ellipsoid as p_ellipsoid
-from shadow4.devel.wolter.conic_penelope import paraboloid as p_paraboloid
-from shadow4.devel.wolter.conic_penelope import sphere as p_sphere
-from shadow4.devel.wolter.conic_penelope import hyperboloid as p_hyperboloid
+from orangecontrib.esrf.shadow.util.conic_penelope import ellipsoid as p_ellipsoid
+from orangecontrib.esrf.shadow.util.conic_penelope import paraboloid as p_paraboloid
+from orangecontrib.esrf.shadow.util.conic_penelope import sphere as p_sphere
+from orangecontrib.esrf.shadow.util.conic_penelope import hyperboloid as p_hyperboloid
 
 # from orangecontrib.syned.util.diaboloid_tools import diaboloid_approximated_point_to_segment
 # from orangecontrib.syned.util.diaboloid_tools import diaboloid_approximated_segment_to_point
