@@ -561,8 +561,8 @@ Approximated coherent fraction at 1st harmonic:
         # if magnetic_structure is None:
         index = self.ebs_id_index - 1
         self.K_horizontal = 0.0
-        self.K_vertical = numpy.round(self.data_dict["Kmax"][index],3)
-        self.period_length = numpy.round(self.data_dict["id_period"][index],3)
+        self.K_vertical = numpy.round(self.data_dict["Kmax"][index],4)
+        self.period_length = numpy.round(self.data_dict["id_period"][index],4)
         self.number_of_periods = numpy.round(self.data_dict["id_length"][index] / self.period_length,3)
 
     def populate_gap_parametrization(self):
