@@ -288,6 +288,22 @@ class OWWolterCalculator(OWWidget):
             print("# DESIGN PHASE")
             print("####################################################\n")
 
+            source_plane_distance_1 = None
+            image_plane_distance_1 = None
+            angles_respect_to_1 = None
+            incidence_angle_deg_1 = None
+            reflection_angle_deg_1 = None
+            mirror_orientation_angle_1 = None
+
+            source_plane_distance_2 = None
+            image_plane_distance_2 = None
+            angles_respect_to_2 = None
+            incidence_angle_deg_2 = None
+            reflection_angle_deg_2 = None
+            mirror_orientation_angle_2 = None
+
+
+
             if self.setup_type == 0:
                 tkt_ell, tkt_hyp = recipe1(
                     p_ell=self.p1,
@@ -300,8 +316,10 @@ class OWWolterCalculator(OWWidget):
                 print("\n\n>>>>>\n\n")
 
                 # correct for incidence in the negative Y
+                print(">>> corrected hyperbola for incidence in the negative Y ")
                 ccc1 = tkt_hyp['ccc']
                 ccc2 = rotate_and_shift_quartic(ccc1, omega=0.0, theta=0.0, phi=numpy.pi, )
+                tkt_hyp['ccc'] = ccc2
                 print(ccc2)
 
                 self.p2 = tkt_hyp['p']
@@ -309,8 +327,23 @@ class OWWolterCalculator(OWWidget):
                 self.theta2 = tkt_hyp['theta_grazing']
                 self.m_hyp = 1/self.ratio_hyp
 
+
                 print(tkt_ell)
                 print(tkt_hyp)
+
+                source_plane_distance_1 = self.p1
+                image_plane_distance_1 = self.distance / 2
+                angles_respect_to_1 = 0
+                incidence_angle_deg_1 = 90 - numpy.degrees(self.theta1)
+                reflection_angle_deg_1 = 90 - numpy.degrees(self.theta1)
+                mirror_orientation_angle_1 = None
+
+                source_plane_distance_2 = self.distance / 2
+                image_plane_distance_2 = self.p2
+                angles_respect_to_2 = 0
+                incidence_angle_deg_2 = 90 - numpy.degrees(self.theta1)
+                reflection_angle_deg_2 =  90 - numpy.degrees(self.theta1)
+                mirror_orientation_angle_2 = None
 
             elif self.setup_type == 1:
                 tkt_ell, tkt_hyp = recipe2(
@@ -403,23 +436,23 @@ class OWWolterCalculator(OWWidget):
             print("# RAY-TRACING PHASE")
             print("####################################################\n")
 
-            #
-            # self.send("PreProcessor_Data", WolterSystemPreProcessorData(
-            #     conic_coefficients1 = self.conic_coefficients1,
-            #     conic_coefficients2 = self.conic_coefficients2,
-            #     source_plane_distance1 = self.source_plane_distance1,
-            #     source_plane_distance2 = self.source_plane_distance2,
-            #     image_plane_distance1 = self.image_plane_distance1,
-            #     image_plane_distance2 = self.image_plane_distance2,
-            #     angles_respect_to1 = self.angles_respect_to1,
-            #     angles_respect_to2 = self.angles_respect_to2,
-            #     incidence_angle_deg1 = self.incidence_angle_deg1,
-            #     incidence_angle_deg2 = self.incidence_angle_deg2,
-            #     reflection_angle_deg1 = self.reflection_angle_deg1,
-            #     reflection_angle_deg2 = self.reflection_angle_deg2,
-            #     mirror_orientation_angle1 = self.mirror_orientation_angle1,
-            #     mirror_orientation_angle2 = self.mirror_orientation_angle2,
-            # ))
+            print("---------------------- first mirror:")
+            print("sending ccc ell: ", self.conic_coefficients1)
+            if source_plane_distance_1    is not None: print("sending source_plane_distance=", source_plane_distance_1)
+            if image_plane_distance_1     is not None: print("sending image_plane_distance=", image_plane_distance_1)
+            if angles_respect_to_1        is not None: print("sending angles_respect_to=", angles_respect_to_1)
+            if incidence_angle_deg_1      is not None: print("sending incidence_angle_deg=", incidence_angle_deg_1)
+            if reflection_angle_deg_1     is not None: print("sending reflection_angle_deg=", reflection_angle_deg_1)
+            if mirror_orientation_angle_1 is not None: print("sending mirror_orientation_angle=", mirror_orientation_angle_1)
+
+            print("---------------------- second mirror:")
+            print("sending ccc hyp: ", self.conic_coefficients2)
+            if source_plane_distance_2    is not None: print("sending source_plane_distance=", source_plane_distance_2)
+            if image_plane_distance_2     is not None: print("sending image_plane_distance=", image_plane_distance_2)
+            if angles_respect_to_2        is not None: print("sending angles_respect_to=", angles_respect_to_2)
+            if incidence_angle_deg_2      is not None: print("sending incidence_angle_deg=", incidence_angle_deg_2)
+            if reflection_angle_deg_2     is not None: print("sending reflection_angle_deg=", reflection_angle_deg_2)
+            if mirror_orientation_angle_2 is not None: print("sending mirror_orientation_angle=", mirror_orientation_angle_2)
 
             self.send("ConicCoeff_1_PreProcessor_Data", ConicCoefficientsPreProcessorData(
                 conic_coefficient_0 = self.conic_coefficients1[0],
@@ -432,12 +465,12 @@ class OWWolterCalculator(OWWidget):
                 conic_coefficient_7 = self.conic_coefficients1[7],
                 conic_coefficient_8 = self.conic_coefficients1[8],
                 conic_coefficient_9 = self.conic_coefficients1[9],
-                source_plane_distance=None,
-                image_plane_distance=None,
-                angles_respect_to=None,
-                incidence_angle_deg=None,
-                reflection_angle_deg=None,
-                mirror_orientation_angle=None,
+                source_plane_distance = source_plane_distance_1,
+                image_plane_distance = image_plane_distance_1,
+                angles_respect_to = angles_respect_to_1,
+                incidence_angle_deg = incidence_angle_deg_1,
+                reflection_angle_deg = reflection_angle_deg_1,
+                mirror_orientation_angle = mirror_orientation_angle_1,
                 ))
             self.send("ConicCoeff_2_PreProcessor_Data", ConicCoefficientsPreProcessorData(
                 conic_coefficient_0=self.conic_coefficients2[0],
@@ -450,12 +483,12 @@ class OWWolterCalculator(OWWidget):
                 conic_coefficient_7=self.conic_coefficients2[7],
                 conic_coefficient_8=self.conic_coefficients2[8],
                 conic_coefficient_9=self.conic_coefficients2[9],
-                source_plane_distance=None,
-                image_plane_distance=None,
-                angles_respect_to=None,
-                incidence_angle_deg=None,
-                reflection_angle_deg=None,
-                mirror_orientation_angle=None,
+                source_plane_distance = source_plane_distance_2,
+                image_plane_distance = image_plane_distance_2,
+                angles_respect_to = angles_respect_to_2,
+                incidence_angle_deg = incidence_angle_deg_2,
+                reflection_angle_deg = reflection_angle_deg_2,
+                mirror_orientation_angle = mirror_orientation_angle_2,
                 ))
 
         except Exception as exception:
