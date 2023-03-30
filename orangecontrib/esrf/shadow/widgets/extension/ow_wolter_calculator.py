@@ -62,19 +62,19 @@ class OWWolterCalculator(OWWidget):
 
     #################
 
-    setup_type = Setting(2)
+    setup_type = Setting(0)
     same_angle = Setting(1)
 
-    p1 = Setting(1e11)
-    q1 = Setting(3.808047)
+    p1 = Setting(2.1)
+    q1 = Setting(1.05)
     p2 = Setting(1.904995)
     q2 = Setting(10.0)
-    distance = Setting(0.3)
+    distance = Setting(0.1)
 
-    theta1 = Setting(0.0159872)
+    theta1 = Setting(0.1134464014)
     theta2 = Setting(0.003)
 
-    ratio_hyp = Setting(3.0)  # ratio_hyp = q_hyp / p_ell > 1.0
+    ratio_hyp = Setting(1.1)  # ratio_hyp = q_hyp / p_ell > 1.0
     m_hyp = Setting(1 / 3)
 
     # to send to shadow
@@ -93,6 +93,8 @@ class OWWolterCalculator(OWWidget):
     mirror_orientation_angle1 = Setting(0)
     mirror_orientation_angle2 = Setting(0)
 
+    npoints = Setting(200)
+    y_length = Setting(0.3)
 
     tab=[]
 
@@ -136,19 +138,19 @@ class OWWolterCalculator(OWWidget):
         gui.comboBox(box, self, "setup_type", label="Setup type", labelWidth=260,
                      items=["Wolter-I variable throw",
                             "Wolter-I fixed throw",
-                            "Wolter-I common point",
-                            "Wolter-I centered system",
+                            # "Wolter-I common point",
+                            # "Wolter-I centered system",
                             ],
                      callback=self.update_panel, sendSelectedValue=False, orientation="horizontal")
 
-        self.w_p1 = oasysgui.lineEdit(box, self, "p1", "Distance focus11-oe1 [m]", labelWidth=260, valueType=float, orientation="horizontal")
-        self.w_q1 = oasysgui.lineEdit(box, self, "q1", "Distance oe1-focus12 [m]", labelWidth=260, valueType=float, orientation="horizontal")
-        self.w_p2 = oasysgui.lineEdit(box, self, "p2", "Distance focus21-oe2 [m]", labelWidth=260, valueType=float, orientation="horizontal")
-        self.w_q2 = oasysgui.lineEdit(box, self, "q2", "Distance oe2-focus22 [m]", labelWidth=260, valueType=float, orientation="horizontal")
-        self.w_distance = oasysgui.lineEdit(box, self, "distance", "Distance oe1-oe2 [m]", labelWidth=260, valueType=float, orientation="horizontal")
+        self.w_p1 = oasysgui.lineEdit(box, self, "p1", "Distance focus11-oe1 (p1) [m]", labelWidth=210, valueType=float, orientation="horizontal")
+        self.w_q1 = oasysgui.lineEdit(box, self, "q1", "Distance oe1-focus12 (q1) [m]", labelWidth=210, valueType=float, orientation="horizontal")
+        self.w_p2 = oasysgui.lineEdit(box, self, "p2", "Distance focus21-oe2 (p2) [m]", labelWidth=210, valueType=float, orientation="horizontal")
+        self.w_q2 = oasysgui.lineEdit(box, self, "q2", "Distance oe2-focus22 (q2) [m]", labelWidth=210, valueType=float, orientation="horizontal")
+        self.w_distance = oasysgui.lineEdit(box, self, "distance", "Distance oe1-oe2 [m]", labelWidth=210, valueType=float, orientation="horizontal")
 
-        self.w_ratio_hyp = oasysgui.lineEdit(box, self, "ratio_hyp", "Ratio hyperbola=q2/p2>1", labelWidth=260, valueType=float, orientation="horizontal")
-        self.w_m_hyp = oasysgui.lineEdit(box, self, "m_hyp", "Magnification hyperbola=p2/q2", labelWidth=260,
+        self.w_ratio_hyp = oasysgui.lineEdit(box, self, "ratio_hyp", "Ratio hyperbola=q2/p2>1", labelWidth=210, valueType=float, orientation="horizontal")
+        self.w_m_hyp = oasysgui.lineEdit(box, self, "m_hyp", "Magnification hyperbola=p2/q2", labelWidth=220,
                                              valueType=float, orientation="horizontal")
 
         gui.separator(box)
@@ -161,8 +163,15 @@ class OWWolterCalculator(OWWidget):
                             ],
                      callback=self.update_panel, sendSelectedValue=False, orientation="horizontal")
 
-        self.w_theta1 = oasysgui.lineEdit(box_2, self, "theta1", "Grazing angle oe1 [rad]", labelWidth=260, valueType=float, orientation="horizontal", callback=self.update_panel)
-        self.w_theta2 = oasysgui.lineEdit(box_2, self, "theta2", "Grazing angle oe2 [rad]", labelWidth=260, valueType=float, orientation="horizontal")
+        self.w_theta1 = oasysgui.lineEdit(box_2, self, "theta1", "Grazing angle oe1 [rad]", labelWidth=210, valueType=float, orientation="horizontal", callback=self.update_panel)
+        self.w_theta2 = oasysgui.lineEdit(box_2, self, "theta2", "Grazing angle oe2 [rad]", labelWidth=210, valueType=float, orientation="horizontal")
+
+
+
+        box_3 = oasysgui.widgetBox(tab_step_1, "For plots", orientation="vertical")
+        oasysgui.lineEdit(box_3, self, "npoints", "Points", labelWidth=260, valueType=int, orientation="horizontal")
+        oasysgui.lineEdit(box_3, self, "y_length", "Mirror length [m]", labelWidth=260, valueType=int, orientation="horizontal")
+
 
 
         #
@@ -194,6 +203,8 @@ class OWWolterCalculator(OWWidget):
         gui.rubber(self.controlArea)
 
         self.initializeTabs()
+
+        self.update_panel()
 
         gui.rubber(self.mainArea)
 
@@ -322,11 +333,10 @@ class OWWolterCalculator(OWWidget):
                 tkt_hyp['ccc'] = ccc2
                 print(ccc2)
 
-                self.p2 = tkt_hyp['p']
-                self.q2 = tkt_hyp['q']
+                self.p2     = tkt_hyp['p']
+                self.q2     = tkt_hyp['q']
                 self.theta2 = tkt_hyp['theta_grazing']
-                self.m_hyp = 1/self.ratio_hyp
-
+                self.m_hyp  = 1/self.ratio_hyp
 
                 print(tkt_ell)
                 print(tkt_hyp)
@@ -345,6 +355,13 @@ class OWWolterCalculator(OWWidget):
                 reflection_angle_deg_2 =  90 - numpy.degrees(self.theta1)
                 mirror_orientation_angle_2 = None
 
+                # round (cosmetics)
+                self.p2     = numpy.round(self.p2    , 5)
+                self.q2     = numpy.round(self.q2    , 5)
+                # self.theta2 = numpy.round(self.theta2, 5)
+                self.m_hyp  = numpy.round(self.m_hyp , 5)
+
+
             elif self.setup_type == 1:
                 tkt_ell, tkt_hyp = recipe2(
                     p_ell=self.p1,
@@ -356,11 +373,12 @@ class OWWolterCalculator(OWWidget):
                 )
 
                 print("\n\n>>>>>\n\n")
-                # print(cyl(tkt_ell['ccc']))
-                print(tkt_ell['ccc'])
+
                 # correct for incidence in the negative Y
+                print(">>> corrected hyperbola for incidence in the negative Y ")
                 ccc1 = tkt_hyp['ccc']
                 ccc2 = rotate_and_shift_quartic(ccc1, omega=0.0, theta=0.0, phi=numpy.pi, )
+                tkt_hyp['ccc'] = ccc2
                 print(ccc2)
 
                 self.q1 = tkt_ell['p']
@@ -371,30 +389,52 @@ class OWWolterCalculator(OWWidget):
                 print(tkt_ell)
                 print(tkt_hyp)
 
-            elif self.setup_type == 2:
-                tkt_ell, tkt_hyp = recipe3(
-                    p_ell=self.p1,
-                    q_ell=self.q1,
-                    p_hyp=self.p2,
-                    theta=self.theta1,
-                    verbose=1,
-                )
 
-                self.rat_hyp = self.q2 / self.p2
-                self.m_hyp = self.p2 / self.q2
+                source_plane_distance_1 = self.p1
+                image_plane_distance_1 = self.distance / 2
+                angles_respect_to_1 = 0
+                incidence_angle_deg_1 = 90 - numpy.degrees(self.theta1)
+                reflection_angle_deg_1 = 90 - numpy.degrees(self.theta1)
+                mirror_orientation_angle_1 = None
 
-            elif self.setup_type == 3:
-                tkt_ell, tkt_hyp = recipe4(
-                    f11=self.p1,
-                    f12=self.q1,
-                    f21=self.p2,
-                    f22=self.q2,
-                    theta=self.theta1,
-                    verbose=1,
-                )
+                source_plane_distance_2 = self.distance / 2
+                image_plane_distance_2 = self.p2
+                angles_respect_to_2 = 0
+                incidence_angle_deg_2 = 90 - numpy.degrees(self.theta1)
+                reflection_angle_deg_2 =  90 - numpy.degrees(self.theta1)
+                mirror_orientation_angle_2 = None
 
-                self.rat_hyp = 0 # todo
-                self.m_hyp = 0 # todo
+                # round (cosmetics)
+                self.p2     = numpy.round(self.p2    , 5)
+                self.q2     = numpy.round(self.q2    , 5)
+                # self.theta2 = numpy.round(self.theta2, 5)
+                self.m_hyp  = numpy.round(self.m_hyp , 5)
+
+
+            # elif self.setup_type == 2:
+            #     tkt_ell, tkt_hyp = recipe3(
+            #         p_ell=self.p1,
+            #         q_ell=self.q1,
+            #         p_hyp=self.p2,
+            #         theta=self.theta1,
+            #         verbose=1,
+            #     )
+            #
+            #     self.rat_hyp = self.q2 / self.p2
+            #     self.m_hyp = self.p2 / self.q2
+            #
+            # elif self.setup_type == 3:
+            #     tkt_ell, tkt_hyp = recipe4(
+            #         f11=self.p1,
+            #         f12=self.q1,
+            #         f21=self.p2,
+            #         f22=self.q2,
+            #         theta=self.theta1,
+            #         verbose=1,
+            #     )
+            #
+            #     self.rat_hyp = 0 # todo
+            #     self.m_hyp = 0 # todo
             else:
                 raise Exception(NotImplementedError)
 
@@ -425,11 +465,138 @@ class OWWolterCalculator(OWWidget):
             for i in range(10):
                 results_txt += "\nccc[%d]       %10.4g       %10.4g  " % (i, ccc_ell[i], ccc_hyp[i])
 
-
-
-
             #results_txt += "\nthrow=%f m" % (self.p1+self.distance+self.p2)
             self.design_output.setText(results_txt)
+
+            #
+            # plot data
+            #
+
+            self.progressBarInit()
+            y = numpy.linspace(- self.y_length / 2, self.y_length / 2, self.npoints)
+
+
+            #
+            # # plot oe 1
+            #
+            # if self.ellipse_flag:
+            #     self.plot_multi_data1D([-x, -x, -x, -x], [y1a, y1b, y3a, y3b],
+            #                            10, 2, 0,
+            #                            title="oe1 (parabola or ellipse)", xtitle="-z [m] (along optical axis)", ytitle="x,y [m]",
+            #                            ytitles=["parabola+", "parabola-","ellipse+", "ellipse-"],
+            #                            colors=['blue', 'blue','green', 'green'],
+            #                            replace=True,
+            #                            control=False,
+            #                            xrange=None,
+            #                            yrange=None,
+            #                            symbol=['', '','', ''])
+            #
+            # else:
+            #     self.plot_multi_data1D([-x,-x], [y1a,y1b],
+            #                           10, 2, 0,
+            #                           title="parabola", xtitle="-z [m] (along optical axis)", ytitle="x,y [m]",
+            #                           ytitles=["parabola+","parabola-"],
+            #                           colors=['blue','blue'],
+            #                           replace=True,
+            #                           control=False,
+            #                           xrange=None,
+            #                           yrange=None,
+            #                           symbol=['',''])
+            #
+            # # plot oe2
+            # self.plot_multi_data1D([-x,-x], [y2a,y2b],
+            #                       20, 3, 1,
+            #                       title="hyperbola", xtitle="-z [m] (along optical axis)", ytitle="x,y [m]",
+            #                       ytitles=["hyperbola+","hyperbola-"],
+            #                       colors=['red','red'],
+            #                       replace=True,
+            #                       control=False,
+            #                       xrange=None,
+            #                       yrange=None,
+            #                       symbol=['',''])
+            #
+            # #
+            # # plot joint oe1+oe2
+            # #
+            #
+            #
+            # x_c = numpy.array([x_pmin*1.5, x_pmin, 2*c_h, 2*c_h,  x_pmin,  x_pmin*1.5])
+            # y_c = numpy.array([y_pmin,     y_pmin, 0  , 0  , -y_pmin, -y_pmin    ])
+            #
+            # x_c2 = numpy.array([2*c_e, x_he, 2*c_h, 2*c_h,  x_he,  2*c_e])
+            # y_c2 = numpy.array([0,     y_he, 0    ,   0  , -y_he,  0    ])
+            # if self.ellipse_flag:
+            #     self.plot_multi_data1D([-x,-x,-x,-x, -x_c, -x, -x, -x_c2], [y1a,y1b,y2a,y2b,y_c, y3a, y3b, y_c2],
+            #                           80, 4, 2,
+            #                           title="parabola+hyperbola+ellipse", xtitle="-z [m] (along optical axis)", ytitle="x,y [m]",
+            #                           ytitles=["parabola+","parabola-","hyperbola+","hyperbola-", "ray at par+hyp crossing", "ellipse+","ellipse-", "ray at ell+hyp crossing",],
+            #                           colors=['blue','blue','red','red','k','green','green','k'],
+            #                           replace=True,
+            #                           control=False,
+            #                           xrange=[-x.min(),- x.max()],
+            #                           yrange=None,
+            #                           symbol=['','','','','','','',''],)
+            # else:
+            #     self.plot_multi_data1D([-x,-x,-x,-x, -x_c], [y1a,y1b,y2a,y2b,y_c],
+            #                           80, 4, 2,
+            #                           title="parabola+hyperbola", xtitle="-z [m] (along optical axis)", ytitle="x,y [m]",
+            #                           ytitles=["parabola+","parabola-","hyperbola+","hyperbola-", "ray at par+hyp crossing"],
+            #                           colors=['blue','blue','red','red','k'],
+            #                           replace=True,
+            #                           control=False,
+            #                           xrange=None,
+            #                           yrange=None,
+            #                           symbol=['','','','',''])
+            #
+            #
+            #
+            # # plot angles
+            # XXhe = numpy.array([x_pmin, x_pmin])
+            # YYhe = numpy.array([0, numpy.nanmax(theta_h)])
+            # if self.ellipse_flag:
+            #     Xhe = numpy.array([x_he,x_he])
+            #     Yhe = numpy.array([0,numpy.nanmax(theta_h)])
+            #     self.plot_multi_data1D([-x,-x,-x,-XXhe,-x,-Xhe],
+            #                            [1e3*(x*0+1)*self.theta1,
+            #                             1e3*theta_p,
+            #                             1e3*theta_h,
+            #                             1e3 * YYhe,
+            #                             1e3*theta_e,
+            #                             1e3*Yhe,
+            #                             ],
+            #                           90, 5, 3,
+            #                           title="Grazing incident angles", xtitle="-z [m] (along optical axis)", ytitle="angle [mrad]",
+            #                           ytitles=["design","parabola","hyperbola",'par+hyp crossing',"ellipse",'ell+hyp crossing'],
+            #                           colors=['black','blue','red','k','green','pink'],
+            #                           replace=True,
+            #                           control=False,
+            #                           xrange=None,
+            #                           yrange=None,
+            #                           symbol=['','','','','',''])
+            # else:
+            #
+            #     self.plot_multi_data1D([-x,-x,-x,-XXhe],
+            #                            [1e3*(x*0+1)*self.theta1,
+            #                             1e3*theta_p,
+            #                             1e3*theta_h,
+            #                             1e3 * YYhe,],
+            #                           90, 5, 3,
+            #                           title="Grazing incident angles", xtitle="-z [m] (along optical axis)", ytitle="angle [mrad]",
+            #                           ytitles=["design","parabola","hyperbola",'par+hyp crossing'],
+            #                           colors=['black','blue','red','k'],
+            #                           replace=True,
+            #                           control=False,
+            #                           xrange=None,
+            #                           yrange=None,
+            #                           symbol=['','','',''])
+
+
+
+
+            #
+            # send data
+            #
+
 
             print("\n\n\n\n")
             print("####################################################")
