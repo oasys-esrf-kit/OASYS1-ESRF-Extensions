@@ -2,11 +2,8 @@ import os, sys
 import numpy
 
 from PyQt5.QtCore import QRect, Qt
-from PyQt5.QtWidgets import QApplication, QMessageBox, QScrollArea, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QWidget, QLabel, QSizePolicy
-from PyQt5.QtGui import QTextCursor,QFont, QPalette, QColor, QPainter, QBrush, QPen, QPixmap
-
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
-from matplotlib.figure import Figure
+from PyQt5.QtWidgets import QApplication, QMessageBox, QLabel, QSizePolicy
+from PyQt5.QtGui import QTextCursor, QPixmap
 
 import orangecanvas.resources as resources
 
@@ -16,13 +13,8 @@ from orangewidget.settings import Setting
 from oasys.widgets.widget import OWWidget
 from oasys.widgets import gui as oasysgui
 
-from srxraylib.metrology.dabam import dabam, autocorrelationfunction
-
-from copy import copy
-from urllib.request import urlopen
 
 from orangecontrib.esrf.shadow.util.wolter1 import recipe1, recipe2, recipe3, recipe4, rotate_and_shift_quartic
-# from orangecontrib.shadow.util.shadow_objects import ConicCoefficientsPreProcessorData # TODO to be added
 from orangecontrib.esrf.shadow.util.shadow_objects import ConicCoefficientsPreProcessorData
 
 from oasys.util.oasys_util import EmittingStream
@@ -96,6 +88,8 @@ class OWWolterCalculator(OWWidget):
     npoints = Setting(200)
     y_length = Setting(0.3)
 
+    sagittal_flat = Setting(0)
+
     tab=[]
 
     usage_path = os.path.join(resources.package_dirname("orangecontrib.esrf.shadow.widgets.extension"), "icons", "use_wolter.png")
@@ -138,8 +132,6 @@ class OWWolterCalculator(OWWidget):
         gui.comboBox(box, self, "setup_type", label="Setup type", labelWidth=260,
                      items=["Wolter-I variable throw",
                             "Wolter-I fixed throw",
-                            # "Wolter-I common point",
-                            # "Wolter-I centered system",
                             ],
                      callback=self.update_panel, sendSelectedValue=False, orientation="horizontal")
 
@@ -152,6 +144,11 @@ class OWWolterCalculator(OWWidget):
         self.w_ratio_hyp = oasysgui.lineEdit(box, self, "ratio_hyp", "Ratio hyperbola=q2/p2>1", labelWidth=210, valueType=float, orientation="horizontal")
         self.w_m_hyp = oasysgui.lineEdit(box, self, "m_hyp", "Magnification hyperbola=p2/q2", labelWidth=220,
                                              valueType=float, orientation="horizontal")
+
+        gui.comboBox(box, self, "sagittal_flat", label="2D/1D focusing", labelWidth=260,
+                     items=["2D (revolution symmetry)",
+                            "1D (flat in sagittal)",
+                            ], sendSelectedValue=False, orientation="horizontal")
 
         gui.separator(box)
 
@@ -168,18 +165,9 @@ class OWWolterCalculator(OWWidget):
 
 
 
-        box_3 = oasysgui.widgetBox(tab_step_1, "For plots", orientation="vertical")
+        box_3 = oasysgui.widgetBox(tab_step_1, "For plotting mirror profiles", orientation="vertical")
         oasysgui.lineEdit(box_3, self, "npoints", "Points", labelWidth=260, valueType=int, orientation="horizontal")
         oasysgui.lineEdit(box_3, self, "y_length", "Mirror length [m]", labelWidth=260, valueType=int, orientation="horizontal")
-
-
-
-        #
-        #-------------------- Output
-        #
-        # out_box = oasysgui.widgetBox(tab_out, "System Output", addSpace=True, orientation="horizontal", height=600)
-        # self.output_textarea = oasysgui.textArea(height=500,readOnly=False)
-        # out_box.layout().addWidget(self.output_textarea)
 
         #
         #-------------------- Use
@@ -299,22 +287,6 @@ class OWWolterCalculator(OWWidget):
             print("# DESIGN PHASE")
             print("####################################################\n")
 
-            source_plane_distance_1 = None
-            image_plane_distance_1 = None
-            angles_respect_to_1 = None
-            incidence_angle_deg_1 = None
-            reflection_angle_deg_1 = None
-            mirror_orientation_angle_1 = None
-
-            source_plane_distance_2 = None
-            image_plane_distance_2 = None
-            angles_respect_to_2 = None
-            incidence_angle_deg_2 = None
-            reflection_angle_deg_2 = None
-            mirror_orientation_angle_2 = None
-
-
-
             if self.setup_type == 0:
                 tkt_ell, tkt_hyp = recipe1(
                     p_ell=self.p1,
@@ -332,6 +304,24 @@ class OWWolterCalculator(OWWidget):
                 ccc2 = rotate_and_shift_quartic(ccc1, omega=0.0, theta=0.0, phi=numpy.pi, )
                 tkt_hyp['ccc'] = ccc2
                 print(ccc2)
+
+                # 1D focusing (flat in sagittal)
+                if self.sagittal_flat:
+                    print(">>> corrected: flat in sagittal (1D focusing)")
+                    tkt_ell['ccc'][0] = 0
+                    tkt_ell['ccc'][4] = 0
+                    tkt_ell['ccc'][6] = 0
+                    tkt_ell['ccc'][7] = 0
+
+                    tkt_hyp['ccc'][0] = 0
+                    tkt_hyp['ccc'][4] = 0
+                    tkt_hyp['ccc'][6] = 0
+                    tkt_hyp['ccc'][7] = 0
+
+                # round
+                for i in range(10):
+                    if numpy.abs(tkt_ell['ccc'][i]) < 1e-14: tkt_ell['ccc'][i] = 0
+                    if numpy.abs(tkt_hyp['ccc'][i]) < 1e-14: tkt_hyp['ccc'][i] = 0
 
                 self.p2     = tkt_hyp['p']
                 self.q2     = tkt_hyp['q']
@@ -381,6 +371,25 @@ class OWWolterCalculator(OWWidget):
                 tkt_hyp['ccc'] = ccc2
                 print(ccc2)
 
+                # 1D focusing (flat in sagittal)
+                if self.sagittal_flat:
+                    print(">>> corrected: flat in sagittal (1D focusing)")
+
+                    tkt_ell['ccc'][0] = 0
+                    tkt_ell['ccc'][4] = 0
+                    tkt_ell['ccc'][6] = 0
+                    tkt_ell['ccc'][7] = 0
+
+                    tkt_hyp['ccc'][0] = 0
+                    tkt_hyp['ccc'][4] = 0
+                    tkt_hyp['ccc'][6] = 0
+                    tkt_hyp['ccc'][7] = 0
+
+                # round
+                for i in range(10):
+                    if numpy.abs(tkt_ell['ccc'][i]) < 1e-14: tkt_ell['ccc'][i] = 0
+                    if numpy.abs(tkt_hyp['ccc'][i]) < 1e-14: tkt_hyp['ccc'][i] = 0
+
                 self.q1 = tkt_ell['p']
                 self.q2 = tkt_hyp['q']
                 self.theta2 = tkt_hyp['theta_grazing']
@@ -410,31 +419,6 @@ class OWWolterCalculator(OWWidget):
                 # self.theta2 = numpy.round(self.theta2, 5)
                 self.m_hyp  = numpy.round(self.m_hyp , 5)
 
-
-            # elif self.setup_type == 2:
-            #     tkt_ell, tkt_hyp = recipe3(
-            #         p_ell=self.p1,
-            #         q_ell=self.q1,
-            #         p_hyp=self.p2,
-            #         theta=self.theta1,
-            #         verbose=1,
-            #     )
-            #
-            #     self.rat_hyp = self.q2 / self.p2
-            #     self.m_hyp = self.p2 / self.q2
-            #
-            # elif self.setup_type == 3:
-            #     tkt_ell, tkt_hyp = recipe4(
-            #         f11=self.p1,
-            #         f12=self.q1,
-            #         f21=self.p2,
-            #         f22=self.q2,
-            #         theta=self.theta1,
-            #         verbose=1,
-            #     )
-            #
-            #     self.rat_hyp = 0 # todo
-            #     self.m_hyp = 0 # todo
             else:
                 raise Exception(NotImplementedError)
 
@@ -455,11 +439,17 @@ class OWWolterCalculator(OWWidget):
             self.conic_coefficients2 = ccc_hyp
 
             # ccc_hyp = rotate_and_shift_quartic(ccc_hyp, omega=0.0, theta=0.0, phi=numpy.pi, )
+            if self.sagittal_flat:
+                ccc_ell_nor = ccc_ell[1]
+                ccc_hyp_nor = ccc_hyp[1]
+            else:
+                ccc_ell_nor = ccc_ell[0]
+                ccc_hyp_nor = ccc_hyp[0]
 
             results_txt += "\n\n\n    oe1(normalized)      oe2(normalized)"
             for i in range(10):
                 results_txt += "\nccc[%d]       %10.4g       %10.4g  " % (i,
-                                                                    ccc_ell[i]/ccc_ell[0], ccc_hyp[i]/ccc_hyp[0])
+                                                                    ccc_ell[i]/ccc_ell_nor, ccc_hyp[i]/ccc_hyp_nor)
 
             results_txt += "\n\n\n    oe1           oe2 "
             for i in range(10):
@@ -473,131 +463,26 @@ class OWWolterCalculator(OWWidget):
             #
 
             self.progressBarInit()
-            y = numpy.linspace(- self.y_length / 2, self.y_length / 2, self.npoints)
 
+            # plot oe 1
+            y, z1a, z1b = self.height(oe=1)
+            y, z2a, z2b = self.height(oe=2)
+            self.plot_multi_data1D([y,y,y,y], [z1a,z1b,z2a,z2b],
+                                  10, 2, 0,
+                                  title="mirror 1", xtitle="y [m]", ytitle="z [m]",
+                                  ytitles=["Mirror 1 solution 1","Mirror 1 solution 2","Mirror 2 solution 1","Mirror 2 solution 2"],
+                                  colors=['blue','red','green','k'],
+                                  replace=True,
+                                  control=False,
+                                  xrange=None,
+                                  yrange=None,
+                                  symbol=['','','',''],
+                                )
 
-            #
-            # # plot oe 1
-            #
-            # if self.ellipse_flag:
-            #     self.plot_multi_data1D([-x, -x, -x, -x], [y1a, y1b, y3a, y3b],
-            #                            10, 2, 0,
-            #                            title="oe1 (parabola or ellipse)", xtitle="-z [m] (along optical axis)", ytitle="x,y [m]",
-            #                            ytitles=["parabola+", "parabola-","ellipse+", "ellipse-"],
-            #                            colors=['blue', 'blue','green', 'green'],
-            #                            replace=True,
-            #                            control=False,
-            #                            xrange=None,
-            #                            yrange=None,
-            #                            symbol=['', '','', ''])
-            #
-            # else:
-            #     self.plot_multi_data1D([-x,-x], [y1a,y1b],
-            #                           10, 2, 0,
-            #                           title="parabola", xtitle="-z [m] (along optical axis)", ytitle="x,y [m]",
-            #                           ytitles=["parabola+","parabola-"],
-            #                           colors=['blue','blue'],
-            #                           replace=True,
-            #                           control=False,
-            #                           xrange=None,
-            #                           yrange=None,
-            #                           symbol=['',''])
-            #
-            # # plot oe2
-            # self.plot_multi_data1D([-x,-x], [y2a,y2b],
-            #                       20, 3, 1,
-            #                       title="hyperbola", xtitle="-z [m] (along optical axis)", ytitle="x,y [m]",
-            #                       ytitles=["hyperbola+","hyperbola-"],
-            #                       colors=['red','red'],
-            #                       replace=True,
-            #                       control=False,
-            #                       xrange=None,
-            #                       yrange=None,
-            #                       symbol=['',''])
-            #
-            # #
-            # # plot joint oe1+oe2
-            # #
-            #
-            #
-            # x_c = numpy.array([x_pmin*1.5, x_pmin, 2*c_h, 2*c_h,  x_pmin,  x_pmin*1.5])
-            # y_c = numpy.array([y_pmin,     y_pmin, 0  , 0  , -y_pmin, -y_pmin    ])
-            #
-            # x_c2 = numpy.array([2*c_e, x_he, 2*c_h, 2*c_h,  x_he,  2*c_e])
-            # y_c2 = numpy.array([0,     y_he, 0    ,   0  , -y_he,  0    ])
-            # if self.ellipse_flag:
-            #     self.plot_multi_data1D([-x,-x,-x,-x, -x_c, -x, -x, -x_c2], [y1a,y1b,y2a,y2b,y_c, y3a, y3b, y_c2],
-            #                           80, 4, 2,
-            #                           title="parabola+hyperbola+ellipse", xtitle="-z [m] (along optical axis)", ytitle="x,y [m]",
-            #                           ytitles=["parabola+","parabola-","hyperbola+","hyperbola-", "ray at par+hyp crossing", "ellipse+","ellipse-", "ray at ell+hyp crossing",],
-            #                           colors=['blue','blue','red','red','k','green','green','k'],
-            #                           replace=True,
-            #                           control=False,
-            #                           xrange=[-x.min(),- x.max()],
-            #                           yrange=None,
-            #                           symbol=['','','','','','','',''],)
-            # else:
-            #     self.plot_multi_data1D([-x,-x,-x,-x, -x_c], [y1a,y1b,y2a,y2b,y_c],
-            #                           80, 4, 2,
-            #                           title="parabola+hyperbola", xtitle="-z [m] (along optical axis)", ytitle="x,y [m]",
-            #                           ytitles=["parabola+","parabola-","hyperbola+","hyperbola-", "ray at par+hyp crossing"],
-            #                           colors=['blue','blue','red','red','k'],
-            #                           replace=True,
-            #                           control=False,
-            #                           xrange=None,
-            #                           yrange=None,
-            #                           symbol=['','','','',''])
-            #
-            #
-            #
-            # # plot angles
-            # XXhe = numpy.array([x_pmin, x_pmin])
-            # YYhe = numpy.array([0, numpy.nanmax(theta_h)])
-            # if self.ellipse_flag:
-            #     Xhe = numpy.array([x_he,x_he])
-            #     Yhe = numpy.array([0,numpy.nanmax(theta_h)])
-            #     self.plot_multi_data1D([-x,-x,-x,-XXhe,-x,-Xhe],
-            #                            [1e3*(x*0+1)*self.theta1,
-            #                             1e3*theta_p,
-            #                             1e3*theta_h,
-            #                             1e3 * YYhe,
-            #                             1e3*theta_e,
-            #                             1e3*Yhe,
-            #                             ],
-            #                           90, 5, 3,
-            #                           title="Grazing incident angles", xtitle="-z [m] (along optical axis)", ytitle="angle [mrad]",
-            #                           ytitles=["design","parabola","hyperbola",'par+hyp crossing',"ellipse",'ell+hyp crossing'],
-            #                           colors=['black','blue','red','k','green','pink'],
-            #                           replace=True,
-            #                           control=False,
-            #                           xrange=None,
-            #                           yrange=None,
-            #                           symbol=['','','','','',''])
-            # else:
-            #
-            #     self.plot_multi_data1D([-x,-x,-x,-XXhe],
-            #                            [1e3*(x*0+1)*self.theta1,
-            #                             1e3*theta_p,
-            #                             1e3*theta_h,
-            #                             1e3 * YYhe,],
-            #                           90, 5, 3,
-            #                           title="Grazing incident angles", xtitle="-z [m] (along optical axis)", ytitle="angle [mrad]",
-            #                           ytitles=["design","parabola","hyperbola",'par+hyp crossing'],
-            #                           colors=['black','blue','red','k'],
-            #                           replace=True,
-            #                           control=False,
-            #                           xrange=None,
-            #                           yrange=None,
-            #                           symbol=['','','',''])
-
-
-
-
+            self.progressBarFinished()
             #
             # send data
             #
-
-
             print("\n\n\n\n")
             print("####################################################")
             print("# RAY-TRACING PHASE")
@@ -669,9 +554,7 @@ class OWWolterCalculator(OWWidget):
 
         self.tab = [oasysgui.createTabPage(self.tabs, "Design parameters"),
                     oasysgui.createTabPage(self.tabs, "Output"),
-                    oasysgui.createTabPage(self.tabs, "oe1 Profile"),
-                    oasysgui.createTabPage(self.tabs, "oe2 Profile"),
-                    oasysgui.createTabPage(self.tabs, "join profile"),
+                    oasysgui.createTabPage(self.tabs, "Mirror Profiles"),
         ]
 
         for tab in self.tab:
@@ -688,50 +571,30 @@ class OWWolterCalculator(OWWidget):
         tmp1.layout().addWidget(self.shadow_output)
 
         #
-        self.plot_canvas = [None, None, None]
+        self.plot_canvas = [None]
 
         self.plot_canvas[0] = oasysgui.plotWindow(roi=False, control=False, position=True)
         self.plot_canvas[0].setDefaultPlotLines(True)
         self.plot_canvas[0].setActiveCurveColor(color='blue')
         self.plot_canvas[0].setGraphYLabel("Z [nm]")
-        self.plot_canvas[0].setGraphTitle("oe1 Profile")
+        self.plot_canvas[0].setGraphTitle("oe Profiles")
         self.plot_canvas[0].setInteractiveMode(mode='zoom')
 
-        self.plot_canvas[1] = oasysgui.plotWindow(roi=False, control=False, position=True)
-        self.plot_canvas[1].setDefaultPlotLines(True)
-        self.plot_canvas[1].setActiveCurveColor(color='blue')
-        self.plot_canvas[1].setGraphYLabel("Z [nm]")
-        self.plot_canvas[1].setGraphTitle("oe2 Profile")
-        self.plot_canvas[1].setInteractiveMode(mode='zoom')
-
-        self.plot_canvas[2] = oasysgui.plotWindow(roi=False, control=False, position=True)
-        self.plot_canvas[2].setDefaultPlotLines(True)
-        self.plot_canvas[2].setActiveCurveColor(color='blue')
-        self.plot_canvas[2].setGraphYLabel("Z [nm]")
-        self.plot_canvas[2].setGraphTitle("Joint Profile")
-        self.plot_canvas[2].setInteractiveMode(mode='zoom')
+        # self.plot_canvas[1] = oasysgui.plotWindow(roi=False, control=False, position=True)
+        # self.plot_canvas[1].setDefaultPlotLines(True)
+        # self.plot_canvas[1].setActiveCurveColor(color='blue')
+        # self.plot_canvas[1].setGraphYLabel("Z [nm]")
+        # self.plot_canvas[1].setGraphTitle("oe2 Profile")
+        # self.plot_canvas[1].setInteractiveMode(mode='zoom')
 
 
         self.tab[2].layout().addWidget(self.plot_canvas[0])
-        self.tab[3].layout().addWidget(self.plot_canvas[1])
-        self.tab[4].layout().addWidget(self.plot_canvas[2])
+        # self.tab[3].layout().addWidget(self.plot_canvas[1])
 
         self.tabs.setCurrentIndex(0)
 
     def check_fields(self):
         pass
-        # self.dimension_x = congruence.checkStrictlyPositiveNumber(self.dimension_x, "Dimension X")
-        # self.step_x = congruence.checkStrictlyPositiveNumber(self.step_x, "Step X")
-        #
-        # congruence.checkLessOrEqualThan(self.step_x, self.dimension_x/2, "Step Width", "Width/2")
-        #
-        # if self.modify_y == 1 or self.modify_y == 2:
-        #     self.new_length = congruence.checkStrictlyPositiveNumber(self.new_length, "New Length")
-        #
-        # if self.renormalize_y == 1:
-        #     self.rms_y = congruence.checkPositiveNumber(self.rms_y, "Rms Y")
-        #
-        # congruence.checkDir(self.heigth_profile_file_name)
 
     def writeStdOut(self, text):
         cursor = self.shadow_output.textCursor()
@@ -739,6 +602,108 @@ class OWWolterCalculator(OWWidget):
         cursor.insertText(text)
         self.shadow_output.setTextCursor(cursor)
         self.shadow_output.ensureCursorVisible()
+
+    def height(self, oe=1):
+
+        if oe == 1:
+            ccc = self.conic_coefficients1
+        elif oe == 2:
+            ccc = self.conic_coefficients2
+
+        y = numpy.linspace(-self.y_length / 2, self.y_length / 2, self.npoints)
+        x = 0
+
+        aa = ccc[2]
+        bb = ccc[4] * y + ccc[5] * x + ccc[8]
+        cc = ccc[0] * x**2 + ccc[1] * y**2 + ccc[3] * x * y + \
+            ccc[6] * x + ccc[7] * y + ccc[9]
+
+        if aa != 0:
+            discr = bb**2 - 4 * aa * cc + 0j
+            s1 = (-bb + numpy.sqrt(discr)) / 2 / aa
+            s2 = (-bb - numpy.sqrt(discr)) / 2 / aa
+        else:
+            s1 = -cc / bb
+            s2 = s1
+
+        return y, numpy.real(s1), numpy.real(s2)
+
+
+    def plot_multi_data1D(self, x_list, y_list,
+                    progressBarValue, tabs_canvas_index, plot_canvas_index,
+                    title="", xtitle="",
+                    ytitle="",
+                    ytitles= [""],
+                    colors = ['green'],
+                    replace=True,
+                    control=False,
+                    xrange=None,
+                    yrange=None,
+                    symbol=['']):
+
+        if len(y_list) != len(ytitles):
+            ytitles = ytitles * len(y_list)
+
+        if len(y_list) != len(colors):
+            colors = colors * len(y_list)
+        if len(y_list) != len(symbol):
+            symbols = symbol * len(y_list)
+        else:
+            symbols = symbol
+
+        if tabs_canvas_index is None: tabs_canvas_index = 0 #back compatibility?
+
+        self.tab[tabs_canvas_index].layout().removeItem(self.tab[tabs_canvas_index].layout().itemAt(0))
+
+        self.plot_canvas[plot_canvas_index] = oasysgui.plotWindow(parent=None,
+                                                                  backend=None,
+                                                                  resetzoom=True,
+                                                                  autoScale=False,
+                                                                  logScale=True,
+                                                                  grid=True,
+                                                                  curveStyle=True,
+                                                                  colormap=False,
+                                                                  aspectRatio=False,
+                                                                  yInverted=False,
+                                                                  copy=True,
+                                                                  save=True,
+                                                                  print_=True,
+                                                                  control=control,
+                                                                  position=True,
+                                                                  roi=False,
+                                                                  mask=False,
+                                                                  fit=False)
+
+
+        self.plot_canvas[plot_canvas_index].setDefaultPlotLines(True)
+        self.plot_canvas[plot_canvas_index].setActiveCurveColor(color=colors[0])
+        self.plot_canvas[plot_canvas_index].setGraphXLabel(xtitle)
+        self.plot_canvas[plot_canvas_index].setGraphYLabel(ytitle)
+
+        self.tab[tabs_canvas_index].layout().addWidget(self.plot_canvas[plot_canvas_index])
+
+
+        for i in range(len(y_list)):
+            # print(">>>>>>>>>>>>>>>>>>>> ADDING PLOT INDEX", i, x_list[i].shape, y_list[i].shape,ytitles[i],symbols[i],colors[i])
+            self.plot_canvas[plot_canvas_index].addCurve(x_list[i], y_list[i],
+                                         ytitles[i],
+                                         xlabel=xtitle,
+                                         ylabel=ytitle,
+                                         symbol=symbols[i],
+                                         color=colors[i])
+        #
+        self.plot_canvas[plot_canvas_index].getLegendsDockWidget().setFixedHeight(150)
+        self.plot_canvas[plot_canvas_index].getLegendsDockWidget().setVisible(True)
+        self.plot_canvas[plot_canvas_index].setActiveCurve(ytitles[0])
+        self.plot_canvas[plot_canvas_index].replot()
+
+
+        if xrange is not None:
+            self.plot_canvas[plot_canvas_index].setGraphXLimits(xrange[0],xrange[1])
+        if yrange is not None:
+            self.plot_canvas[plot_canvas_index].setGraphYLimits(yrange[0],yrange[1])
+
+        self.progressBarSet(progressBarValue)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
