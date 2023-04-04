@@ -116,27 +116,24 @@ class OWWolterCenteredCalculator(OWWidget):
                             ],
                      callback=self.update_panel, sendSelectedValue=False, orientation="horizontal")
 
-        self.w_p1 = oasysgui.lineEdit(box, self, "p1", "parabola directrix coord (z=-p=-f/2)", labelWidth=240, valueType=float, orientation="horizontal")
+        self.w_p1 = oasysgui.lineEdit(box, self, "p1", "parabola directrix coord (z=-p=-f/2)",
+                            labelWidth=240, valueType=float, orientation="horizontal", tooltip="p1")
         self.w_p2 = oasysgui.lineEdit(box, self, "p2", "hyperbola interfocal distance (2c)", labelWidth=240, valueType=float, orientation="horizontal")
-        self.w_theta1 = oasysgui.lineEdit(box, self, "theta1", "Grazing angle at principal surface [rad]", labelWidth=260, valueType=float, orientation="horizontal", callback=self.update_panel)
+        self.w_theta1 = oasysgui.lineEdit(box, self, "theta1", "Grazing angle at principal surface [rad]",
+                            labelWidth=260, valueType=float, orientation="horizontal", tooltip="theta1",
+                            callback=self.update_panel)
 
         box = oasysgui.widgetBox(tab_step_1, "Ellipse inputs", orientation="vertical")
         gui.comboBox(box, self, "ellipse_flag", label="Replace parabola by ellipse?", labelWidth=260,
-                     items=["No","Yes"],
+                     items=["No","Yes"], tooltip="ellipse_flag",
                      callback=self.update_panel, sendSelectedValue=False, orientation="horizontal")
         self.w_ellipse_2c = oasysgui.widgetBox(box, "", orientation="vertical")
-        oasysgui.lineEdit(self.w_ellipse_2c, self, "ellipse_2c", "Ellipse focus (z=2c)", labelWidth=260, valueType=float, orientation="horizontal", callback=self.update_panel)
+        oasysgui.lineEdit(self.w_ellipse_2c, self, "ellipse_2c", "Ellipse focus (z=2c)", labelWidth=260,
+                    valueType=float, orientation="horizontal", callback=self.update_panel, tooltip="ellipse_2c")
 
         box = oasysgui.widgetBox(tab_step_1, "Other inputs", orientation="vertical")
-        oasysgui.lineEdit(box, self, "npoints", "Points (for plot)", labelWidth=260, valueType=int, orientation="horizontal", callback=self.update_panel)
-
-
-        #
-        #-------------------- Output
-        #
-        # out_box = oasysgui.widgetBox(tab_out, "System Output", addSpace=True, orientation="horizontal", height=600)
-        # self.output_textarea = oasysgui.textArea(height=500,readOnly=False)
-        # out_box.layout().addWidget(self.output_textarea)
+        oasysgui.lineEdit(box, self, "npoints", "Points (for plot)", labelWidth=260, valueType=int,
+                          orientation="horizontal", callback=self.update_panel, tooltip="npoints")
 
         #
         #-------------------- Use
@@ -170,6 +167,7 @@ class OWWolterCenteredCalculator(OWWidget):
             self.w_ellipse_2c.setVisible(True)
         else:
             self.w_ellipse_2c.setVisible(False)
+
     def calculate(self):
         try:
             self.shadow_output.setText("")
@@ -800,23 +798,21 @@ class OWWolterCenteredCalculator(OWWidget):
     #         self.plot_data2D_with_histograms(data2D, dataX, dataY, progressBarValue, tabs_canvas_index,plot_canvas_index,
     #                      title=title, xtitle=xtitle, ytitle=ytitle)
 
-    def wolter1_centered(self,
-                         verbose = True,
-                         #  centered system parabola-hyperbola
+    def wolter1_centered(self, verbose = True):
+        #  centered system parabola-hyperbola
         # f11 = -0.00194644,
         # f12 = 0.0,
         # f21 = 1.905,
         # f22 = 0.0,
         # theta = 0.0159872,
         # verbose = 1,
-                ):
+
         f11 = self.p1
         f12 = 0.0
         f21 = self.p2
         f22 = 0.0
         theta = self.theta1
         c_e = self.ellipse_2c / 2
-
 
         if f12 != 0.0 or f22 != 0:
             raise Exception("Is your origin at the common focus?")
@@ -826,7 +822,6 @@ class OWWolterCenteredCalculator(OWWidget):
 
         # intersection point at the parabola matching angle (https://doi.org/10.1107/S1600577522004593)
         x_pmin = (p / 2) / (numpy.tan(theta)) ** 2 - (p/2)
-        # y^2 = 2px + p^2
         y_pmin = numpy.sqrt( 2 * p * x_pmin + p**2)
 
         #
@@ -846,20 +841,20 @@ class OWWolterCenteredCalculator(OWWidget):
         S2 = numpy.sqrt( (-B - numpy.sqrt(B ** 2 - 4 * A * C)) / (2 * A) )
         a_h = numpy.min((S1,S2))
         b_h = numpy.sqrt(c_h**2 - a_h**2)
-        b_h2 = numpy.sqrt(numpy.sqrt((x_pmin-c_h) ** 2 + y_pmin ** 2) * numpy.sqrt(x_pmin ** 2 + y_pmin ** 2)) * numpy.sin(theta)
-        # print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>", b_h, b_h2)
-        #
+        # b_h2 = numpy.sqrt(numpy.sqrt((x_pmin-c_h) ** 2 + y_pmin ** 2) * numpy.sqrt(x_pmin ** 2 + y_pmin ** 2)) * numpy.sin(theta)
+
+
         # coeffs
 
         # Parabola
         # y^2 = p(2 * x + p) (Underwood)
-        # x^2 + z^2 = 2 p y + p^2 (Shadow)
+        # x^2 + y^2 = 2 p z + p^2 (Shadow)
         ccc_centered_parabola = numpy.array([1, 1, 0, 0, 0, 0, 0, 0, -2 * p, -p ** 2])
 
         # Hyperbola
         # (x-c)^2/a^2 - y^2/b^2 = 1 (Underwood)
-        # (z-c)^2/a^2 - (y^2+x*2)/b^2 = 1 (Shadow)
-        # # normal incidence (Underwood x->z, y->y  ->x)
+        # (z-c)^2/a^2 - (y^2+x^2)/b^2 = 1 (Shadow)
+        # normal incidence (Underwood->Shadow:  x->z, y^2->y^2+x^2)
 
         ccc_centered_hyperbola = numpy.array([-1/b_h**2, -1/b_h**2, 1/a_h**2, \
                                               0, 0, 0, \
@@ -870,100 +865,51 @@ class OWWolterCenteredCalculator(OWWidget):
         # Ellipse ###########################################################################
         #
 
-        method = 1
-        if method == 0:
-            Pe = numpy.sqrt((x_pmin - 2 * c_e) ** 2 + y_pmin ** 2)
-            Qe = numpy.sqrt(x_pmin ** 2 + y_pmin ** 2)
-            b_e = numpy.sqrt(Pe * Qe) * numpy.sin(self.theta1)
-            a_e = numpy.sqrt(c_e ** 2 + b_e ** 2)
 
-            # Ellipse
-            # (x-c_e)^2/a^2 + y^2/b_e^2 = 1 (Underwood)
-            # (z-c_e)^2/a^2 + (y^2+x^2)/b_e^2 = 1 (Shadow)
-            # normal incidence (Underwood x->z, y->y  ->x)
-
-            ccc_centered_ellipse = numpy.array([1 / b_e ** 2, 1 / b_e ** 2, 1 / a_e ** 2, \
-                                                  0, 0, 0, \
-                                                  0, 0, -2 * c_e / a_e ** 2, \
-                                                  (c_e / a_e) ** 2 - 1])
-
-            # intersection hyperbola ellipse
-            # hyperbola: (x-c_h)**2/a_h**2 - y**2/b_h**2 = 1
-            # ellipse: (x-c_e)**2/a_e**2 + y**2/b_e**2 = 1
-
-            A = 1.0 / a_e ** 2 + (b_h / b_e / a_h) ** 2
-            B = -2 * c_e / a_e ** 2 - 2 * c_h * (b_h / b_e / a_h) ** 2
-            C = -(b_h / b_e) ** 2 - 1 + (c_e / a_e) ** 2 + (c_h * b_h / b_e / a_h) ** 2
-
-            D = B ** 2 - 4 * A * C
-            if D < 0:
-                print("\n Cannot calculate ellipse (Delta=%f)...." % D)
-            x_he = (-B + numpy.sqrt(D)) / 2 / A
-            print("A,B,C,D, x_he: ", A, B, C, D, x_he)
-            y_he = b_h * numpy.sqrt(((x_he - c_h) / a_h) ** 2 - 1)
-            y_he2 = b_e * numpy.sqrt(1 - ((x_he - c_e) / a_e) ** 2)
-
-        elif method == 1:
-            Pe = numpy.sqrt((x_pmin - 2 * c_e) ** 2 + y_pmin ** 2)
-            Qe = numpy.sqrt(x_pmin ** 2 + y_pmin ** 2)
-            b_e = numpy.sqrt(Pe * Qe) * numpy.sin(self.theta1)
-            a_e = numpy.sqrt(c_e ** 2 + b_e ** 2)
+        Pe = numpy.sqrt((x_pmin - 2 * c_e) ** 2 + y_pmin ** 2)
+        Qe = numpy.sqrt(x_pmin ** 2 + y_pmin ** 2)
+        b_e = numpy.sqrt(Pe * Qe) * numpy.sin(self.theta1)
+        a_e = numpy.sqrt(c_e ** 2 + b_e ** 2)
 
 
-            # calculate the intersection x1 of the hyperbola with an ellipse  with c_e and
-            # variable eccentricity.
-            # then solve numerically x1(ecc) = x_pmin to get the wanted ellipse that intersects
-            # the hyperbila at x_pmin
+        # calculate the intersection x1 of the hyperbola with an ellipse  with c_e and
+        # variable eccentricity.
+        # then solve numerically x1(ecc) = x_pmin to get the wanted ellipse that intersects
+        # the hyperbila at x_pmin
 
-            if False:
-                ecc_guess = c_e / a_e
-                ecc_good = fsolve(self.fff, ecc_guess, args=(c_e, a_h, b_h, c_h, x_pmin))
+        ecc = (self.calculate_ellipse_eccentricity(c_e, a_h, b_h, c_h, x_pmin))[0]
 
-                print("n\n>>>>>>>>>>>>>>>>>>>> ecc_guess, ecc_good: ", ecc_guess, ecc_good)
-                print("\>>>>>>>>>>>>>>>>>>>> fff[ecc_guess, ecc_good]: ",
-                      self.fff(ecc_guess, c_e, a_h, b_h, c_h, x_pmin),
-                      self.fff(ecc_good, c_e, a_h, b_h, c_h, x_pmin),
-                               )
+        a_e = c_e / ecc
+        b_e = numpy.sqrt(a_e**2 - c_e**2)
 
-                ecc = ecc_good[0]
-            else:
-                ecc = (self.calculate_ellipse_eccentricity(c_e, a_h, b_h, c_h, x_pmin))[0]
-                print("\n\n>>>>>>>>>>>>>>>>>>>> ecc_anal: ",ecc)
-                print(">>>>>>>>>>>>>>>>>>>> fff[ecc_anal]: ",
-                      self.fff(ecc, c_e, a_h, b_h, c_h, x_pmin),
-                               )
+        # Ellipse
+        # (x-c_e)^2/a^2 + y^2/b_e^2 = 1 (Underwood)
+        # (z-c_e)^2/a^2 + (y^2+x^2)/b_e^2 = 1 (Shadow)
+        # normal incidence (Underwood x->z, y->y  ->x)
 
-            a_e = c_e / ecc
-            b_e = numpy.sqrt(a_e**2 - c_e**2)
+        ccc_centered_ellipse = numpy.array([1 / b_e ** 2, 1 / b_e ** 2, 1 / a_e ** 2, \
+                                            0, 0, 0, \
+                                            0, 0, -2 * c_e / a_e ** 2, \
+                                            (c_e / a_e) ** 2 - 1])
 
-            # Ellipse
-            # (x-c_e)^2/a^2 + y^2/b_e^2 = 1 (Underwood)
-            # (z-c_e)^2/a^2 + (y^2+x^2)/b_e^2 = 1 (Shadow)
-            # normal incidence (Underwood x->z, y->y  ->x)
+        # intersection hyperbola ellipse (in fact, redundant because x_he = x_pmin by construction!)
 
-            ccc_centered_ellipse = numpy.array([1 / b_e ** 2, 1 / b_e ** 2, 1 / a_e ** 2, \
-                                                0, 0, 0, \
-                                                0, 0, -2 * c_e / a_e ** 2, \
-                                                (c_e / a_e) ** 2 - 1])
+        # hyperbola: (x-c_h)**2/a_h**2 - y**2/b_h**2 = 1
+        # ellipse: (x-c_e)**2/a_e**2 + y**2/b_e**2 = 1
 
-            # intersection hyperbola ellipse (in fact, redundant because x_he = x_pmin by construction!)
+        A = 1.0 / a_e ** 2 + (b_h / b_e / a_h) ** 2
+        B = -2 * c_e / a_e ** 2 - 2 * c_h * (b_h / b_e / a_h) ** 2
+        C = -(b_h / b_e) ** 2 - 1 + (c_e / a_e) ** 2 + (c_h * b_h / b_e / a_h) ** 2
 
-            # hyperbola: (x-c_h)**2/a_h**2 - y**2/b_h**2 = 1
-            # ellipse: (x-c_e)**2/a_e**2 + y**2/b_e**2 = 1
+        D = B ** 2 - 4 * A * C
+        if D < 0:
+            print("\n Cannot calculate ellipse (Delta=%f)...." % D)
+        x_he = (-B + numpy.sqrt(D)) / 2 / A
+        print("A,B,C,D, x_he: ", A, B, C, D, x_he)
+        y_he = b_h * numpy.sqrt(((x_he - c_h) / a_h) ** 2 - 1)
+        # y_he2 = b_e * numpy.sqrt(1 - ((x_he - c_e) / a_e) ** 2)
 
-            A = 1.0 / a_e ** 2 + (b_h / b_e / a_h) ** 2
-            B = -2 * c_e / a_e ** 2 - 2 * c_h * (b_h / b_e / a_h) ** 2
-            C = -(b_h / b_e) ** 2 - 1 + (c_e / a_e) ** 2 + (c_h * b_h / b_e / a_h) ** 2
-
-            D = B ** 2 - 4 * A * C
-            if D < 0:
-                print("\n Cannot calculate ellipse (Delta=%f)...." % D)
-            x_he = (-B + numpy.sqrt(D)) / 2 / A
-            print("A,B,C,D, x_he: ", A, B, C, D, x_he)
-            y_he = b_h * numpy.sqrt(((x_he - c_h) / a_h) ** 2 - 1)
-            y_he2 = b_e * numpy.sqrt(1 - ((x_he - c_e) / a_e) ** 2)
-
-            ############################################################################################################
+        ############################################################################################################
 
         if verbose:
             print("f11, f12", f11, f12)
@@ -1007,30 +953,6 @@ class OWWolterCenteredCalculator(OWWidget):
                  'x_he':x_he, 'y_he':y_he,
                  }
 
-    # TODO: delete
-    def fff(self, ecc, c_e, a_h, b_h, c_h, x_pmin):
-        a_e = c_e / ecc
-        b_e = numpy.sqrt(a_e**2 - c_e**2)
-
-        #
-        # intersection hyperbola ellipse
-        # hyperbola: (x-c_h)**2/a_h**2 - y**2/b_h**2 = 1
-        # ellipse: (x-c_e)**2/a_e**2 + y**2/b_e**2 = 1
-
-        A = 1.0 / a_e ** 2 + (b_h / b_e / a_h) ** 2
-        B = -2 * c_e / a_e ** 2 - 2 * c_h * (b_h / b_e / a_h) ** 2
-        C = -(b_h / b_e) ** 2 - 1 + (c_e / a_e) ** 2 + (c_h * b_h / b_e / a_h) ** 2
-
-        D = B ** 2 - 4 * A * C
-        if D < 0:
-            print("\n Cannot calculate ellipse (Delta=%f)...." % D)
-        x1 = (-B + numpy.sqrt(D)) / 2 / A
-        x2 = (-B - numpy.sqrt(D)) / 2 / A
-        print("A,B,C,D, x1, x2: ", A, B, C, D, x1, x2)
-        # y_he = b_h * numpy.sqrt(((x_he - c_h) / a_h) ** 2 - 1)
-        # y_he2 = b_e * numpy.sqrt(1 - ((x_he - c_e) / a_e) ** 2)
-        return x1 - x_pmin
-
     def calculate_ellipse_eccentricity(self, c_e, a_h, b_h, c_h, x_pmin):
         # obtain the eccentricity of the ellipse (given c_e) than crosses the hyperbola (with a_h,b_h,c_h)
         # at abscissa x_pmin
@@ -1048,10 +970,6 @@ class OWWolterCenteredCalculator(OWWidget):
         #     iv) Solve the second-degree equation and return ecc
         a1 = ((x_pmin-c_e)/c_e)**2
         b1 = (b_h/c_e)**2 * ( ((x_pmin-c_h)/a_h)**2 -1)
-        # delta1 = 0.5 * (-1 + a1 + b1 + numpy.sqrt(4 * b1 + ( 1 -a1 - b1 ) ** 2))
-        # delta2 = 0.5 * (-1 + a1 + b1 - numpy.sqrt(4 * b1 + ( 1 -a1 - b1 ) ** 2))
-        # ecc1 = 1 / numpy.sqrt(1 + delta1)
-        # ecc2 = 1 / numpy.sqrt(1 + delta2)
         ecc1 = (0.5 * (1 + a1 + b1 + numpy.sqrt(4 * b1 + (1 - a1 - b1) ** 2))) ** (-1 / 2)
         ecc2 = (0.5 * (1 + a1 + b1 - numpy.sqrt(4 * b1 + (1 - a1 - b1) ** 2))) ** (-1 / 2)
         return ecc1, ecc2
