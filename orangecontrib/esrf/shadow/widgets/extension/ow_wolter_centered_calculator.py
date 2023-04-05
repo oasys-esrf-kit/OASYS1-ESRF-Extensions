@@ -20,6 +20,11 @@ from oasys.util.oasys_util import EmittingStream
 
 # from scipy.optimize import fsolve
 
+
+#
+#  TODO: correct rays when separation!=0. Need to calculate intersection of hyperbola and straight line
+#  from (x_pmin,y_pmin) to (0,0)
+#
 class OWWolterCenteredCalculator(OWWidget):
     name = "Wolter-Centered Calculator"
     id = "WolterCenteredCalculator"
@@ -55,14 +60,15 @@ class OWWolterCenteredCalculator(OWWidget):
 
     #################
 
-    setup_type = Setting(0)
+    # setup_type = Setting(0)
 
     p1 = Setting(-0.00194644)
     p2 = Setting(1.904995)
 
     theta1 = Setting(0.0159872)
 
-    ellipse_flag = Setting(1)
+    separation = Setting(0.0)
+    ellipse_flag = Setting(0)
     ellipse_2c = Setting(10.0)
     npoints = Setting(400)
     tab=[]
@@ -109,19 +115,21 @@ class OWWolterCenteredCalculator(OWWidget):
 
         box = oasysgui.widgetBox(tab_step_1, "Main inputs", orientation="vertical")
 
-        gui.comboBox(box, self, "setup_type", label="Setup type", labelWidth=260,
-                     items=["Wolter-I",
-                            # "Wolter-II",
-                            # "Wolter-III",
-                            ],
-                     callback=self.update_panel, sendSelectedValue=False, orientation="horizontal")
+        # gui.comboBox(box, self, "setup_type", label="Setup type", labelWidth=260,
+        #              items=["Wolter-I",
+        #                     # "Wolter-II",
+        #                     # "Wolter-III",
+        #                     ],
+        #              callback=self.update_panel, sendSelectedValue=False, orientation="horizontal")
 
         self.w_p1 = oasysgui.lineEdit(box, self, "p1", "parabola directrix coord (z=-p=-f/2)",
                             labelWidth=240, valueType=float, orientation="horizontal", tooltip="p1")
-        self.w_p2 = oasysgui.lineEdit(box, self, "p2", "hyperbola interfocal distance (2c)", labelWidth=240, valueType=float, orientation="horizontal")
-        self.w_theta1 = oasysgui.lineEdit(box, self, "theta1", "Grazing angle at principal surface [rad]",
+        self.w_p2 = oasysgui.lineEdit(box, self, "p2", "hyp interfocal dist 2c (>=0 W1, <=0 W2) [m]", labelWidth=240, valueType=float, orientation="horizontal")
+        self.w_theta1 = oasysgui.lineEdit(box, self, "theta1", "Grazing angle at mirrors intersection [rad]",
                             labelWidth=260, valueType=float, orientation="horizontal", tooltip="theta1",
                             callback=self.update_panel)
+        oasysgui.lineEdit(box, self, "separation", "separation (<=0 W1, >=0 W2)[m]", labelWidth=260,
+                                      valueType=float, orientation="horizontal")
 
         box = oasysgui.widgetBox(tab_step_1, "Ellipse inputs", orientation="vertical")
         gui.comboBox(box, self, "ellipse_flag", label="Replace parabola by ellipse?", labelWidth=260,
@@ -158,6 +166,8 @@ class OWWolterCenteredCalculator(OWWidget):
         self.initializeTabs()
 
         gui.rubber(self.mainArea)
+
+        self.update_panel()
 
     def update_panel(self):
         self.w_p1.setVisible(True)
@@ -350,28 +360,35 @@ class OWWolterCenteredCalculator(OWWidget):
 
             x_c2 = numpy.array([2*c_e, x_he, 2*c_h, 2*c_h,  x_he,  2*c_e])
             y_c2 = numpy.array([0,     y_he, 0    ,   0  , -y_he,  0    ])
+
+            x_c3 = numpy.array([x_pmin, 0])
+            y_c3 = numpy.array([y_pmin, 0])
             if self.ellipse_flag:
-                self.plot_multi_data1D([-x,-x,-x,-x, -x_c, -x, -x, -x_c2], [y1a,y1b,y2a,y2b,y_c, y3a, y3b, y_c2],
+                x_c3 = numpy.array([x_he, 0,  x_he])
+                y_c3 = numpy.array([y_he, 0, -y_he])
+                self.plot_multi_data1D([-x,-x,-x,-x, -x_c, -x, -x, -x_c2, -x_c3], [y1a,y1b,y2a,y2b,y_c, y3a, y3b, y_c2, y_c3],
                                       80, 4, 2,
                                       title="parabola+hyperbola+ellipse", xtitle="-z [m] (along optical axis)", ytitle="x,y [m]",
-                                      ytitles=["parabola+","parabola-","hyperbola+","hyperbola-", "ray at par+hyp crossing", "ellipse+","ellipse-", "ray at ell+hyp crossing",],
-                                      colors=['blue','blue','red','red','k','green','green','k'],
+                                      ytitles=["parabola+","parabola-","hyperbola+","hyperbola-", "ray at par+hyp crossing", "ellipse+","ellipse-", "ray at ell+hyp crossing", "ray to common focus"],
+                                      colors=['blue','blue','red','red','k','green','green','k','pink'],
                                       replace=True,
                                       control=False,
                                       xrange=[-x.min(),- x.max()],
                                       yrange=None,
-                                      symbol=['','','','','','','',''],)
+                                      symbol=['','','','','','','','',''],)
             else:
-                self.plot_multi_data1D([-x,-x,-x,-x, -x_c], [y1a,y1b,y2a,y2b,y_c],
+                x_c3 = numpy.array([x_pmin, 0,  x_pmin])
+                y_c3 = numpy.array([y_pmin, 0, -y_pmin])
+                self.plot_multi_data1D([-x,-x,-x,-x, -x_c, -x_c3], [y1a,y1b,y2a,y2b,y_c,y_c3],
                                       80, 4, 2,
                                       title="parabola+hyperbola", xtitle="-z [m] (along optical axis)", ytitle="x,y [m]",
-                                      ytitles=["parabola+","parabola-","hyperbola+","hyperbola-", "ray at par+hyp crossing"],
-                                      colors=['blue','blue','red','red','k'],
+                                      ytitles=["parabola+","parabola-","hyperbola+","hyperbola-", "ray at par+hyp crossing", "ray to common focus"],
+                                      colors=['blue','blue','red','red','k','pink'],
                                       replace=True,
                                       control=False,
                                       xrange=None,
                                       yrange=None,
-                                      symbol=['','','','',''])
+                                      symbol=['','','','','',''])
 
 
 
@@ -598,10 +615,11 @@ class OWWolterCenteredCalculator(OWWidget):
         self.tabs.setCurrentIndex(0)
 
     def check_fields(self):
-        if self.setup_type > 0:
-            raise Exception(NotImplementedError)
-        else:
-            pass
+        pass
+        # if self.setup_type > 0:
+        #     raise Exception(NotImplementedError)
+        # else:
+        #     pass
 
         # self.dimension_x = congruence.checkStrictlyPositiveNumber(self.dimension_x, "Dimension X")
         # self.step_x = congruence.checkStrictlyPositiveNumber(self.step_x, "Step X")
@@ -833,10 +851,11 @@ class OWWolterCenteredCalculator(OWWidget):
         # get a from the hyperbola
         # (x-c)/a)^2 - (y/b)^2 = 1
         # b^2 = c^2 - a^2
-
+        x_pmin1 = x_pmin + self.separation
+        y_pmin1 = numpy.sqrt( 2 * p * x_pmin1 + p**2)
         A = 1
-        B = -x_pmin**2 + 2 * c_h * x_pmin - 2 * c_h**2 - y_pmin**2
-        C = c_h**4 + c_h**2 * x_pmin**2 - 2 * c_h**3 * x_pmin
+        B = -x_pmin1**2 + 2 * c_h * x_pmin1 - 2 * c_h**2 - y_pmin1**2
+        C = c_h**4 + c_h**2 * x_pmin1**2 - 2 * c_h**3 * x_pmin1
         S1 = numpy.sqrt( (-B + numpy.sqrt(B**2 - 4*A*C)) / (2 * A) )
         S2 = numpy.sqrt( (-B - numpy.sqrt(B ** 2 - 4 * A * C)) / (2 * A) )
         a_h = numpy.min((S1,S2))
@@ -950,6 +969,7 @@ class OWWolterCenteredCalculator(OWWidget):
                  'a_h':a_h, 'b_h':b_h, 'c_h':c_h,
                  'a_e':a_e, 'b_e':b_e, 'c_e':c_e,
                  'x_pmin':x_pmin, 'y_pmin':y_pmin,
+                 'x_pmin2': x_pmin1, 'y_pmin2': y_pmin1,
                  'x_he':x_he, 'y_he':y_he,
                  }
 
