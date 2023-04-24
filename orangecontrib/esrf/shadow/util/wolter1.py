@@ -16,21 +16,23 @@ def cyl(ccc):
 
 
 def recipe1(
-    p_ell = 10.0,
-    q_ell = 3.0,
-    distance = 0.3,
-    theta = 0.003,
-    ratio_hyp = 3.0, # ratio_hyp = q_hyp / p_ell > 1.0
-    verbose = 1,
+    p_ell=10.0,
+    q_ell=3.0,
+    distance=0.3,
+    theta=0.003,
+    theta_hyp=None,
+    ratio_hyp=3.0, # ratio_hyp = q_hyp / p_ell > 1.0
+    verbose=1,
                 ):
 
+    if theta_hyp is None: theta_hyp = theta
 
     q_hyp = q_ell - distance
     a_hyp = 0.5 * q_hyp * (1 - 1/ratio_hyp)
     p_hyp = q_hyp - 2 * a_hyp
 
     tkt_ell = ellipsoid(p_ell,q_ell,theta)
-    tkt_hyp = hyperboloid(p_hyp,q_hyp,theta)
+    tkt_hyp = hyperboloid(p_hyp,q_hyp,theta_hyp)
 
     if verbose:
         print("ell p,q", p_ell, q_ell)
@@ -51,14 +53,18 @@ def recipe1(
 
 
 def recipe2(
-    p_ell = 10.0,
-    distance = 0.3,
-    p_hyp = 0.9,
-    theta = 0.003,
+    p_ell=10.0,
+    distance=0.3,
+    p_hyp=0.9,
+    theta=0.003,
+    theta_hyp=None,
     # m_ell = 0.3,
-    m_hyp = 1/3,
-    verbose = 1,
+    m_hyp=1/3,
+    verbose=1,
             ):
+
+    if theta_hyp is None: theta_hyp = theta
+
     q_hyp = p_hyp / m_hyp
     # a_hyp = 0.5 * (q_hyp - p_hyp)
 
@@ -81,7 +87,7 @@ def recipe2(
         raise Exception("must be: q_hyp > p_hyp")
 
     tkt_ell = ellipsoid(p_ell,q_ell,theta)
-    tkt_hyp = hyperboloid(p_hyp,q_hyp,theta)
+    tkt_hyp = hyperboloid(p_hyp,q_hyp,theta_hyp)
 
     if verbose:
         print("distance:", distance)

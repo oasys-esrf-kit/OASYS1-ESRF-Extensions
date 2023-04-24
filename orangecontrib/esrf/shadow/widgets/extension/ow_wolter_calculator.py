@@ -287,15 +287,23 @@ class OWWolterCalculator(OWWidget):
             print("# DESIGN PHASE")
             print("####################################################\n")
 
+            if self.same_angle:
+                theta_hyp = self.theta1
+            else:
+                theta_hyp = self.theta2
+
             if self.setup_type == 0:
+
+                print("||||||||||||||||| theta_hyp: ", theta_hyp)
                 tkt_ell, tkt_hyp = recipe1(
                     p_ell=self.p1,
                     q_ell=self.q1,
                     distance=self.distance,
                     theta=self.theta1,
+                    theta_hyp=theta_hyp,
                     ratio_hyp=self.ratio_hyp,
                 )
-
+                print("||||||||||||||||| tkt_hyp: ", tkt_hyp)
                 print("\n\n>>>>>\n\n")
 
                 # correct for incidence in the negative Y
@@ -341,8 +349,8 @@ class OWWolterCalculator(OWWidget):
                 source_plane_distance_2 = self.distance / 2
                 image_plane_distance_2 = self.p2
                 angles_respect_to_2 = 0
-                incidence_angle_deg_2 = 90 - numpy.degrees(self.theta1)
-                reflection_angle_deg_2 =  90 - numpy.degrees(self.theta1)
+                incidence_angle_deg_2 = 90 - numpy.degrees(theta_hyp)
+                reflection_angle_deg_2 =  90 - numpy.degrees(theta_hyp)
                 mirror_orientation_angle_2 = None
 
                 # round (cosmetics)
@@ -353,11 +361,13 @@ class OWWolterCalculator(OWWidget):
 
 
             elif self.setup_type == 1:
+
                 tkt_ell, tkt_hyp = recipe2(
                     p_ell=self.p1,
                     distance=self.distance,
                     p_hyp=self.p2,
                     theta=self.theta1,
+                    theta_hyp=theta_hyp,
                     m_hyp=self.m_hyp,
                     verbose=1,
                 )
@@ -406,11 +416,16 @@ class OWWolterCalculator(OWWidget):
                 reflection_angle_deg_1 = 90 - numpy.degrees(self.theta1)
                 mirror_orientation_angle_1 = None
 
+                if self.same_angle:
+                    theta_hyp = self.theta1
+                else:
+                    theta_hyp = self.theta2
+
                 source_plane_distance_2 = self.distance / 2
                 image_plane_distance_2 = self.p2
                 angles_respect_to_2 = 0
-                incidence_angle_deg_2 = 90 - numpy.degrees(self.theta1)
-                reflection_angle_deg_2 =  90 - numpy.degrees(self.theta1)
+                incidence_angle_deg_2 = 90 - numpy.degrees(theta_hyp)
+                reflection_angle_deg_2 =  90 - numpy.degrees(theta_hyp)
                 mirror_orientation_angle_2 = None
 
                 # round (cosmetics)
