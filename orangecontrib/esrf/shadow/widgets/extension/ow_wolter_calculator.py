@@ -314,17 +314,19 @@ class OWWolterCalculator(OWWidget):
                 print(ccc2)
 
                 # 1D focusing (flat in sagittal)
+                # xx  yy  zz  xy  yz  xz  x   y   z   0
+                #  0   1   2   3   4   5  6   7   8   9
                 if self.sagittal_flat:
                     print(">>> corrected: flat in sagittal (1D focusing)")
                     tkt_ell['ccc'][0] = 0
-                    tkt_ell['ccc'][4] = 0
+                    tkt_ell['ccc'][3] = 0
+                    tkt_ell['ccc'][5] = 0
                     tkt_ell['ccc'][6] = 0
-                    tkt_ell['ccc'][7] = 0
 
                     tkt_hyp['ccc'][0] = 0
-                    tkt_hyp['ccc'][4] = 0
+                    tkt_hyp['ccc'][3] = 0
+                    tkt_hyp['ccc'][5] = 0
                     tkt_hyp['ccc'][6] = 0
-                    tkt_hyp['ccc'][7] = 0
 
                 # round
                 for i in range(10):
@@ -386,14 +388,14 @@ class OWWolterCalculator(OWWidget):
                     print(">>> corrected: flat in sagittal (1D focusing)")
 
                     tkt_ell['ccc'][0] = 0
-                    tkt_ell['ccc'][4] = 0
+                    tkt_ell['ccc'][3] = 0
+                    tkt_ell['ccc'][5] = 0
                     tkt_ell['ccc'][6] = 0
-                    tkt_ell['ccc'][7] = 0
 
                     tkt_hyp['ccc'][0] = 0
-                    tkt_hyp['ccc'][4] = 0
+                    tkt_hyp['ccc'][3] = 0
+                    tkt_hyp['ccc'][5] = 0
                     tkt_hyp['ccc'][6] = 0
-                    tkt_hyp['ccc'][7] = 0
 
                 # round
                 for i in range(10):
