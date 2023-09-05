@@ -391,9 +391,8 @@ class FiniteElementReader(OWWidget): #ow_automatic_element.AutomaticElement):
         # if self.file_out[0:4] == "http":
         #     self.file_out = "tmp.h5" # self.file_out.split(os.sep)[-1]
         # print(">>>>>>>>>>>>>>>>>>>",self.file_out)
-
         if file_out[0:4] == "http":
-            file_out = file_out.split(os.sep)[-1]
+            file_out = file_out.split("/")[-1]
 
         self.file_out = file_out
 
@@ -697,6 +696,7 @@ if __name__ == "__main__":
     # ow.set_input_file("/users/srio/OASYS1.2/shadow3-scripts/METROLOGY/ring256.h5")
     # ow.set_input_file("/users/srio/Downloads/dabam2d-001.h5")
     ow.set_input_file("https://raw.githubusercontent.com/srio/dabam2d/main/data/dabam2d-001.h5")
+    # ow.set_input_file("C:/Users/srio/Downloads/dabam2d-001.h5")
     ow.file_in_type = 2
     ow.n_axis_0 = 0
     ow.n_axis_1 = 0
