@@ -4,6 +4,7 @@ import scipy.constants as codata
 
 
 from syned.storage_ring.magnetic_structures.undulator import Undulator
+from syned.storage_ring.magnetic_structures.wiggler import Wiggler
 
 from syned.storage_ring.magnetic_structures import insertion_device
 
@@ -363,12 +364,6 @@ class OWEBS(OWWidget):
         congruence.checkStrictlyPositiveNumber(self.period_length, "Period Length")
         congruence.checkStrictlyPositiveNumber(self.number_of_periods, "Number of Periods")
 
-    def get_magnetic_structure(self):
-        return insertion_device.InsertionDevice(K_horizontal=self.K_horizontal,
-                                                K_vertical=self.K_vertical,
-                                                period_length=self.period_length,
-                                                number_of_periods=self.number_of_periods)
-
     def set_ebs_electron_beam(self):
         self.type_of_properties = 1
         self.electron_beam_size_h = 30.1836e-6
@@ -377,7 +372,7 @@ class OWEBS(OWWidget):
         self.electron_beam_divergence_v = 1.37498e-6
 
         #
-        eb = self.get_light_source().get_electron_beam()
+        eb = self.get_electron_beam()
 
         moment_xx, moment_xxp, moment_xpxp, moment_yy, moment_yyp, moment_ypyp = eb.get_moments_all()
         self.moment_xx   = moment_xx
@@ -412,9 +407,8 @@ class OWEBS(OWWidget):
 
     def update_info(self):
 
-        syned_light_source = self.get_light_source()
-        syned_electron_beam = syned_light_source.get_electron_beam()
-        syned_undulator = syned_light_source.get_magnetic_structure()
+        syned_electron_beam = self.get_electron_beam()
+        syned_undulator = self.get_magnetic_structure()
 
         gamma = self.gamma()
 
@@ -546,11 +540,25 @@ Approximated coherent fraction at 1st harmonic:
 
 """
 
-    def get_magnetic_structure(self):
-        return Undulator(K_horizontal=self.K_horizontal,
-                         K_vertical=self.K_vertical,
-                         period_length=self.period_length,
-                         number_of_periods=self.number_of_periods)
+    def get_magnetic_structure(self, check_for_wiggler=False):
+
+        if not(check_for_wiggler):
+            return Undulator(K_horizontal=self.K_horizontal,
+                             K_vertical=self.K_vertical,
+                             period_length=self.period_length,
+                             number_of_periods=self.number_of_periods)
+        else:
+            id_name = self.get_id_list()[self.ebs_id_index]
+            if "W" in id_name:
+                return Wiggler(K_horizontal=self.K_horizontal,
+                                 K_vertical=self.K_vertical,
+                                 period_length=self.period_length,
+                                 number_of_periods=self.number_of_periods)
+            else:
+                return Undulator(K_horizontal=self.K_horizontal,
+                                 K_vertical=self.K_vertical,
+                                 period_length=self.period_length,
+                                 number_of_periods=self.number_of_periods)
 
 
     def check_magnetic_structure_instance(self, magnetic_structure):
@@ -614,7 +622,7 @@ Approximated coherent fraction at 1st harmonic:
 
     def populate_settings_after_setting_K(self):
 
-        syned_undulator = self.get_light_source().get_magnetic_structure()
+        syned_undulator = self.get_magnetic_structure()
         self.auto_energy = numpy.round(syned_undulator.resonance_energy(self.gamma(),
                                             harmonic=self.auto_harmonic_number),3)
 
@@ -911,15 +919,14 @@ Approximated coherent fraction at 1st harmonic:
     def send_data(self):
         try:
             self.check_data()
-
-            self.send("SynedData", Beamline(light_source=self.get_light_source()))
+            self.send("SynedData", Beamline(light_source=self.get_light_source(check_for_wiggler=True)))
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e.args[0]), QMessageBox.Ok)
 
             self.setStatusMessage("")
             self.progressBarFinished()
 
-    def get_light_source(self):
+    def get_electron_beam(self):
         electron_beam = ElectronBeam(energy_in_GeV=self.electron_energy_in_GeV,
                                      energy_spread=self.electron_energy_spread,
                                      current=self.ring_current,
@@ -950,9 +957,12 @@ Approximated coherent fraction at 1st harmonic:
         elif self.type_of_properties == 3:
             electron_beam.set_moments_all(0,0,0,0,0,0)
 
+        return electron_beam
+
+    def get_light_source(self, check_for_wiggler=False):
         return LightSource(name=self.get_id_list()[self.ebs_id_index],
-                           electron_beam = electron_beam,
-                           magnetic_structure = self.get_magnetic_structure())
+                           electron_beam = self.get_electron_beam(),
+                           magnetic_structure = self.get_magnetic_structure(check_for_wiggler=check_for_wiggler))
 
     def callResetSettings(self):
         if ConfirmDialog.confirmed(parent=self, message="Confirm Reset of the Fields?"):
