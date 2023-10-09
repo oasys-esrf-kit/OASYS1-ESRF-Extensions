@@ -9,7 +9,7 @@ from oasys.widgets.exchange import DataExchangeObject
 from orangecontrib.xoppy.widgets.gui.ow_xoppy_widget import XoppyWidget
 
 from crystalpy.diffraction.GeometryType import BraggDiffraction, LaueDiffraction
-from crystalpy.diffraction.DiffractionSetup import DiffractionSetup
+from crystalpy.diffraction.DiffractionSetupXraylib import DiffractionSetupXraylib
 from crystalpy.diffraction.Diffraction import Diffraction
 import scipy.constants as codata
 from crystalpy.util.Vector import Vector
@@ -39,6 +39,7 @@ class Monochromator(XoppyWidget):
     ENER_N = Setting(2000)
     SOURCE_FILE = Setting("?")
     FILE_DUMP = Setting(0)
+    METHOD = Setting(0)                # Zachariasen
 
     def build_gui(self):
 
@@ -156,6 +157,15 @@ class Monochromator(XoppyWidget):
                     valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
+        # widget index 13
+        idx += 1
+        box1 = gui.widgetBox(box)
+        gui.comboBox(box1, self, "METHOD",
+                     label=self.unitLabels()[idx], addSpace=True,
+                     items=["Zachariasen", "Guigay"],
+                     orientation="horizontal")
+        self.show_at(self.unitFlags()[idx], box1)
+
         self.input_spectrum = None
 
 
@@ -175,7 +185,8 @@ class Monochromator(XoppyWidget):
                  'Type Monochromator',
                  'Energy Selected [eV]',
                  'miller index h','miller index k','miller index l','Crystal thickness [microns]',
-                 "Dump file"]
+                 "Dump file",
+                 "Calculation method"]
 
 
     def unitFlags(self):
@@ -188,6 +199,7 @@ class Monochromator(XoppyWidget):
                  'self.TYPE  ==  1 or self.TYPE  ==  2 or self.TYPE  ==  3',
                  'self.TYPE  ==  1 or self.TYPE  ==  2','self.TYPE  ==  1 or self.TYPE  ==  2','self.TYPE  ==  1 or self.TYPE  ==  2',
                  'self.TYPE  ==  2',
+                 'True',
                  'True']
 
     def get_help_name(self):
@@ -328,7 +340,7 @@ class Monochromator(XoppyWidget):
         r = numpy.zeros_like(energies)
         harmonic = 1
 
-        diffraction_setup_r = DiffractionSetup(geometry_type=BraggDiffraction(),  # GeometryType object
+        diffraction_setup_r = DiffractionSetupXraylib(geometry_type=BraggDiffraction(),  # GeometryType object
                                                crystal_name="Si",  # string
                                                thickness=1,  # meters
                                                miller_h=harmonic * h_miller,  # int
@@ -352,7 +364,7 @@ class Monochromator(XoppyWidget):
             ri = numpy.zeros_like(energies)
             for i in range(energies.size):
                 try:
-                    diffraction_setup_r = DiffractionSetup(geometry_type=BraggDiffraction(),  # GeometryType object
+                    diffraction_setup_r = DiffractionSetupXraylib(geometry_type=BraggDiffraction(),  # GeometryType object
                                                            crystal_name="Si",  # string
                                                            thickness=1,  # meters
                                                            miller_h=harmonic * h_miller,  # int
@@ -374,11 +386,11 @@ class Monochromator(XoppyWidget):
                     photon = Photon(energy_in_ev=energy, direction_vector=Vector(0.0, yy, zz))
 
                     # perform the calculation
-                    coeffs_r = diffraction.calculateDiffractedComplexAmplitudes(diffraction_setup_r, photon)
+                    coeffs_r = diffraction.calculateDiffractedComplexAmplitudes(diffraction_setup_r, photon, calculation_method=self.METHOD)
                     # note the power 4 to get intensity (**2) for a double reflection (**2)
 
-                    r[i] += numpy.abs(coeffs_r['S'].complexAmplitude()) ** 4
-                    ri[i] = numpy.abs(coeffs_r['S'].complexAmplitude()) ** 4
+                    r[i] += numpy.abs( coeffs_r['S'] ) ** 4
+                    ri[i] = numpy.abs( coeffs_r['S'] ) ** 4
                 except:
                     print("Failed to calculate reflectivity at E=%g eV for %d%d%d reflection" % (energy,
                                             harmonic*h_miller, harmonic*k_miller, harmonic*l_miller))
@@ -392,7 +404,7 @@ class Monochromator(XoppyWidget):
         energy_setup = self.ENER_SELECTED
         r = numpy.zeros_like(energies)
         harmonic = 1
-        diffraction_setup_r = DiffractionSetup(geometry_type=LaueDiffraction(),  # GeometryType object
+        diffraction_setup_r = DiffractionSetupXraylib(geometry_type=LaueDiffraction(),  # GeometryType object
                                                crystal_name="Si",  # string
                                                thickness=self.THICK*1e-6,  # meters
                                                miller_h=harmonic * h_miller,  # int
@@ -416,7 +428,7 @@ class Monochromator(XoppyWidget):
             ri = numpy.zeros_like(energies)
             for i in range(energies.size):
                 try:
-                    diffraction_setup_r = DiffractionSetup(geometry_type=LaueDiffraction(),  # GeometryType object
+                    diffraction_setup_r = DiffractionSetupXraylib(geometry_type=LaueDiffraction(),  # GeometryType object
                                                            crystal_name="Si",  # string
                                                            thickness=self.THICK*1e-6,  # meters
                                                            miller_h=harmonic * h_miller,  # int
@@ -438,10 +450,10 @@ class Monochromator(XoppyWidget):
                     photon = Photon(energy_in_ev=energy, direction_vector=Vector(0.0, yy, zz))
 
                     # perform the calculation
-                    coeffs_r = diffraction.calculateDiffractedComplexAmplitudes(diffraction_setup_r, photon)
+                    coeffs_r = diffraction.calculateDiffractedComplexAmplitudes(diffraction_setup_r, photon, calculation_method=self.METHOD)
                     # note the power 2 to get intensity
-                    r[i] += numpy.abs(coeffs_r['S'].complexAmplitude()) ** 2
-                    ri[i] = numpy.abs(coeffs_r['S'].complexAmplitude()) ** 2
+                    r[i] += numpy.abs( coeffs_r['S'] ) ** 2
+                    ri[i] = numpy.abs( coeffs_r['S'] ) ** 2
                 except:
                     print("Failed to calculate reflectivity at E=%g eV for %d%d%d reflection" % (energy,
                                             harmonic*h_miller, harmonic*k_miller, harmonic*l_miller))
