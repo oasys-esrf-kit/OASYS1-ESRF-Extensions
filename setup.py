@@ -42,8 +42,8 @@ INSTALL_REQUIRES = (
     'oasys-barc4ro>=1.0.3',
     'pandas',
     'numba',
-    'shadow4>=0.1.12',
-    'xoppylib>=1.0.19',
+    'shadow4>=0.1.15',
+    'xoppylib>=1.0.20',
     'crystalpy>=0.0.17',
 )
 
