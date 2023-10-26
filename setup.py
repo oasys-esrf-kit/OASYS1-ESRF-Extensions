@@ -44,7 +44,7 @@ INSTALL_REQUIRES = (
     'numba',
     'shadow4>=0.1.15',
     'xoppylib>=1.0.20',
-    'crystalpy>=0.0.17',
+    'crystalpy>=0.0.20',
 )
 
 PACKAGES = find_packages(exclude=('*.tests', '*.tests.*', 'tests.*', 'tests'))
