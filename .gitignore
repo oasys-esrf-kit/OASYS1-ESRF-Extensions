@@ -1,0 +1,11 @@
+
+*.pyc
+OASYS1_ESRF_Extensions.egg-info/dependency_links.txt
+OASYS1_ESRF_Extensions.egg-info/entry_points.txt
+OASYS1_ESRF_Extensions.egg-info/namespace_packages.txt
+OASYS1_ESRF_Extensions.egg-info/not-zip-safe
+OASYS1_ESRF_Extensions.egg-info/PKG-INFO
+OASYS1_ESRF_Extensions.egg-info/requires.txt
+OASYS1_ESRF_Extensions.egg-info/SOURCES.txt
+OASYS1_ESRF_Extensions.egg-info/top_level.txt
+*.gz

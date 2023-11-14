@@ -124,6 +124,8 @@ class OWEBS(OWWidget):
     a5 = Setting('')
     a6 = Setting('')
 
+    pow_dens_screen = Setting(30.0)
+
     # data_url = 'ftp://ftp.esrf.eu/pub/scisoft/syned/resources/jsrund.csv'
     # create it in nice with the ID app: /segfs/tango/bin/jsrund
     data_url = os.path.join(resources.package_dirname("orangecontrib.esrf.syned.data"), 'jsrund.csv')
@@ -289,6 +291,10 @@ class OWEBS(OWWidget):
         oasysgui.lineEdit(left_box_00, self, "a5", "a5", labelWidth=260, valueType=str, orientation="horizontal", callback=self.set_K)
         oasysgui.lineEdit(left_box_00, self, "a6", "a6", labelWidth=260, valueType=str, orientation="horizontal", callback=self.set_K)
 
+        oasysgui.lineEdit(left_box_0, self, "pow_dens_screen",  "Distance to power density screen (m)",
+                          labelWidth=260, valueType=float, orientation="horizontal",
+                          callback=self.update)
+
         self.initializeTabs()
 
         # self.populate_gap_parametrization()
@@ -309,13 +315,13 @@ class OWEBS(OWWidget):
         return out_list
 
     def titles(self):
-        return ["K vs Gap", "B vs Gap", "Gap vs resonance energy", "Power vs Gap", "Power density peak at 30 m vs Gap"]
+        return ["K vs Gap", "B vs Gap", "Gap vs resonance energy", "Power vs Gap", "Power density peak at screen vs Gap"]
 
     def xtitles(self):
         return ['Gap [mm]'] * len(self.titles())
 
     def ytitles(self):
-        return ['K', 'B [T]', 'Photon energy [eV]', 'Power [W]', 'Power density peak @ 30 m [W/mm$^2$]']
+        return ['K', 'B [T]', 'Photon energy [eV]', 'Power [W]', 'Power density peak at %2d m [W/mm$^2$]'%(self.pow_dens_screen)]
 
     def initializeTabs(self):
         self.tabs = oasysgui.tabWidget(self.mainArea)
@@ -745,14 +751,13 @@ Approximated coherent fraction at 1st harmonic:
                self.ring_current * codata.e * 2 * numpy.pi * codata.c * self.gamma()**2 * \
                (Karray**2 + Karray_horizontal**2) / self.period_length
 
-        ### power density peak at 30 m, not yet implemented for helical undulators ###
-        dist_to_source = 30
+        ### power density peak at a given distance, not yet implemented for helical undulators ###        
         
         ### From: Undulators, Wigglers and their Applications - H. Onuki & P Elleaume ###
         ### Chapter 3: Undulator radiation eqs. 68 and 69 ###
         g_k = Karray * ((Karray**6) + (24/7)*(Karray**4) + 4*(Karray**2) + (16/7))/((1 + (Karray**2))**(7/2))
 
-        p_dens_peak = ((21 * (self.gamma()**2)) / (16 * numpy.pi * Karray) * ptot * g_k)/((dist_to_source * 1e3)**2)
+        p_dens_peak = ((21 * (self.gamma()**2)) / (16 * numpy.pi * Karray) * ptot * g_k)/((self.pow_dens_screen * 1e3)**2)
 
         self.plot_graph(0, self.titles()[0], gap_mm, Karray, xtitle=self.xtitles()[0], ytitle=self.ytitles()[0])
         self.plot_graph(1, self.titles()[1], gap_mm, Bfield, xtitle=self.xtitles()[1], ytitle=self.ytitles()[1])
@@ -891,6 +896,7 @@ Approximated coherent fraction at 1st harmonic:
         congruence.checkStrictlyPositiveNumber(self.electron_energy_in_GeV , "Energy")
         congruence.checkStrictlyPositiveNumber(self.electron_energy_spread, "Energy Spread")
         congruence.checkStrictlyPositiveNumber(self.ring_current, "Ring Current")
+        congruence.checkStrictlyPositiveNumber(self.pow_dens_screen, "Distance to power density screen")
 
         if self.type_of_properties == 0:
             congruence.checkPositiveNumber(self.moment_xx   , "Moment xx")
