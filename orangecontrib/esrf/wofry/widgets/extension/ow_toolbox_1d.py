@@ -43,18 +43,21 @@ class OWWOToolbox1D(OWWOOpticalElement1D):
 
 
         gui.comboBox(toolbox_box, self, "change_photon_energy", label="Change photon energy",
-                     items=['No','Yes'], #callback=self.set_visible,
+                     items=['No','Yes'], callback=self.set_visible,
                      sendSelectedValue=False, orientation="horizontal")
 
 
-        new_energy_box = oasysgui.widgetBox(toolbox_box, "", addSpace=False,
+        self.new_energy_box = oasysgui.widgetBox(toolbox_box, "", addSpace=False,
                                         orientation="horizontal")  # width=550, height=50)
-        tmp = oasysgui.lineEdit(new_energy_box, self, "new_photon_energy", "new photon energy",
+        tmp = oasysgui.lineEdit(self.new_energy_box, self, "new_photon_energy", "new photon energy",
                           labelWidth=250, valueType=float, orientation="horizontal")
         tmp.setToolTip("new_photon_energy")
-        self.show_at("self.change_photon_energy == 1", new_energy_box)
+        self.show_at("self.change_photon_energy == 1", self.new_energy_box)
 
+        self.set_visible()
 
+    def set_visible(self):
+        self.new_energy_box.setVisible(self.change_photon_energy ==1)
 
     def get_optical_element(self):
 
