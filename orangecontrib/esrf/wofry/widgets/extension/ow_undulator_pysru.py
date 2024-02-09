@@ -388,8 +388,15 @@ class OWUndulatorPySRU(WofryWidget):
 
         self.progressBarSet(10.0)
 
-        # main calculation
+
         ls = self.get_light_source()
+        try:
+            beamline = WOBeamline(light_source=ls)
+            self.wofry_python_script.set_code(beamline.to_python_code())
+        except:
+            pass
+
+        # main calculation
         self.calculated_wavefront = ls.get_wavefront()
 
         # ii = self.calculated_wavefront.get_integrated_intensity()
@@ -411,11 +418,7 @@ class OWUndulatorPySRU(WofryWidget):
 
         self.progressBarFinished()
 
-        try:
-            beamline = WOBeamline(light_source=ls)
-            self.wofry_python_script.set_code(beamline.to_python_code())
-        except:
-            pass
+
 
 
         # beamline = WOBeamline(light_source=ls)
