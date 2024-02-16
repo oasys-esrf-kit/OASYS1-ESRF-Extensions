@@ -2,7 +2,6 @@ import numpy
 import sys
 
 from PyQt5.QtGui import QPalette, QColor, QFont
-from PyQt5.QtWidgets import QMessageBox
 
 from orangewidget import gui
 from orangewidget import widget
@@ -12,16 +11,14 @@ from oasys.widgets import gui as oasysgui
 from oasys.widgets import congruence
 from oasys.util.oasys_util import TriggerIn, TriggerOut, EmittingStream
 
-from syned.storage_ring.magnetic_structures.undulator import Undulator
 from syned.beamline.beamline import Beamline
-from syned.storage_ring.electron_beam import ElectronBeam
 from syned.storage_ring.magnetic_structures.undulator import Undulator
 
 
 from wofry.propagator.wavefront2D.generic_wavefront import GenericWavefront2D
 
 from wofryimpl.beamline.beamline import WOBeamline
-from orangecontrib.esrf.wofry.util.light_source import WOPySRULightSource # TODO: from wofryimpl...
+from wofryimpl.propagator.light_source_pysru import WOPySRULightSource
 
 from orangecontrib.wofry.util.wofry_objects import WofryData
 from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
@@ -74,7 +71,11 @@ class OWUndulatorPySRU(WofryWidget):
 
     flag_send_wavefront_dimension = Setting(0)
 
+    traj_method = Setting(1) # 0=TRAJECTORY_METHOD_ANALYTIC, 1=TRAJECTORY_METHOD_ODE
+    rad_method = Setting(2) # 0=RADIATION_METHOD_NEAR_FIELD, 1= RADIATION_METHOD_APPROX, 2=RADIATION_METHOD_APPROX_FARFIELD
+    number_of_trajectory_points_per_period = Setting(15)
     calculated_wavefront = None
+
 
     def __init__(self):
 
@@ -107,13 +108,14 @@ class OWUndulatorPySRU(WofryWidget):
         tabs_setting.setFixedHeight(self.TABS_AREA_HEIGHT + 50)
         tabs_setting.setFixedWidth(self.CONTROL_AREA_WIDTH-5)
 
-        self.tab_settings = oasysgui.createTabPage(tabs_setting, "Settings")
-        self.tab_lightsource = oasysgui.createTabPage(tabs_setting, "Convolution parameters")
+        tab_settings = oasysgui.createTabPage(tabs_setting, "Settings")
+        tab_lightsource = oasysgui.createTabPage(tabs_setting, "Convolution Parameters")
+        tab_advanced = oasysgui.createTabPage(tabs_setting, "Advanced Settings")
 
         #
         # Settings
         #
-        box_wavefront = oasysgui.widgetBox(self.tab_settings, "Sampling wavefront", addSpace=False, orientation="vertical")
+        box_wavefront = oasysgui.widgetBox(tab_settings, "Sampling wavefront", addSpace=False, orientation="vertical")
 
 
 
@@ -146,7 +148,7 @@ class OWUndulatorPySRU(WofryWidget):
         #
         # Light Source
         #
-        box_ring = oasysgui.widgetBox(self.tab_settings, "Storage ring", addSpace=False, orientation="vertical")
+        box_ring = oasysgui.widgetBox(tab_settings, "Storage ring", addSpace=False, orientation="vertical")
 
         oasysgui.lineEdit(box_ring, self, "electron_energy_in_GeV", "Energy [GeV]",  labelWidth=260, valueType=float, orientation="horizontal", callback=self.update)
         oasysgui.lineEdit(box_ring, self, "ring_current", "Ring Current [A]",        labelWidth=260, valueType=float, orientation="horizontal", callback=self.update)
@@ -154,7 +156,7 @@ class OWUndulatorPySRU(WofryWidget):
         #
         # Undulator
         #
-        box_und = oasysgui.widgetBox(self.tab_settings, "Undulator", addSpace=False, orientation="vertical")
+        box_und = oasysgui.widgetBox(tab_settings, "Undulator", addSpace=False, orientation="vertical")
 
         oasysgui.lineEdit(box_und, self, "period_length", "Period Length [m]", labelWidth=260,
                           valueType=float, orientation="horizontal", callback=self.update)
@@ -165,7 +167,7 @@ class OWUndulatorPySRU(WofryWidget):
                           valueType=float, orientation="horizontal")
 
 
-        box_send = oasysgui.widgetBox(self.tab_settings, "Send wavefront", addSpace=True, orientation="vertical")
+        box_send = oasysgui.widgetBox(tab_settings, "Send wavefront", addSpace=True, orientation="vertical")
         gui.comboBox(box_send, self, "flag_send_wavefront_dimension", label="Send Wavefront", labelWidth=350,
                      items=["2D",
                             "1D Horizontal",
@@ -175,12 +177,11 @@ class OWUndulatorPySRU(WofryWidget):
                      sendSelectedValue=False, orientation="horizontal")
 
         #
-        # second tab
+        # convolution tab
         #
-
-        self.emittances_box_h = oasysgui.widgetBox(self.tab_lightsource, "Electron Horizontal beam sizes",
+        self.emittances_box_h = oasysgui.widgetBox(tab_lightsource, "Electron Horizontal beam sizes",
                                             addSpace=True, orientation="vertical")
-        self.emittances_box_v = oasysgui.widgetBox(self.tab_lightsource, "Electron Vertical beam sizes",
+        self.emittances_box_v = oasysgui.widgetBox(tab_lightsource, "Electron Vertical beam sizes",
                                             addSpace=True, orientation="vertical")
 
 
@@ -199,9 +200,26 @@ class OWUndulatorPySRU(WofryWidget):
                             labelWidth=250, tooltip="sigma_divergence_v",
                             valueType=float, orientation="horizontal")
 
+        #
+        # advanved settings tab
+        #
 
+        oasysgui.lineEdit(tab_advanced, self, "number_of_trajectory_points_per_period", "Trajectory points (per period)",
+                            labelWidth=250, tooltip="number_of_trajectory_points_per_period",
+                            valueType=float, orientation="horizontal")
 
+        gui.comboBox(tab_advanced, self, "traj_method", label="Trajectory calculation", labelWidth=350, tooltip="traj_method",
+                     items=["Analytic",
+                            "ODE (ordinary diff eq)",
+                            ],
+                     sendSelectedValue=False, orientation="horizontal")
 
+        gui.comboBox(tab_advanced, self, "rad_method", label="Radiation calculation", labelWidth=350, tooltip="rad_method",
+                     items=["Near Field",
+                            "Approximated",
+                            "Far Field",
+                            ],
+                     sendSelectedValue=False, orientation="horizontal")
 
     def initializeTabs(self):
         size = len(self.tab)
@@ -313,7 +331,10 @@ class OWUndulatorPySRU(WofryWidget):
             photon_energy=self.photon_energy,
             h_slit_points=self.h_slit_points,
             v_slit_points=self.v_slit_points,
+            number_of_trajectory_points=int(self.number_of_trajectory_points_per_period * self.number_of_periods),
             flag_send_wavefront_dimension=self.flag_send_wavefront_dimension,
+            traj_method=self.traj_method,
+            rad_method=self.rad_method,
         )
 
     def do_plot_results(self, progressBarValue):
@@ -439,7 +460,6 @@ class OWUndulatorPySRU(WofryWidget):
 
 
 if __name__ == "__main__":
-    import sys
     from PyQt5.QtWidgets import QApplication
 
     a = QApplication(sys.argv)
