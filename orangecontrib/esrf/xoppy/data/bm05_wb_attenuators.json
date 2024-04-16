@@ -1,0 +1,453 @@
+{
+    "Att1":{
+        "filter1": {
+			"name":"Empty",
+			"substance":"Air, Dry (near sea level)",
+			"thickness":0.0,
+			"density":1.0e-6
+		},
+		"filter2": {
+			"name":"Al filter 1.42 mm",
+			"substance":"Al",
+			"thickness":1.42,
+			"density":2.7
+		},
+		"filter3": {
+			"name":"Al filter 0.25 mm",
+			"substance":"Al",
+			"thickness":0.25,
+			"density":2.7
+		},
+		"filter4": {
+			"name":"Al filter 0.54 mm",
+			"substance":"Al",
+			"thickness":0.54,
+			"density":2.7
+		},
+		"filter5": {
+			"name":"Al filter 2.3 mm",
+			"substance":"Al",
+			"thickness":2.3,
+			"density":2.7
+		},
+		"filter6": {
+			"name":"Cu filter 0.23 mm",
+			"substance":"Cu",
+			"thickness":0.23,
+			"density":8.96
+		},
+		"filter7": {
+			"name":"Cu filter 0.68 mm",
+			"substance":"Cu",
+			"thickness":0.68,
+			"density":8.96
+		},
+		"filter8": {
+			"name":"Cu filter 2.59 mm",
+			"substance":"Cu",
+			"thickness":2.59,
+			"density":8.96
+		},
+		"filter9": {
+			"name":"Mo filter 0.95 mm",
+			"substance":"Mo",
+			"thickness":0.96,
+			"density":10.22
+		},
+		"filter10": {
+			"name":"Mo filter 1.93 mm",
+			"substance":"Mo",
+			"thickness":1.93,
+			"density":10.22
+		},		
+		"filter11": {
+			"name":"Mo filter 3.93 mm",
+			"substance":"Mo",
+			"thickness":3.93,
+			"density":10.22
+		}
+	},
+	"Att2":{
+        "filter1": {
+			"name":"Empty",
+			"substance":"Air, Dry (near sea level)",
+			"thickness":0.0,
+			"density":1.0e-6
+		},
+		"filter2": {
+			"name":"Al filter 0.54 mm",
+			"substance":"Al",
+			"thickness":0.54,
+			"density":2.7
+		},
+		"filter3": {
+			"name":"Al filter 2.33 mm",
+			"substance":"Al",
+			"thickness":2.33,
+			"density":2.7
+		},
+		"filter4": {
+			"name":"Al filter 4.47 mm",
+			"substance":"Al",
+			"thickness":4.47,
+			"density":2.7
+		},
+		"filter5": {
+			"name":"Cu filter 0.71 mm",
+			"substance":"Cu",
+			"thickness":0.71,
+			"density":8.96
+		},
+		"filter6": {
+			"name":"Cu filter 1.18 mm",
+			"substance":"Cu",
+			"thickness":1.18,
+			"density":8.96
+		},
+		"filter7": {
+			"name":"Cu filter 2.64 mm",
+			"substance":"Cu",
+			"thickness":2.64,
+			"density":8.96
+		},
+		"filter8": {
+			"name":"Mo filter 0.05 mm",
+			"substance":"Mo",
+			"thickness":0.05,
+			"density":10.22
+		},
+		"filter9": {
+			"name":"Mo filter 0.1 mm",
+			"substance":"Mo",
+			"thickness":0.1,
+			"density":10.22
+		},
+		"filter10": {
+			"name":"Mo filter 0.24 mm",
+			"substance":"Mo",
+			"thickness":0.24,
+			"density":10.22
+		},
+		"filter11": {
+			"name":"W filter 0.63 mm",
+			"substance":"W",
+			"thickness":0.63,
+			"density":19.3
+		}
+	},
+	"Att3":{
+        "filter1": {
+			"name":"Empty",
+			"substance":"Air, Dry (near sea level)",
+			"thickness":0.0,
+			"density":1.0e-6
+		},
+		"filter2": {
+			"name":"Cu filter 0.08 mm",
+			"substance":"Cu",
+			"thickness":0.08,
+			"density":8.96
+		},
+		"filter3": {
+			"name":"Cu filter 0.18 mm",
+			"substance":"Cu",
+			"thickness":0.18,
+			"density":8.96
+		},
+		"filter4": {
+			"name":"Cu filter 1.18 mm",
+			"substance":"Cu",
+			"thickness":1.18,
+			"density":8.96
+		},
+		"filter5": {
+			"name":"Mo filter 0.05 mm",
+			"substance":"Mo",
+			"thickness":0.05,
+			"density":10.22
+		},
+		"filter6": {
+			"name":"Mo filter 0.1 mm",
+			"substance":"Mo",
+			"thickness":0.1,
+			"density":10.22
+		},
+		"filter7": {
+			"name":"Mo filter 0.23 mm",
+			"substance":"Mo",
+			"thickness":0.23,
+			"density":10.22
+		},
+		"filter8": {
+			"name":"Mo filter 0.45 mm",
+			"substance":"Mo",
+			"thickness":0.45,
+			"density":10.22
+		},
+		"filter9": {
+			"name":"Mo filter 0.8 mm",
+			"substance":"Mo",
+			"thickness":0.8,
+			"density":10.22
+		},
+		"filter10": {
+			"name":"W filter 0.27 mm",
+			"substance":"W",
+			"thickness":0.27,
+			"density":19.3
+		},
+		"filter11": {
+			"name":"Mo filter 0.44 mm",
+			"substance":"Mo",
+			"thickness":0.44,
+			"density":10.22
+		}
+		
+	},
+	"Att4":{        
+		"filter1": {
+			"name":"Glassy C rod filter 36 mm",
+			"substance":"C",
+			"thickness":36.0,
+			"density":1.42
+		},
+		"filter2": {
+			"name":"Glassy C rod filter 84 mm",
+			"substance":"C",
+			"thickness":84.0,
+			"density":1.42
+		},
+		"filter3": {
+			"name":"Glassy C rod filter 92 mm",
+			"substance":"C",
+			"thickness":92.0,
+			"density":1.42
+		},
+		"filter4": {
+			"name":"SiO2 rod filter 92 mm",
+			"substance":"SiO2",
+			"thickness":92.0,
+			"density":2.203
+		},
+		"filter5": {
+			"name":"SiO2 rod filter 84 mm",
+			"substance":"SiO2",
+			"thickness":84.0,
+			"density":2.203
+		},
+		"filter6": {
+			"name":"SiO2 rod filter 72 mm",
+			"substance":"SiO2",
+			"thickness":72.0,
+			"density":2.203
+		},
+		"filter7": {
+			"name":"SiO2 rod filter 64 mm",
+			"substance":"SiO2",
+			"thickness":64.0,
+			"density":2.203
+		},
+		"filter8": {
+			"name":"SiO2 rod filter 56 mm",
+			"substance":"SiO2",
+			"thickness":56.0,
+			"density":2.203
+		},
+		"filter9": {
+			"name":"SiO2 rod filter 48 mm",
+			"substance":"SiO2",
+			"thickness":48.0,
+			"density":2.203
+		},
+		"filter10": {
+			"name":"SiO2 rod filter 40 mm",
+			"substance":"SiO2",
+			"thickness":40.0,
+			"density":2.203
+		},
+		"filter11": {
+			"name":"SiO2 rod filter 32 mm",
+			"substance":"SiO2",
+			"thickness":32.0,
+			"density":2.203
+		},
+		"filter12": {
+			"name":"SiO2 rod filter 28 mm",
+			"substance":"SiO2",
+			"thickness":28.0,
+			"density":2.203
+		},
+		"filter13": {
+			"name":"SiO2 rod filter 24 mm",
+			"substance":"SiO2",
+			"thickness":24.0,
+			"density":2.203
+		},
+		"filter14": {
+			"name":"SiO2 rod filter 20 mm",
+			"substance":"SiO2",
+			"thickness":20.0,
+			"density":2.203
+		},
+		"filter15": {
+			"name":"SiO2 rod filter 16 mm",
+			"substance":"SiO2",
+			"thickness":16.0,
+			"density":2.203
+		},
+		"filter16": {
+			"name":"SiO2 rod filter 12 mm",
+			"substance":"SiO2",
+			"thickness":12.0,
+			"density":2.203
+		},
+		"filter17": {
+			"name":"SiO2 rod filter 8 mm",
+			"substance":"SiO2",
+			"thickness":8.0,
+			"density":2.203
+		},
+		"filter18": {
+			"name":"SiO2 rod filter b 8 mm",
+			"substance":"SiO2",
+			"thickness":8.0,
+			"density":2.203
+		},
+		"filter19": {
+			"name":"Glassy C rod filter 8 mm",
+			"substance":"C",
+			"thickness":8.0,
+			"density":1.42
+		},
+		"filter20": {
+			"name":"Empty",
+			"substance":"Air, Dry (near sea level)",
+			"thickness":0.0,
+			"density":1.0e-6
+		}		
+	},
+	
+	"Att5":{
+        "filter1": {
+			"name":"SiO2 rod filter b 76 mm",
+			"substance":"SiO2",
+			"thickness":76.0,
+			"density":2.203
+		},
+		"filter2": {
+			"name":"SiO2 rod filter b 84 mm",
+			"substance":"SiO2",
+			"thickness":84.0,
+			"density":2.203
+		},
+		"filter3": {
+			"name":"SiO2 rod filter 92 mm",
+			"substance":"SiO2",
+			"thickness":92.0,
+			"density":2.203
+		},
+		"filter4": {
+			"name":"Glassy C rod filter 92 mm",
+			"substance":"C",
+			"thickness":92.0,
+			"density":1.42
+		},
+		"filter5": {
+			"name":"Glassy C rod filter 84 mm",
+			"substance":"C",
+			"thickness":92.0,
+			"density":1.42
+		},
+		"filter6": {
+			"name":"Glassy C rod filter 72 mm",
+			"substance":"C",
+			"thickness":72.0,
+			"density":1.42
+		},
+		"filter7": {
+			"name":"Glassy C rod filter 64 mm",
+			"substance":"C",
+			"thickness":64.0,
+			"density":1.42
+		},
+		"filter8": {
+			"name":"Glassy C rod filter 56 mm",
+			"substance":"C",
+			"thickness":56.0,
+			"density":1.42
+		},
+		"filter9": {
+			"name":"Glassy C rod filter 48 mm",
+			"substance":"C",
+			"thickness":48.0,
+			"density":1.42
+		},
+		"filter10": {
+			"name":"Glassy C rod filter 40 mm",
+			"substance":"C",
+			"thickness":40.0,
+			"density":1.42
+		},
+		"filter11": {
+			"name":"Glassy C rod filter 32 mm",
+			"substance":"C",
+			"thickness":32.0,
+			"density":1.42
+		},
+		"filter12": {
+			"name":"Glassy C rod filter 28 mm",
+			"substance":"C",
+			"thickness":28.0,
+			"density":1.42
+		},
+		"filter13": {
+			"name":"Glassy C rod filter 24 mm",
+			"substance":"C",
+			"thickness":24.0,
+			"density":1.42
+		},
+		"filter14": {
+			"name":"Glassy C rod filter 20 mm",
+			"substance":"C",
+			"thickness":20.0,
+			"density":1.42
+		},
+		"filter15": {
+			"name":"Glassy C rod filter 16 mm",
+			"substance":"C",
+			"thickness":16.0,
+			"density":1.42
+		},
+		"filter16": {
+			"name":"Glassy C rod filter 12 mm",
+			"substance":"C",
+			"thickness":12.0,
+			"density":1.42
+		},
+		"filter17": {
+			"name":"Glassy C rod filter b 8 mm",
+			"substance":"C",
+			"thickness":8.0,
+			"density":1.42
+		},
+		"filter18": {
+			"name":"Glassy C rod filter c 8 mm",
+			"substance":"C",
+			"thickness":8.0,
+			"density":1.42
+		},
+		"filter19": {
+			"name":"SiO2 rod filter c 8 mm",
+			"substance":"SiO2",
+			"thickness":8.0,
+			"density":2.203
+		},
+		"filter20": {
+			"name":"Empty",
+			"substance":"Air, Dry (near sea level)",
+			"thickness":0.0,
+			"density":1.0e-6
+		}
+		
+	}
+}
