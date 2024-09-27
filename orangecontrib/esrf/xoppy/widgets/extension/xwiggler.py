@@ -471,7 +471,7 @@ plot(energy,cumulated_power,
         return ["Energy [eV]", "Energy [eV]", "Energy [eV]", "s [m]", "s [m]", "s [m]"]
 
     def getYTitles(self):
-        return ["Flux [Phot/sec/0.1%bw]", "Spectral Power [W/eV]", "Cumulated Power [W]", "x [m]", "beta_x [m]", "B [T]"]
+        return ["Flux [Phot/sec/0.1%bw]", "Spectral Power [W/eV]", "Cumulated Power [W]", "x [m]", "beta_x [c units]", "B [T]"]
 
     def getLogPlot(self):
         return [(True, True), (True, True), (False, False), (False, False), (False, False), (False, False)]
