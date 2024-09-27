@@ -1,5 +1,7 @@
 {
-    "Att1":{
+    "Axis1":{
+		"_name": "Att1",
+		"_att_pos": 0,
         "filter1": {
 			"name":"Empty",
 			"substance":"Air, Dry (near sea level)",
@@ -67,7 +69,9 @@
 			"density":10.22
 		}
 	},
-	"Att2":{
+	"Axis2":{
+		"_name": "Att2",
+		"_att_pos": 0,
         "filter1": {
 			"name":"Empty",
 			"substance":"Air, Dry (near sea level)",
@@ -135,7 +139,9 @@
 			"density":19.3
 		}
 	},
-	"Att3":{
+	"Axis3":{
+		"_name": "Att3",
+		"_att_pos": 0,
         "filter1": {
 			"name":"Empty",
 			"substance":"Air, Dry (near sea level)",
@@ -204,7 +210,9 @@
 		}
 		
 	},
-	"Att4":{        
+	"Axis4":{
+		"_name": "Att4",
+		"_att_pos": 0,        
 		"filter1": {
 			"name":"Glassy C rod filter 36 mm",
 			"substance":"C",
@@ -327,7 +335,9 @@
 		}		
 	},
 	
-	"Att5":{
+	"Axis5":{
+		"_name": "Att5",
+		"_att_pos": 0,
         "filter1": {
 			"name":"SiO2 rod filter b 76 mm",
 			"substance":"SiO2",

@@ -20,11 +20,11 @@ import scipy.constants as codata
 import xraylib
 from dabax.dabax_xraylib import DabaxXraylib
 
-class OWBM05WBAttenuators(XoppyWidget):
-    name = "BM05_WB_Attenuators"
+class OWBM05Scintillators(XoppyWidget):
+    name = "BM05_Scintillators"
     id = "orange.widgets.dataxpower"
-    description = "Absorbed and Transmitted Power by White Beam Filters of BM05"
-    icon = "icons/bm05_wb_attenuator.png"
+    description = "Absorbed and Transmitted Power by Scintillators of BM05"
+    icon = "icons/bm05_wb_scitillator.png"
     priority = 1
     category = ""
     keywords = ["xoppy", "power"]
@@ -38,28 +38,23 @@ class OWBM05WBAttenuators(XoppyWidget):
     SOURCE_FILE = Setting("?")   
     Axis1 = Setting(0)
     Axis2 = Setting(0)
-    Axis3 = Setting(0)
-    Axis4 = Setting(19)
-    Axis5 = Setting(19)    
+    Axis3 = Setting(0)    
     
-
-    PLOT_SETS = Setting(0)
+    #PLOT_SETS = Setting(0)
     FILE_DUMP = 0
 
     MATERIAL_CONSTANT_LIBRARY_FLAG = Setting(0)
-    file_json = os.path.join(resources.package_dirname("orangecontrib.esrf.xoppy.data"), 'bm05_wb_attenuators.json')
+    file_json = os.path.join(resources.package_dirname("orangecontrib.esrf.xoppy.data"), 'bm05_scintillators.json')
     input_spectrum = None
     input_script = None
-    att_dic = None
+    scintillator_dic = None
 
     def __init__(self):
         super().__init__(show_script_tab=True)
                      
 
     def build_gui(self):
-        self.get_att_dictionary()
-
-        #TODO Check how to read the position of each axis attenuator         
+        self.get_scintillator_dic()         
 
         self.leftWidgetPart.setSizePolicy(QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding))
         self.leftWidgetPart.setMaximumWidth(self.CONTROL_AREA_WIDTH + 20)
@@ -111,35 +106,26 @@ class OWBM05WBAttenuators(XoppyWidget):
         gui.button(file_box_id, self, "...", callback=self.select_input_file, width=25)
         self.show_at(self.unitFlags()[idx], box1)
 
-        #widget index 10 - 14 Attenuators axis
+        #widget index 10 - 12 Scintillators axis
+
         #Please notice that the JSON file must have same as the above
         #defined attributes Axis1, Axis2, ...
-        
-        for key in self.att_dic.keys():
+        #here we check to use only filters by excluding any "_" character
+
+        for key in self.scintillator_dic.keys():
             idx += 1
             box1 = gui.widgetBox(box)
             items = []
-            for filter in self.att_dic[key].keys():
-                if filter[0] != "_":
-                    items.append(self.att_dic[key][filter]['name'])
+            for filter in self.scintillator_dic[key].keys():
+                if filter[0] != "_":                                         
+                    items.append(self.scintillator_dic[key][filter]['name'])
             gui.comboBox(box1, self, key,
                         label=self.unitLabels()[idx], addSpace=False,                        
                         items=items,
                         valueType=str, orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
-            self.show_at(self.unitFlags()[idx], box1)                
+            self.show_at(self.unitFlags()[idx], box1)             
 
-        #widget index 15
-        idx += 1
-        box1 = gui.widgetBox(box)
-        gui.separator(box1, height=7)
-
-        gui.comboBox(box1, self, "PLOT_SETS",
-                     label=self.unitLabels()[idx], addSpace=False,
-                    items=['Total Attenuation', 'Axis Attenuation'],
-                    valueType=int, orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
-        self.show_at(self.unitFlags()[idx], box1)
-
-        #widget index 16
+        #widget index 13
         idx += 1
         box1 = gui.widgetBox(box)
         gui.separator(box1, height=7)
@@ -150,7 +136,7 @@ class OWBM05WBAttenuators(XoppyWidget):
                     valueType=int, orientation="horizontal", labelWidth=250, callback=self.set_EL_FLAG)
         self.show_at(self.unitFlags()[idx], box1)
 
-        #widget index 17
+        #widget index 14
         idx += 1
         box1 = gui.widgetBox(box)
         gui.separator(box1, height=7)
@@ -168,21 +154,22 @@ class OWBM05WBAttenuators(XoppyWidget):
                                     "Open 2-columns file with spectral power",
                                     file_extension_filter="ascii dat (*.dat *.txt *spec)"))
 
-    def get_att_dictionary(self):        
+    def get_scintillator_dic(self):        
         with open(self.file_json) as att_file:
-            att_dic = json.load(att_file)
-        self.att_dic = att_dic
+            scintillator_dic = json.load(att_file)
+        self.scintillator_dic = scintillator_dic
 
     def get_axis_name(self, axis=0):
         """ For the labels: get the axis name
             If does not exist gives a generic name """
         
-        self.get_att_dictionary()        
+        self.get_scintillator_dic()        
         try:
-            axis_name = self.att_dic[f'Axis{axis+1}']['_name']
+            axis_name = self.scintillator_dic[f'Axis{axis+1}']['_name']
         except:
             axis_name = f'Axis{axis+1}'
-        return axis_name          
+        return axis_name
+
 
     def set_EL_FLAG(self):
         self.initializeTabs()
@@ -193,9 +180,8 @@ class OWBM05WBAttenuators(XoppyWidget):
                  'To energy [eV]:',
                  'Energy points:  ',
                  'File with input beam spectral power:',
-                 self.get_axis_name(0), self.get_axis_name(1), self.get_axis_name(2),
-                 self.get_axis_name(3), self.get_axis_name(4),                                  
-                 'Plot','Material data library','Dump file']
+                 self.get_axis_name(0), self.get_axis_name(1), self.get_axis_name(2),                                  
+                 'Material data library','Dump file']
 
 
     def unitFlags(self):
@@ -204,11 +190,11 @@ class OWBM05WBAttenuators(XoppyWidget):
                  'self.SOURCE  ==  1',
                  'self.SOURCE  ==  1',
                  'self.SOURCE  >  1',
-                 'True','True','True','True', 'True',                
-                 'True','True', 'True']
+                 'True','True','True',
+                 'True', 'True']
 
     def get_help_name(self):
-        return 'BM05_WB_Attenuators'
+        return 'BM05_Scintillators'
 
     def selectFile(self):
         self.le_source_file.setText(oasysgui.selectFileFromDialog(self, self.SOURCE_FILE, "Open Source File", file_extension_filter="*.*"))
@@ -311,52 +297,38 @@ class OWBM05WBAttenuators(XoppyWidget):
             congruence.checkLessThan(self.ENER_MIN, self.ENER_MAX, "Energy from", "Energy to")
             self.NPOINTS = congruence.checkStrictlyPositiveNumber(self.ENER_N, "Energy Points")
         elif self.SOURCE == 2:
-            congruence.checkFile(self.SOURCE_FILE)
+            congruence.checkFile(self.SOURCE_FILE)    
         
-        self.check_att_pos()
         
-
-    def check_att_pos(self):
-    
-        """ Here we check the use of filters that requieres a prefilter """
-
-        if self.Axis1 == 0 and self.Axis2 >= 7: #requires prefilter from Mo filter to the rest (W)
-            QMessageBox.warning(self, "Warning", "Prefilter Required", QMessageBox.Ok)
-            
-        elif self.Axis1 == 0 and self.Axis2 == 0 and self.Axis3 >= 4: # requieres prefilter from Mo to the rest (Mo 0.44 mm)
-            QMessageBox.warning(self, "Warning", "Prefilter Required", QMessageBox.Ok)
-
-        else:
-            pass
-
-    ### Input for each axis of attenuators
+    ### Input for each axis of scintillators
 
     def att_pos(self):
         """ List of each attenuator position to be used in calcualtions """        
-        return [self.Axis1, self.Axis2, self.Axis3, self.Axis4, self.Axis5]    
-    ### Please noticed that here is reading by the name filter ###
+        return [self.Axis1, self.Axis2, self.Axis3]    
 
+    ### Please noticed that here is reading by the name filter ###
+    
     def att_substance(self):
         """ Substance (or material) for each axis """
         substance=[]       
-        for i, att_axis in enumerate(self.att_dic.keys()):
-            substance.append(self.att_dic[att_axis][f'filter{self.att_pos()[i]+1}']['substance'])             
+        for i, att_axis in enumerate(self.scintillator_dic.keys()):
+            substance.append(self.scintillator_dic[att_axis][f'filter{self.att_pos()[i]+1}']['substance'])             
 
         return substance
     
     def att_thick(self):
         """ Thickness of each attenuator at a given axis """
         thick=[]
-        for i, att_axis in enumerate(self.att_dic.keys()):
-            thick.append(self.att_dic[att_axis][f'filter{self.att_pos()[i]+1}']['thickness'])        
+        for i, att_axis in enumerate(self.scintillator_dic.keys()):
+            thick.append(self.scintillator_dic[att_axis][f'filter{self.att_pos()[i]+1}']['thickness'])        
 
         return thick    
 
     def att_dens(self):
         """ Particular density of each attenuator at a given axis """
         dens = []
-        for i, att_axis in enumerate(self.att_dic.keys()):
-            dens.append(self.att_dic[att_axis][f'filter{self.att_pos()[i]+1}']['density'])  
+        for i, att_axis in enumerate(self.scintillator_dic.keys()):
+            dens.append(self.scintillator_dic[att_axis][f'filter{self.att_pos()[i]+1}']['density'])  
              
         return dens        
 
@@ -456,7 +428,7 @@ class OWBM05WBAttenuators(XoppyWidget):
             material_constants_library = material_constants_library,
                                                 )
 
-        print(out_dictionary["info"])        
+        print(out_dictionary["info"])
 
         dict_parameters = {
             "substance"                 : substance_str,
@@ -519,45 +491,32 @@ plot(out_dictionary["data"][0,:], out_dictionary["data"][1,:],
 """  
     def extract_data_from_xoppy_output(self, calculation_output):
 
-        """ Custom calculated data for this widget depending on which total WB power
-        or power by WB attenuator axis is needed """        
+        """ Calculated data """        
 
         out_dictionary, script = calculation_output
 
         cumulated_data = {}
         results=[]
-        shift = 6 
+        shift = 6        
         
         # First, we add the typical: energy axis and input beam
         
         results.append((out_dictionary['data'][0]).tolist()) #Pos: 0
         results.append((out_dictionary['data'][1]).tolist()) #Pos: 1
 
-        #if just the total of the WB attenuators is needed
+        #Scintillator attenuation
+        total_trans = numpy.ones_like(out_dictionary['data'][0])
+        total_abs_spectra = numpy.zeros_like(out_dictionary['data'][0])
+        for i in range(len(self.att_substance())):
+            total_trans *= out_dictionary['data'][4 + i * shift]
+            total_abs_spectra += out_dictionary['data'][6 + i * shift]
 
-        if self.do_plot_total():
-            #Total
-            total_trans = numpy.ones_like(out_dictionary['data'][0])
-            total_abs_spectra = numpy.zeros_like(out_dictionary['data'][0])
-            for i in range(len(self.att_substance())):
-                total_trans *= out_dictionary['data'][4 + i * shift]
-                total_abs_spectra += out_dictionary['data'][6 + i * shift]
-
-            results.append(total_trans.tolist())                                   #Pos: 2
-            results.append(total_abs_spectra.tolist())                            #Pos: 3
-            results.append(((out_dictionary['data'][-1])/codata.e/1e3).tolist())   #Pos: 4                  
-            results.append((out_dictionary['data'][-1]).tolist())                  #Pos: 5                
-             
-        # if what is needed is the absorption per attenuator axis
-        
-        if self.do_plot_per_axis():              
-            
-            for i in range(len(self.att_substance())):
-                results.append((out_dictionary['data'][4 + i*shift]).tolist()) #Trasmitivity            
-                results.append((out_dictionary['data'][6 + i*shift]).tolist()) #Spectral power absorbed 
-                results.append((out_dictionary['data'][7 + i*shift]).tolist()) #Spectral power after
-       
-        cumulated_data['data']=numpy.array(results)        
+        results.append(total_trans.tolist())                                   #Pos: 2
+        results.append(total_abs_spectra.tolist())                             #Pos: 3
+        results.append(((out_dictionary['data'][-1])/codata.e/1e3).tolist())   #Pos: 4                  
+        results.append((out_dictionary['data'][-1]).tolist())                  #Pos: 5                              
+                                    
+        cumulated_data['data']=numpy.array(results)
 
         # send exchange
         calculated_data = DataExchangeObject("XOPPY", self.get_data_exchange_widget_name())
@@ -577,57 +536,29 @@ plot(out_dictionary["data"][0,:], out_dictionary["data"][1,:],
         try:
            calculated_data.add_content("info", out_dictionary["info"])
         except:
-           pass    
+           pass
 
         return calculated_data
 
 
     def get_data_exchange_widget_name(self):
-        return "POWER"
-
-    def do_plot_total(self):
-        """ For WB attenuators total properties """
-        out = False
-        if self.PLOT_SETS == 0: out = True                        
-        return out
-
-    def do_plot_per_axis(self):
-        """ For each WB attenuator axis """
-        out = False
-        if self.PLOT_SETS == 1: out = True        
-        return out
+        return "POWER"    
 
     def getTitles(self):
         titles = []
-        titles.append("Input beam") #input beam always
-
-        if self.do_plot_total():
-            
-            titles.append("Total transmitivity of WB attenuators")
-            titles.append("Total spectral power absorbed in WB attenuators")
-            titles.append("Flux after WB attenuators")
-            titles.append("Spectral power after WB attenuators")
-            
-
-        if self.do_plot_per_axis():
-            for att_n in range(len(self.att_substance())):
-                titles.append("Transmitivity of Axis " + str(att_n + 1))
-                titles.append("Spectral power absorbed in Axis " + str(att_n + 1))
-                titles.append("Spectral power after Axis " + str(att_n + 1))                
-
+        titles.append("Input beam") #input beam                   
+        titles.append("Transmitivity")
+        titles.append("Spectral power absorbed")
+        titles.append("Flux after Scintillator")
+        titles.append("Spectral power after Scintilllator")         
+                
         return titles
 
     def getXTitles(self):
         xtitles = []
 
-        xtitles.append("Photon Energy [eV]") #for ithe input beam
-
-        if self.do_plot_total():
-            for axis_n in range(len(self.att_substance())+1):
-                xtitles.append("Photon Energy [eV]")
-        if self.do_plot_per_axis():
-            for axis_n in range(3*len(self.att_substance())+len(self.att_substance())):
-                xtitles.append("Photon Energy [eV]")    
+        for n in range(7):
+            xtitles.append("Photon Energy [eV]") 
         
         return xtitles
 
@@ -638,18 +569,10 @@ plot(out_dictionary["data"][0,:], out_dictionary["data"][1,:],
         flux_unit_str = '[photons/s/0.1%bw]'
 
         ytitles.append("Spectral Power %s" % pow_unit_str ) #input beam
-
-        if self.do_plot_total():
-            ytitles.append("Transmitivity")
-            ytitles.append("Spectral power  %s" % pow_unit_str)
-            ytitles.append("Flux %s" % flux_unit_str)
-            ytitles.append("Spectral power  %s" % pow_unit_str)            
-
-        if self.do_plot_per_axis():            
-            for axis_n in range(3*len(self.att_substance())):        
-                ytitles.append("Transmitivity")
-                ytitles.append("Spectral power  %s" % pow_unit_str)
-                ytitles.append("Spectral power  %s" % pow_unit_str)                      
+        ytitles.append("Transmitivity")
+        ytitles.append("Spectral power  %s" % pow_unit_str)
+        ytitles.append("Flux %s" % flux_unit_str)
+        ytitles.append("Spectral power  %s" % pow_unit_str)
         
         return ytitles
 
@@ -657,19 +580,12 @@ plot(out_dictionary["data"][0,:], out_dictionary["data"][1,:],
         variables = []
 
         variables.append((0, 1))  # start plotting the source
-
-        if self.do_plot_total():
-            variables.append((0, 2))
-            variables.append((0, 3))
-            variables.append((0, 4)) # for this one it plots the Flux
-            variables.append((0, 5)) 
-            
-        if self.do_plot_per_axis():
-            for axis_n in range(len(self.att_substance())):
-                variables.append((0, (2 + 3 * axis_n)))
-                variables.append((0, (3 + 3 * axis_n)))
-                variables.append((0, (4 + 3 * axis_n)))                       
         
+        variables.append((0, 2)) # transmitivity
+        variables.append((0, 3)) # absorbed
+        variables.append((0, 4)) # Flux spectrum after
+        variables.append((0, 5)) # Power spectrum after              
+                       
         return variables
 
     def getLogPlot(self):
@@ -677,13 +593,8 @@ plot(out_dictionary["data"][0,:], out_dictionary["data"][1,:],
 
         logplot.append((False,False)) #source
 
-        if self.do_plot_total():
-            for axis_n in range(len(self.att_substance())):
-                logplot.append((False,False))        
-        
-        if self.do_plot_per_axis:
-            for axis_n in range(3*len(self.att_substance())):
-                logplot.append((False, False))
+        for axis_n in range(len(self.att_substance())+1):
+                logplot.append((False,False))      
         
         return logplot
 
@@ -723,7 +634,7 @@ if __name__ == "__main__":
             received_data.add_content("xoppy_code", code)
 
         app = QApplication(sys.argv)
-        w = OWBM05WBAttenuators()
+        w = OWBM05Scintillators()
         w.acceptExchangeData(received_data)
         w.show()
         app.exec()
@@ -731,7 +642,7 @@ if __name__ == "__main__":
 
     else:
         app = QApplication(sys.argv)
-        w = OWBM05WBAttenuators()
+        w = OWBM05Scintillators()
         w.SOURCE = 1
         w.show()
         app.exec()

@@ -1,0 +1,105 @@
+{
+    "Axis1":{
+		"_name": "Dzoom",
+		"_att_pos": 0,
+        "filter1": {
+			"name":"Empty",
+			"substance":"Air, Dry (near sea level)",
+			"thickness":0.0,
+			"density":1.0e-6
+		},
+		"filter2": {
+			"name":"LuAg w/reflec-layer (2000 um)",
+			"substance":"Lu3Al5O12",
+			"thickness":2.0,
+			"density":6.3
+		},
+		"filter3": {
+			"name":"LuAg (1000 um)",
+			"substance":"Lu3Al5O12",
+			"thickness":1.0,
+			"density":6.3
+		}	
+	},
+
+	"Axis2":{
+		"_name": "Zoom",
+		"_att_pos": 0,
+        "filter1": {
+			"name":"Empty",
+			"substance":"Air, Dry (near sea level)",
+			"thickness":0.0,
+			"density":1.0e-6
+		},
+		"filter2": {
+			"name":"LuAg w/reflec-layer (100 um)",
+			"substance":"Lu3Al5O12",
+			"thickness":0.1,
+			"density":6.3
+		},
+		"filter3": {
+			"name":"LuAg w/reflec-layer (250 um)",
+			"substance":"Lu3Al5O12",
+			"thickness":0.25,
+			"density":6.3
+		},
+		"filter4": {
+			"name":"LuAg w/reflec-layer (500 um)",
+			"substance":"Lu3Al5O12",
+			"thickness":0.5,
+			"density":6.3
+		}	
+	},
+	"Axis3":{
+		"_name": "Twinmic",
+		"_att_pos": 0,
+        "filter1": {
+			"name":"Empty",
+			"substance":"Air, Dry (near sea level)",
+			"thickness":0.0,
+			"density":1.0e-6
+		},
+		"filter2": {
+			"name":"LuAg 50-2 (50 um)",
+			"substance":"Lu3Al5O12",
+			"thickness":0.05,
+			"density":6.3
+		},
+		"filter3": {
+			"name":"LuAg 50-1 (50 um)",
+			"substance":"Lu3Al5O12",
+			"thickness":0.05,
+			"density":6.3
+		},
+		"filter4": {
+			"name":"LuAg 25 (25 um)",
+			"substance":"Lu3Al5O12",
+			"thickness":0.025,
+			"density":6.3
+		},
+		"filter5": {
+			"name":"LSO 20-1 (24.2 um)",
+			"substance":"Lu2SiO5",
+			"thickness":0.0242,
+			"density":7.4
+		},		
+		"filter6": {
+			"name":"LSO 20-2 (23 um)",
+			"substance":"Lu2SiO5",
+			"thickness":0.0242,
+			"density":7.4
+		},
+		"filter7": {
+			"name":"LSO 10-1 (8.5 um)",
+			"substance":"Lu2SiO5",
+			"thickness":0.0085,
+			"density":7.4
+		},
+		"filter8": {
+			"name":"LSO 10-2 (8.8 um)",
+			"substance":"Lu2SiO5",
+			"thickness":0.0088,
+			"density":7.4
+		}	
+	}
+}
