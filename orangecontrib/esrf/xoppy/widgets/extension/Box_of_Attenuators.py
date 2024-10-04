@@ -251,8 +251,9 @@ class OWAttenuatorsBox(XoppyWidget):
         for i in range(n_keys):
             items = []
             for filter in self.att_dic[keys[i]].keys():
-                item = self.att_dic[keys[i]][filter]['name']
-                items.append(item)
+                if filter[0] != "_":
+                    item = self.att_dic[keys[i]][filter]['name']
+                    items.append(item)
 
             self._update_combo(self.wids[i], items)
 
