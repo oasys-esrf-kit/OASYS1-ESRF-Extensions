@@ -268,9 +268,6 @@ class FiniteElementReader(OWWidget): #ow_automatic_element.AutomaticElement):
                      items=["No", "Yes"],
                      sendSelectedValue=False, orientation="horizontal")
 
-        oasysgui.lineEdit(profile1D_box, self, "coordinate_profile1D", "At coordinate [m]:", labelWidth=260, valueType=float,
-                          orientation="horizontal")
-
         gui.separator(tab_out, height=20)
 
 
@@ -695,7 +692,7 @@ if __name__ == "__main__":
     # OASYS hdf5
     # ow.set_input_file("/users/srio/OASYS1.2/shadow3-scripts/METROLOGY/ring256.h5")
     # ow.set_input_file("/users/srio/Downloads/dabam2d-001.h5")
-    ow.set_input_file("https://raw.githubusercontent.com/srio/dabam2d/main/data/dabam2d-001.h5")
+    ow.set_input_file("https://raw.githubusercontent.com/srio/dabam2d/main/data/dabam2d-0001.h5")
     # ow.set_input_file("C:/Users/srio/Downloads/dabam2d-001.h5")
     ow.file_in_type = 2
     ow.n_axis_0 = 0
