@@ -8,6 +8,7 @@ from orangewidget import gui
 from orangewidget.settings import Setting
 
 from oasys.widgets.widget import OWWidget
+from oasys.widgets.widget import OWWidget
 from oasys.widgets import gui as oasysgui
 from oasys.widgets import congruence
 
@@ -136,7 +137,9 @@ class OWdabam2d(OWWidget):
 
         # results
         main_tabs = oasysgui.tabWidget(self.mainArea)
+
         plot_tab = oasysgui.createTabPage(main_tabs, "Surfaces")
+
 
         self.tab = []
         self.tabs = oasysgui.tabWidget(plot_tab)
@@ -146,6 +149,13 @@ class OWdabam2d(OWWidget):
 
         gui.rubber(self.controlArea)
         gui.rubber(self.mainArea)
+
+    def delete_tab(self):
+        """
+        main_tabs.setTabsClosable(True)
+        main_tabs.tabCloseRequested.connect(self.delete_tab)
+        """
+        print(">>>> Delete tab")
 
     def select_root(self):
         root = QFileDialog.getExistingDirectory(self, "Select root/url directory to scan for h5 files", "")
@@ -158,7 +168,17 @@ class OWdabam2d(OWWidget):
 
         # self.zernike()
 
-        self.write_thickness_file()
+        # self.write_thickness_file()
+
+        zz = numpy.round(self.data[-1][2], 12)
+        xx = numpy.round(self.data[-1][0], 12)
+        yy = numpy.round(self.data[-1][1], 12)
+        filename = self.file_out
+        try:
+            OU.write_surface_file(zz.T, xx, yy, file_name=filename)
+            print("File %s written to disk." % filename)
+        except:
+                print("*** Error writing hdf5 file **")
 
         # send 2D profile
         xx = self.data[-1][0]
@@ -236,16 +256,16 @@ class OWdabam2d(OWWidget):
                 text += file + "\n"
         self.files_area.setText(text)
 
-    def write_thickness_file(self):
-        zz = numpy.round(self.data[-1][2], 12)
-        xx = numpy.round(self.data[-1][0], 12)
-        yy = numpy.round(self.data[-1][1], 12)
-        filename = self.file_out
-        try:
-            OU.write_surface_file(zz, xx, yy, file_name=filename)
-            print("File %s written to disk." % filename)
-        except:
-            print("*** Error writing hdf5 file **")
+    # def write_thickness_file(self):
+    #     zz = numpy.round(self.data[-1][2], 12)
+    #     xx = numpy.round(self.data[-1][0], 12)
+    #     yy = numpy.round(self.data[-1][1], 12)
+    #     filename = self.file_out
+    #     try:
+    #         OU.write_surface_file(zz, xx, yy, file_name=filename)
+    #         print("File %s written to disk." % filename)
+    #     except:
+    #         print("*** Error writing hdf5 file **")
 
     def clear_views(self):
         size = len(self.tab)
@@ -480,9 +500,29 @@ class OWdabam2d(OWWidget):
             Zcoeffs, fit, residues = b4RO.fit_zernike_circ(data_i[2], nmodes=37, startmode=1, rec_zern=False)
             print('Zernike coefficients (um): \n' + str(Zcoeffs * 1e6))
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    w = OWdabam2d()
-    w.root = "/nobackup/gurb1/srio/DABAM2D/ESRF/C_2D_R320um"
-    w.show()
-    app.exec()
-    w.saveSettings()
+    if 1:
+        app = QApplication(sys.argv)
+        w = OWdabam2d()
+        w.root = "/nobackup/gurb1/srio/DABAM2D/ESRF/C_2D_R320um"
+        w.show()
+        app.exec()
+        w.saveSettings()
+    else:
+        import re
+        import urllib
+
+        # def ls_ows(target_url="https://github.com/oasys-esrf-kit/dabam2d/tree/main/data/"):
+        def ls_ows(target_url="https://github.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces"):
+            data = urllib.request.urlopen(target_url)
+            list_files = []
+            for line in data:
+                line1 = str(line)
+
+                if ".dat" in line1:
+                    try:
+                        found = re.search('dat">(.+?)</a>', line1).group(1)
+                        list_files.append(found)
+                    except:
+                        pass
+
+        print(ls_ows("https://github.com/oasys-kit/dabaxFiles"))
