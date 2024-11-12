@@ -508,21 +508,27 @@ if __name__ == "__main__":
         app.exec()
         w.saveSettings()
     else:
-        import re
-        import urllib
+        # import re
+        # import urllib
+        #
+        # # def ls_ows(target_url="https://github.com/oasys-esrf-kit/dabam2d/tree/main/data/"):
+        # def ls_ows(target_url="https://github.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces"):
+        #     data = urllib.request.urlopen(target_url)
+        #     list_files = []
+        #     for line in data:
+        #         line1 = str(line)
+        #
+        #         if ".dat" in line1:
+        #             try:
+        #                 found = re.search('dat">(.+?)</a>', line1).group(1)
+        #                 list_files.append(found)
+        #             except:
+        #                 pass
+        #
+        # print(ls_ows("https://github.com/oasys-kit/dabaxFiles"))
+        import github
 
-        # def ls_ows(target_url="https://github.com/oasys-esrf-kit/dabam2d/tree/main/data/"):
-        def ls_ows(target_url="https://github.com/PaNOSC-ViNYL/Oasys-PaNOSC-Workspaces"):
-            data = urllib.request.urlopen(target_url)
-            list_files = []
-            for line in data:
-                line1 = str(line)
-
-                if ".dat" in line1:
-                    try:
-                        found = re.search('dat">(.+?)</a>', line1).group(1)
-                        list_files.append(found)
-                    except:
-                        pass
-
-        print(ls_ows("https://github.com/oasys-kit/dabaxFiles"))
+        g = github.Github("USERNAME", "PASSWORD")
+        repo = g.get_user().get_repo("REPO_NAME")
+        print
+        repo.get_dir_contents("")
