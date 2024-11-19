@@ -5,8 +5,8 @@ import scipy.constants as codata
 
 from syned.storage_ring.magnetic_structures.undulator import Undulator
 from syned.storage_ring.magnetic_structures.wiggler import Wiggler
-
-from syned.storage_ring.magnetic_structures import insertion_device
+from syned.storage_ring.light_source import LightSource, ElectronBeam
+from syned.beamline.beamline import Beamline
 
 from PyQt5.QtGui import QPalette, QColor, QFont
 from PyQt5.QtWidgets import QMessageBox, QApplication
@@ -21,13 +21,9 @@ from oasys.widgets import gui as oasysgui
 from oasys.widgets import congruence
 from oasys.widgets.gui import ConfirmDialog
 
-from syned.storage_ring.light_source import LightSource, ElectronBeam
-from syned.beamline.beamline import Beamline
-
-from oasys.widgets.gui import ConfirmDialog
-
 import orangecanvas.resources as resources
 
+import at #accelerator toolbox
 
 m2ev = codata.c * codata.h / codata.e
 
@@ -35,6 +31,108 @@ VERTICAL = 1
 HORIZONTAL = 2
 BOTH = 3
 
+lattice_file = os.path.join(resources.package_dirname("orangecontrib.esrf.syned.data"), 'S28F_all_BM.mat')
+AT_LATTICE = at.load_lattice(lattice_file)
+
+def get_electron_beam_parameters_from_at(id=1, verbose=0):
+
+    if verbose: print("Retrieving electron beam parameters at the center of the ID%02d straight section" % id)
+
+    cell_length = (AT_LATTICE.get_s_pos(at.End) / 32)[0]
+
+    ID = f'ID{id:02d}'
+    IDind = AT_LATTICE.get_uint32_index(ID)
+    s_locs = AT_LATTICE.get_s_pos(IDind)
+    if verbose: print("%s s: %f m" % (ID, s_locs))
+
+    # get circumference
+    Circumference = AT_LATTICE.get_s_pos(at.End)
+    if verbose: print("Circumference, Cell", Circumference, Circumference / 32)
+
+    # define break locations
+    if verbose: print("Lattice location s_locs: ", s_locs)
+
+    if type(s_locs) != numpy.ndarray: # todo: not needed, remove?
+        npoints = 1 + int(Circumference[0] * 1)
+        s_locs = numpy.linspace(0.0, Circumference, npoints)[:, 0]  # all locations along lattice
+
+    npoints = s_locs.shape[0]
+
+    # insert markers at break locations
+    r = AT_LATTICE.sbreak(break_s=list(s_locs))
+
+    # indexes of s locations
+    s_ind = r.get_uint32_index('sbreak')
+
+    # get lattice parameters with radiation
+    if verbose: print('get lattice parameters')
+    r.enable_6d()
+    p0 = r.envelope_parameters()
+
+    epsilonX = p0.emittances[0];
+    epsilonY = 10 * 1e-12;  # tuned to this value during operation
+    delta = p0.sigma_e;
+
+    # gert optics
+    if verbose: print('get orbit, dispersion, beta functions')
+    _, _, l = AT_LATTICE.linopt6(refpts=s_ind)
+
+    # get geometry
+    if verbose: print('get geomtery')
+    geom, _ = AT_LATTICE.get_geometry(refpts=s_ind)
+
+    data = []
+    for i in range(0, npoints):
+        s = s_locs[i]
+        s0 = s_locs[i]
+
+        alpha = l[i].alpha
+        alphaX = alpha[0]
+        alphaY = alpha[1]
+
+        beta = l[i].beta
+        betaX = beta[0]
+        betaY = beta[1]
+
+        gammaX = (1.0 + alpha[0] * alpha[0]) / beta[0]
+        gammaY = (1.0 + alpha[1] * alpha[1]) / beta[1]
+
+        eta = l[i].dispersion
+        etaX = eta[0]
+        etaXp = eta[1]
+        etaY = eta[2]
+        etaYp = eta[3]
+
+        xx = betaX * epsilonX + (etaX * delta) ** 2
+        yy = betaY * epsilonY + (etaY * delta) ** 2
+        xxp = -alphaX * epsilonX + etaX * etaXp * delta ** 2
+        yyp = -alphaY * epsilonY + etaY * etaYp * delta ** 2
+        xpxp = gammaX * epsilonX + (etaXp * delta) ** 2
+        ypyp = gammaY * epsilonY + (etaYp * delta) ** 2
+
+        lab_x = geom[i].x
+        lab_y = geom[i].y
+        angle = geom[i].angle
+
+        tmp = [s0,  # 0
+               s,  # 1
+               lab_x,  # 2
+               lab_y,  # 3
+               angle,  # 4
+               alphaX,  # 5
+               alphaY,  # 6
+               betaX,  # 7
+               betaY,  # 8
+               gammaX, gammaY,  # 9,10
+               etaX, etaY, etaXp, etaYp,  # 11-14
+               xx, yy, xxp, yyp, xpxp, ypyp,  # 15-20
+               1e6 * numpy.sqrt(xx), 1e6 * numpy.sqrt(yy), 1e6 * numpy.sqrt(xpxp),  # 21-23
+               1e6 * numpy.sqrt(ypyp), numpy.sqrt(xx * xpxp), numpy.sqrt(yy * ypyp),  # 24-26
+               ]
+
+        data.append(tmp)
+
+    return numpy.array(data), epsilonX, epsilonY
 
 class OWEBS(OWWidget):
 
@@ -100,6 +198,7 @@ class OWEBS(OWWidget):
     electron_beam_etap_v = Setting(0.0)
 
     type_of_properties = Setting(1)
+    type_of_properties_initial_selection = type_of_properties # this is a backup value as type_of_properties is changed by the code
 
     auto_energy = Setting(0.0)
     auto_harmonic_number = Setting(1)
@@ -168,10 +267,10 @@ class OWEBS(OWWidget):
         gui.separator(self.controlArea)
 
         geom = QApplication.desktop().availableGeometry()
-        self.setGeometry(QRect(round(geom.width()*0.05),
-                               round(geom.height()*0.05),
-                               round(min(geom.width()*0.98, self.MAX_WIDTH)),
-                               round(min(geom.height()*0.95, self.MAX_HEIGHT))))
+        self.setGeometry(QRect(round(geom.width() * 0.05),
+                               round(geom.height() * 0.05),
+                               round(min(geom.width() * 0.98, self.MAX_WIDTH)),
+                               round(min(geom.height() * 0.95, self.MAX_HEIGHT))))
 
         self.setMaximumHeight(self.geometry().height())
         self.setMaximumWidth(self.geometry().width())
@@ -194,7 +293,8 @@ class OWEBS(OWWidget):
         oasysgui.lineEdit(self.electron_beam_box, self, "ring_current", "Ring Current [A]",        labelWidth=260, valueType=float, orientation="horizontal", callback=self.update)
 
         gui.comboBox(self.electron_beam_box, self, "type_of_properties", label="Electron Beam Properties", labelWidth=350,
-                     items=["From 2nd Moments", "From Size/Divergence", "From Twiss papameters","Zero emittance", "EBS (S28D)"],
+                     items=["From 2nd Moments", "From Size/Divergence", "From Twiss papameters","Zero emittance",
+                            "EBS (S28D 135pm H, 5pm V)", "EBS (S28D 135pm H, 10pm V)", "EBS (S28F 140pm H, 10pm V)"],
                      callback=self.update_electron_beam,
                      sendSelectedValue=False, orientation="horizontal")
 
@@ -370,7 +470,7 @@ class OWEBS(OWWidget):
         congruence.checkStrictlyPositiveNumber(self.period_length, "Period Length")
         congruence.checkStrictlyPositiveNumber(self.number_of_periods, "Number of Periods")
 
-    def set_ebs_electron_beam(self):
+    def set_ebs_electron_beam_S28D_5pmV(self):
         self.type_of_properties = 1
         self.electron_beam_size_h = 30.1836e-6
         self.electron_beam_size_v = 3.63641e-6
@@ -400,9 +500,84 @@ class OWEBS(OWWidget):
         self.electron_beam_emittance_h = 1.3166e-10
         self.electron_beam_emittance_v = 5e-12
 
+
+    def set_ebs_electron_beam_S28D_10pmV(self):
+        self.type_of_properties = 1
+        self.electron_beam_size_h = 30.1836e-6
+        self.electron_beam_size_v = 5.14266e-06 # 3.63641e-6
+        self.electron_beam_divergence_h = 4.36821e-6
+        self.electron_beam_divergence_v = 1.94452e-06 # 1.37498e-6
+
+        #
+        eb = self.get_electron_beam()
+
+        moment_xx, moment_xxp, moment_xpxp, moment_yy, moment_yyp, moment_ypyp = eb.get_moments_all()
+        self.moment_xx   = moment_xx
+        self.moment_yy   = moment_yy
+        self.moment_xxp  = moment_xxp
+        self.moment_yyp  = moment_yyp
+        self.moment_xpxp = moment_xpxp
+        self.moment_ypyp = moment_ypyp
+
+        ex, ax, bx, ey, ay, by = eb.get_twiss_no_dispersion_all()
+        self.electron_beam_beta_h = bx
+        self.electron_beam_beta_v = by
+        self.electron_beam_alpha_h = ax
+        self.electron_beam_alpha_v = ay
+        self.electron_beam_eta_h = ex
+        self.electron_beam_eta_v = ey
+        self.electron_beam_etap_h = 0.0
+        self.electron_beam_etap_v = 0.0
+        self.electron_beam_emittance_h = 1.3166e-10
+        self.electron_beam_emittance_v = 10e-12
+
+    def get_id_number(self):
+        if self.ebs_id_index == 0: # <None>
+            id = 1 # this is by convention, zero would give errors
+        else:
+            label = self.get_id_list()[self.ebs_id_index]
+            id = int(label[2:4])
+        return id
+
+    def set_ebs_electron_beam_S28F(self):
+        self.type_of_properties = 1
+
+        data, epsilonX, epsilonY = get_electron_beam_parameters_from_at(id=self.get_id_number())
+
+        self.electron_beam_size_h       = numpy.round(1e-6 * data[0, 21], 11)
+        self.electron_beam_size_v       = numpy.round(1e-6 * data[0, 22], 11)
+        self.electron_beam_divergence_h = numpy.round(1e-6 * data[0, 23], 11)
+        self.electron_beam_divergence_v = numpy.round(1e-6 * data[0, 24], 11)
+
+        self.moment_xx   = data[0, 15]
+        self.moment_yy   = data[0, 16]
+        self.moment_xxp  = data[0, 17]
+        self.moment_yyp  = data[0, 18]
+        self.moment_xpxp = data[0, 19]
+        self.moment_ypyp = data[0, 20]
+
+        self.electron_beam_beta_h      = data[0, 7]
+        self.electron_beam_beta_v      = data[0, 8]
+        self.electron_beam_alpha_h     = data[0, 5]
+        self.electron_beam_alpha_v     = data[0, 6]
+        self.electron_beam_eta_h       = data[0, 11]
+        self.electron_beam_eta_v       = data[0, 12]
+        self.electron_beam_etap_h      = data[0, 13]
+        self.electron_beam_etap_v      = data[0, 14]
+        self.electron_beam_emittance_h = epsilonX
+        self.electron_beam_emittance_v = epsilonY
+
+
     def update_electron_beam(self):
-        if self.type_of_properties == 4:
-            self.set_ebs_electron_beam()
+        self.type_of_properties_initial_selection = self.type_of_properties
+
+        if self.type_of_properties_initial_selection == 4:
+            self.set_ebs_electron_beam_S28D_5pmV()  # will change self.type_of_properties
+        elif self.type_of_properties_initial_selection == 5:
+            self.set_ebs_electron_beam_S28D_10pmV() # will change self.type_of_properties
+        elif self.type_of_properties_initial_selection == 6:
+            self.set_ebs_electron_beam_S28F() # will change self.type_of_properties
+
         self.set_visible()
         self.update()
 
@@ -473,11 +648,39 @@ class OWEBS(OWWidget):
         self.info_id.setText(self.info_template().format_map(info_parameters))
         # self.tabs[0].setText(self.info_template().format_map(info_parameters))
 
+    def info_electron_beam(self):
+        txt = "\n"
+        txt += "================ electron parameters ===========\n"
+        if self.type_of_properties == 0:
+            txt += "from user 2nd Moments\n"
+        elif self.type_of_properties == 3:
+            txt += "from user Twiss Parameters\n"
+        elif self.type_of_properties == 4:
+            txt += "Zero emittance "
+        else:
+            txt += "from Size/Divergence "
+            if self.type_of_properties_initial_selection == 4:
+                txt += "(retrieved from S28D with V emittance 5 pm: \n"
+            elif self.type_of_properties_initial_selection == 5:
+                txt += "(retrieved from S28D with vertical emittance 10 pm: \n"
+            elif self.type_of_properties_initial_selection == 6:
+                txt += "(retrieved from S28F for ID%02d): \n" % (self.get_id_number())
+            else:
+                txt += ": \n"
+
+            txt += "sigma x: %5.2f um\n"  % (1e6 * self.electron_beam_size_h)
+            txt += "sigma y: %5.2f um\n"  % (1e6 * self.electron_beam_size_v)
+            txt += "sigma xp: %5.2f urad\n" % (1e6 * self.electron_beam_divergence_h)
+            txt += "sigma yp: %5.2f urad\n" % (1e6 * self.electron_beam_divergence_v)
+        txt += "================================================\n"
+
+        return txt
+
 
     def info_template(self):
-        return \
+        return self.info_electron_beam() + \
 """
-data url: {url}
+ID data url: {url}
 id_name: {id}
 
 ================ input parameters ===========
@@ -668,6 +871,11 @@ Approximated coherent fraction at 1st harmonic:
         self.update()
 
     def set_id(self):
+        print(">>>>> self.type_of_properties_initial_selection : ", self.type_of_properties_initial_selection )
+        if self.type_of_properties_initial_selection == 6:
+            print(">>>>> updating for current ID the electron beam using S28F")
+            self.set_ebs_electron_beam_S28F()
+
         if self.ebs_id_index !=0:
             self.populate_gap_parametrization()
             self.populate_magnetic_structure()
@@ -703,15 +911,15 @@ Approximated coherent fraction at 1st harmonic:
 
         if numpy.isnan(K):
             if ConfirmDialog.confirmed(self, message="Impossible configuration. Set to Kmin=%f?" % (Kmin)):
-                K = numpy.round(Kmin,4)
+                K = numpy.round(Kmin, 4)
 
         if (K > Kmax):
             if ConfirmDialog.confirmed(self, message="Needed K (%f) > Kmax (%f). Reset to Kmax?" % (K, Kmax)):
-                K = numpy.round(Kmax,4)
+                K = numpy.round(Kmax, 4)
 
         if (K < Kmin):
             if ConfirmDialog.confirmed(self, message="Needed K (%f) < Kmin (%f). Reset to Kmin?" % (K, Kmin)):
-                K = numpy.round(Kmin,4)
+                K = numpy.round(Kmin, 4)
 
         if which == VERTICAL:
             self.K_vertical = K
@@ -962,6 +1170,8 @@ Approximated coherent fraction at 1st harmonic:
 
         elif self.type_of_properties == 3:
             electron_beam.set_moments_all(0,0,0,0,0,0)
+        else:
+            raise NotImplementedError()
 
         return electron_beam
 
@@ -1146,11 +1356,14 @@ Approximated coherent fraction at 1st harmonic:
 
 if __name__ == "__main__":
     from PyQt5.QtWidgets import QApplication
-
     a = QApplication(sys.argv)
     ow = OWEBS()
     ow.show()
     a.exec_()
+
+
+    # data = get_electron_beam_parameters_from_at(id=8)
+    # print(data.shape, data[0, [21, 22, 23, 24]])
 
     # data_dict = get_data_dictionary()
     # out_list = [("ID%02d %s" % (data_dict["straight_section"][i],data_dict["id_name"][i])) for i in range(len(data_dict["id_name"]))]

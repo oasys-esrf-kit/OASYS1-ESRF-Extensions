@@ -6,7 +6,7 @@ except AttributeError:
     from setuptools import find_packages, setup
 
 NAME = 'OASYS1-ESRF-Extensions'
-VERSION = '0.0.83'
+VERSION = '0.0.84'
 ISRELEASED = True
 
 DESCRIPTION = 'OASYS extension for the ESRF'
@@ -39,12 +39,13 @@ SETUP_REQUIRES = (
 
 INSTALL_REQUIRES = (
     'setuptools',
-    'oasys-barc4ro>=1.0.3',
+    'oasys-barc4ro>=2024.11.13',
     'pandas',
     'numba',
-    'shadow4>=0.1.23',
-    'xoppylib>=1.0.24',
-    'crystalpy>=0.0.22'
+    'shadow4>=0.1.49',
+    'xoppylib>=1.0.25',
+    'crystalpy>=0.0.24',
+    'accelerator-toolbox==0.6.1',
 )
 
 PACKAGES = find_packages(exclude=('*.tests', '*.tests.*', 'tests.*', 'tests'))
