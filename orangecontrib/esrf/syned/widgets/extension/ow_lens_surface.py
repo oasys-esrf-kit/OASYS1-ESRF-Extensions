@@ -79,6 +79,7 @@ class OWLensSurface(OWWidget):
     two_d_lens = Setting(0)
     wall_thickness = Setting(10e-6)
     n_lenses = Setting(1)
+    multiplicative_factor = Setting(1.0)
     aperture_shape = Setting(0)
     aperture_dimension_v = Setting(1e-3)
     aperture_dimension_h = Setting(1e-3)
@@ -249,6 +250,9 @@ class OWLensSurface(OWWidget):
         oasysgui.lineEdit(self.lens_id, self, "n_lenses", "Number of lenses",
                           labelWidth=300, valueType=int, orientation="horizontal")
 
+        oasysgui.lineEdit(id, self, "multiplicative_factor", "Multiplicative factor for z (defailt=1.0)",
+                          labelWidth=300, valueType=float, orientation="horizontal")
+
     def set_visible(self):
         self.lens_id.setVisible(self.surface_shape == 1)
         self.lens_width_id.setVisible(self.aperture_shape == 1)
@@ -309,7 +313,7 @@ class OWLensSurface(OWWidget):
 
             xx, yy, Z = optical_element.get_surface_thickness_mesh(output_wavefront)
 
-
+        Z *= self.multiplicative_factor
 
         #
         # display results
