@@ -25,6 +25,9 @@ import orangecanvas.resources as resources
 
 import at #accelerator toolbox
 
+from orangecontrib.wofry.widgets.gui.python_script import PythonScript # TODO: it is illegal that syned imports from wofry.
+
+
 m2ev = codata.c * codata.h / codata.e
 
 VERTICAL = 1
@@ -432,22 +435,22 @@ class OWEBS(OWWidget):
                     oasysgui.createTabPage(self.tabs, "Resonance vs Gap"),
                     oasysgui.createTabPage(self.tabs, "Power vs Gap"),
                     oasysgui.createTabPage(self.tabs, "Pow_dens_peak vs Gap"),
+                    oasysgui.createTabPage(self.tabs, "Script")
                     ]
 
         for tab in self.tab:
             tab.setFixedHeight(self.IMAGE_HEIGHT)
             tab.setFixedWidth(self.IMAGE_WIDTH)
 
-
+        # info widget
         self.info_id = oasysgui.textArea(height=self.IMAGE_HEIGHT-5, width=self.IMAGE_WIDTH-5)
         profile_box = oasysgui.widgetBox(self.tab[0], "", addSpace=True, orientation="horizontal",
                                          height = self.IMAGE_HEIGHT, width=self.IMAGE_WIDTH-5)
         profile_box.layout().addWidget(self.info_id)
 
-
+        # plot widgets
         n_plots = len(self.titles())
         self.plot_canvas = [None] * (1 + n_plots)
-
 
         for i in range(n_plots):
             self.plot_canvas[i] = oasysgui.plotWindow(roi=False, control=False, position=True)
@@ -458,10 +461,18 @@ class OWEBS(OWWidget):
             self.plot_canvas[i].setGraphTitle(self.titles()[i])
             self.plot_canvas[i].setInteractiveMode(mode='zoom')
 
-
         for index in range(0, 5):
             self.tab[index + 1].layout().addWidget(self.plot_canvas[index])
 
+        # script widget
+
+        # script_tab = oasysgui.createTabPage(self.main_tabs, "Script")
+        self.python_script = PythonScript()
+        self.python_script.code_area.setFixedHeight(400)
+        script_box = gui.widgetBox(self.tab[6], "Python script", addSpace=True, orientation="horizontal")
+        script_box.layout().addWidget(self.python_script)
+
+        #
         self.tabs.setCurrentIndex(1)
 
     def check_magnetic_structure(self):
@@ -585,6 +596,7 @@ class OWEBS(OWWidget):
         self.check_data()
         self.update_info()
         self.update_plots()
+        self.update_script()
 
     def update_info(self):
 
@@ -871,9 +883,7 @@ Approximated coherent fraction at 1st harmonic:
         self.update()
 
     def set_id(self):
-        print(">>>>> self.type_of_properties_initial_selection : ", self.type_of_properties_initial_selection )
         if self.type_of_properties_initial_selection == 6:
-            print(">>>>> updating for current ID the electron beam using S28F")
             self.set_ebs_electron_beam_S28F()
 
         if self.ebs_id_index !=0:
@@ -992,6 +1002,99 @@ Approximated coherent fraction at 1st harmonic:
         self.plot_graph(3, self.titles()[3], gap_mm, ptot, xtitle=self.xtitles()[3], ytitle=self.ytitles()[3])
 
         self.plot_graph(4, self.titles()[4], gap_mm, p_dens_peak, xtitle=self.xtitles()[4], ytitle=self.ytitles()[4])
+
+    def update_script(self):
+
+
+
+        #
+
+        script = """
+import numpy
+import scipy.constants as codata
+from srxraylib.plot.gol import plot"""
+
+        # inputs
+        script += "\n\n#\n# inputs\n#"
+        script += "\ngap_min                = %g # mm" % self.gap_min
+        script += "\ngap_max                = %g # mm" % self.gap_max
+        script += "\nperiod_length          = %g # m" % self.period_length
+        script += "\nnumber_of_periods      = %g" % self.number_of_periods
+        script += "\nring_current           = %g # A" % self.ring_current
+        script += "\nelectron_energy_in_GeV = %g # GeV" % self.electron_energy_in_GeV
+        script += "\npow_dens_screen        = %g # distance to screen in m" % self.pow_dens_screen
+        script += "\nauto_harmonic_number   = %g" % self.auto_harmonic_number
+
+        a = [self.a0,
+             self.a1,
+             self.a2,
+             self.a3,
+             self.a4,
+             self.a5,
+             self.a6,
+             ]
+
+        A = []
+        for i in range(7):
+            try:
+                A.append(float(a[i]))
+            except:
+                pass
+
+        script += "\nA = " + repr(A)
+
+        script += """
+
+#
+# calculations
+#
+gap_mm = numpy.linspace(gap_min * 0.9, gap_max * 1.1, 1000)
+i_half = len(A) // 2
+
+# get K vs gap
+Bmax = numpy.zeros_like(gap_mm)
+for i in range(i_half):
+    Bmax += A[i] * numpy.exp(-numpy.pi * (i + 1) * A[i + i_half] * gap_mm / (period_length * 1e3))
+
+Karray = Bmax * period_length * codata.e / (2 * numpy.pi * codata.m_e * codata.c)
+
+# resonance energy
+gamma1 = 1e9 * electron_energy_in_GeV / (codata.m_e *  codata.c**2 / codata.e)
+Karray_horizontal = numpy.zeros_like(Karray)
+Bfield = Bmax # Karray / (period_length * codata.e / (2 * numpy.pi * codata.m_e * codata.c))
+
+theta_x = 0.0
+theta_z = 0.0
+wavelength = (period_length / (2.0 * gamma1 ** 2)) * (1 + Karray ** 2 / 2.0 + Karray_horizontal ** 2 / 2.0 + gamma1 ** 2 * (theta_x ** 2 + theta_z ** 2))
+wavelength /= auto_harmonic_number
+frequency = codata.c / wavelength * auto_harmonic_number
+energy_in_ev = codata.h * frequency / codata.e
+E1_array = energy_in_ev * auto_harmonic_number
+
+# power
+ptot = (number_of_periods / 6) * codata.value('characteristic impedance of vacuum') * ring_current * codata.e * 2 * numpy.pi * codata.c * gamma1 ** 2 * (Karray ** 2 + Karray_horizontal ** 2) / period_length
+
+### From: Undulators, Wigglers and their Applications - H. Onuki & P Elleaume ###
+### Chapter 3: Undulator radiation eqs. 68 and 69 ###
+g_k = Karray * ((Karray ** 6) + (24 / 7) * (Karray ** 4) + 4 * (Karray ** 2) + (16 / 7)) / ((1 + (Karray ** 2)) ** (7 / 2))
+
+p_dens_peak = ((21 * (gamma1 ** 2)) / (16 * numpy.pi * Karray) * ptot * g_k) / ((pow_dens_screen * 1e3) ** 2)
+
+#
+# plots
+#
+plot(gap_mm, Karray, title="K vs Gap", xtitle="Gap [mm]", ytitle="K", show=0)
+plot(gap_mm, Bfield, title="B vs Gap", xtitle="Gap [mm]", ytitle="B [T]", show=0)
+plot(E1_array, gap_mm,
+          E1_array * 3, gap_mm,
+          E1_array * 5, gap_mm,
+          title="Gap vs resonance energy", xtitle="Photon energy [eV]", ytitle="Gap [mm]",
+          legend=['harmonic 1', 'harmonic 3', 'harmonic 5'], show=0)
+plot(gap_mm, ptot,        title="Power vs Gap", xtitle="Gap [mm]", ytitle="Power [W]", show=0)
+plot(gap_mm, p_dens_peak, title="Power density peak at screen vs Gap", xtitle="Gap [mm]", ytitle="Power density peak at screen [W/mm2]", show=1)
+"""
+
+        self.python_script.set_code(script)
 
 
     def calculate_resonance_energy(self, Karray):
