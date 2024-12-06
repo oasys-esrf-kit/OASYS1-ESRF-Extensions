@@ -1,7 +1,8 @@
 import os, sys
 import numpy
 
-from syned.storage_ring.light_source import ElectronBeam
+from syned.storage_ring.light_source import LightSource, ElectronBeam
+from syned.beamline.beamline import Beamline
 
 from PyQt5.QtGui import QPalette, QColor, QFont
 from PyQt5.QtWidgets import QMessageBox
@@ -192,8 +193,8 @@ class OWEBSCELL(OWWidget):
     keywords = ["data", "file", "load", "read"]
 
     outputs = [{"name":"SynedData",
-                "type":ElectronBeam,
-                "doc":"Syned Electron Beam",
+                "type":Beamline,
+                "doc":"Syned Beamline",
                 "id":"data"}]
 
 
@@ -422,7 +423,10 @@ class OWEBSCELL(OWWidget):
 
         # senf syned data
         try:
-            self.send("SynedData", self.get_electron_beam())
+            self.send("SynedData",
+                      Beamline(light_source=LightSource(name="EBS data",
+                        electron_beam=self.get_electron_beam(),
+                        magnetic_structure=None)))
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e.args[0]), QMessageBox.Ok)
             self.setStatusMessage("")
