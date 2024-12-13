@@ -141,7 +141,7 @@ class OWEBS(OWWidget):
 
     name = "ESRF-EBS ID Light Source"
     description = "Syned: ESRF-EBS ID Light Source"
-    icon = "icons/ebs.png"
+    icon = "icons/id_ebs.png"
     priority = 1
 
 

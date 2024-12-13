@@ -183,7 +183,7 @@ class OWEBSCELL(OWWidget):
 
     name = "ESRF-EBS Cell Parameters"
     description = "Syned: ESRF-EBS Cell Parameters"
-    icon = "icons/ebs_at.png"
+    icon = "icons/at_ebs.png"
     priority = 1.2
 
 
