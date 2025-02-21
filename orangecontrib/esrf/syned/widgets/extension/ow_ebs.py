@@ -1066,10 +1066,8 @@ Bfield = Bmax # Karray / (period_length * codata.e / (2 * numpy.pi * codata.m_e 
 theta_x = 0.0
 theta_z = 0.0
 wavelength = (period_length / (2.0 * gamma1 ** 2)) * (1 + Karray ** 2 / 2.0 + Karray_horizontal ** 2 / 2.0 + gamma1 ** 2 * (theta_x ** 2 + theta_z ** 2))
-wavelength /= auto_harmonic_number
-frequency = codata.c / wavelength * auto_harmonic_number
-energy_in_ev = codata.h * frequency / codata.e
-E1_array = energy_in_ev * auto_harmonic_number
+energy_in_ev = codata.h * codata.c / wavelength / codata.e
+E1_array = energy_in_ev
 
 # power
 ptot = (number_of_periods / 6) * codata.value('characteristic impedance of vacuum') * ring_current * codata.e * 2 * numpy.pi * codata.c * gamma1 ** 2 * (Karray ** 2 + Karray_horizontal ** 2) / period_length
@@ -1108,13 +1106,9 @@ plot(gap_mm, p_dens_peak, title="Power density peak at screen vs Gap", xtitle="G
                          (1 + K_vertical ** 2 / 2.0 + K_horizontal ** 2 / 2.0 + \
                           self.gamma() ** 2 * (theta_x ** 2 + theta_z ** 2))
 
-        wavelength /= self.auto_harmonic_number
+        energy_in_ev = codata.h * codata.c / wavelength / codata.e
 
-        frequency = codata.c / wavelength * self.auto_harmonic_number
-
-        energy_in_ev = codata.h * frequency / codata.e
-
-        return energy_in_ev * self.auto_harmonic_number
+        return energy_in_ev
 
 
     def calculate_K_from_gap(self, gap_mm=None):
