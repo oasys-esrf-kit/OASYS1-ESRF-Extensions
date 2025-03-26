@@ -16,6 +16,190 @@ from crystalpy.util.Vector import Vector
 from crystalpy.util.Photon import Photon
 
 
+
+import h5py
+def calculate_multilayer_monochromator(filename, energies=numpy.linspace(7900, 8100, 200)):
+    # r = numpy.zeros_like(energies)
+
+    try:
+        f = h5py.File(filename, 'r')
+        density1 = f["MLayer/parameters/density1"][()]
+        density2 = f["MLayer/parameters/density2"][()]
+        densityS = f["MLayer/parameters/densityS"][()]
+        gamma1 = numpy.array(f["MLayer/parameters/gamma1"])
+        material1 = f["MLayer/parameters/material1"][()]
+        material2 = f["MLayer/parameters/material2"][()]
+        materialS = f["MLayer/parameters/materialS"][()]
+        mlroughness1 = numpy.array(f["MLayer/parameters/mlroughness1"])
+        mlroughness2 = numpy.array(f["MLayer/parameters/mlroughness2"])
+        roughnessS = f["MLayer/parameters/roughnessS"][()]
+        np = f["MLayer/parameters/np"][()]
+        npair = f["MLayer/parameters/npair"][()]
+        thick = numpy.array(f["MLayer/parameters/thick"])
+        x = numpy.array(f["/MLayer/reflectivity-s/x"])
+        f.close()
+
+        from xoppylib.mlayer import MLayer
+
+        out = MLayer.initialize_from_bilayer_stack(
+            material_S=materialS, density_S=densityS, roughness_S=roughnessS,
+            material_E=material1, density_E=density1, roughness_E=mlroughness1[0],
+            material_O=material2, density_O=density2, roughness_O=mlroughness2[0],
+            bilayer_pairs=np,
+            bilayer_thickness=thick[0],
+            bilayer_gamma=gamma1[0],
+        )
+
+        for key in out.pre_mlayer_dict.keys():
+            print(key, out.pre_mlayer_dict[key])
+        # reflectivity is for amplitude
+        rs, rp, e, t = out.scan(h5file="",
+                                energyN=energies.size, energy1=energies[0], energy2=energies[-1],
+                                thetaN=1, theta1=0.2, theta2=6.0)
+
+
+    except:
+        raise Exception("Error reading file: %s" % filename)
+
+    print("\n\n\n")
+    return rs[:, 0], rp[:, 0], e, t
+
+
+def calculate_bragg_monochromator(h_miller=1, k_miller=1, l_miller=1,
+                        energy_setup=8000.0, energies=numpy.linspace(7900, 8100, 200),
+                        calculation_method=0):
+
+    # energy_setup = self.ENER_SELECTED
+    # calculation_method = self.METHOD
+
+    r = numpy.zeros_like(energies)
+    harmonic = 1
+
+    diffraction_setup_r = DiffractionSetupXraylib(geometry_type=BraggDiffraction(),  # GeometryType object
+                                           crystal_name="Si",  # string
+                                           thickness=1,  # meters
+                                           miller_h=harmonic * h_miller,  # int
+                                           miller_k=harmonic * k_miller,  # int
+                                           miller_l=harmonic * l_miller,  # int
+                                           asymmetry_angle=0,  # 10.0*numpy.pi/180.,            # radians
+                                           azimuthal_angle=0.0)  # radians                            # int
+
+
+    bragg_angle = diffraction_setup_r.angleBragg(energy_setup)
+    print("Bragg angle for Si%d%d%d at E=%f eV is %f deg" % (
+        h_miller, k_miller, l_miller, energy_setup, bragg_angle * 180.0 / numpy.pi))
+    nharmonics = int( energies.max() / energy_setup)
+
+    if nharmonics < 1:
+        nharmonics = 1
+    print("Calculating %d harmonics" % nharmonics)
+
+    for harmonic in range(1,nharmonics+1,2): # calculate only odd harmonics
+        print("\nCalculating harmonic: ", harmonic)
+        ri = numpy.zeros_like(energies)
+        for i in range(energies.size):
+            try:
+                diffraction_setup_r = DiffractionSetupXraylib(geometry_type=BraggDiffraction(),  # GeometryType object
+                                                       crystal_name="Si",  # string
+                                                       thickness=1,  # meters
+                                                       miller_h=harmonic * h_miller,  # int
+                                                       miller_k=harmonic * k_miller,  # int
+                                                       miller_l=harmonic * l_miller,  # int
+                                                       asymmetry_angle=0,  # 10.0*numpy.pi/180.,            # radians
+                                                       azimuthal_angle=0.0)  # radians                            # int
+
+                diffraction = Diffraction()
+
+                energy = energies[i]
+                deviation = 0.0  # angle_deviation_min + ia * angle_step
+                angle = deviation + bragg_angle
+
+                # calculate the components of the unitary vector of the incident photon scan
+                # Note that diffraction plane is YZ
+                yy = numpy.cos(angle)
+                zz = - numpy.abs(numpy.sin(angle))
+                photon = Photon(energy_in_ev=energy, direction_vector=Vector(0.0, yy, zz))
+
+                # perform the calculation
+                coeffs_r = diffraction.calculateDiffractedComplexAmplitudes(diffraction_setup_r, photon, calculation_method=calculation_method)
+                # note the power 2 to get intensity (**2) for a single reflection
+
+                r[i] += numpy.abs( coeffs_r['S'] ) ** 2
+                ri[i] = numpy.abs( coeffs_r['S'] ) ** 2
+            except:
+                print("Failed to calculate reflectivity at E=%g eV for %d%d%d reflection" % (energy,
+                                        harmonic*h_miller, harmonic*k_miller, harmonic*l_miller))
+        print("Max reflectivity: ", ri.max(), " at energy: ", energies[ri.argmax()])
+    print("\n\n\n")
+    return r
+
+def calculate_laue_monochromator(h_miller=1, k_miller=1, l_miller=1,
+                        energy_setup=8000.0, energies=numpy.linspace(7900, 8100, 200),
+                        calculation_method=0, thickness=10e-6):
+
+    # energy_setup = self.ENER_SELECTED
+    # calculation_method = self.METHOD
+    # thickness = self.THICK * 1e-6,  # meters
+
+    r = numpy.zeros_like(energies)
+    harmonic = 1
+    diffraction_setup_r = DiffractionSetupXraylib(geometry_type=LaueDiffraction(),  # GeometryType object
+                                           crystal_name="Si",  # string
+                                           thickness=thickness,  # meters
+                                           miller_h=harmonic * h_miller,  # int
+                                           miller_k=harmonic * k_miller,  # int
+                                           miller_l=harmonic * l_miller,  # int
+                                           asymmetry_angle=numpy.pi/2,  # 10.0*numpy.pi/180.,            # radians
+                                           azimuthal_angle=0)  # radians                            # int
+
+
+    bragg_angle = diffraction_setup_r.angleBragg(energy_setup)
+    print("Bragg angle for Si%d%d%d at E=%f eV is %f deg" % (
+        h_miller, k_miller, l_miller, energy_setup, bragg_angle * 180.0 / numpy.pi))
+    nharmonics = int( energies.max() / energy_setup)
+
+    if nharmonics < 1:
+        nharmonics = 1
+    print("Calculating %d harmonics" % nharmonics)
+
+    for harmonic in range(1, nharmonics+1, 2): # calculate only odd harmonics
+        print("\nCalculating harmonic: ", harmonic)
+        ri = numpy.zeros_like(energies)
+        for i in range(energies.size):
+            try:
+                diffraction_setup_r = DiffractionSetupXraylib(geometry_type=LaueDiffraction(),  # GeometryType object
+                                                       crystal_name="Si",  # string
+                                                       thickness=thickness,  # meters
+                                                       miller_h=harmonic * h_miller,  # int
+                                                       miller_k=harmonic * k_miller,  # int
+                                                       miller_l=harmonic * l_miller,  # int
+                                                       asymmetry_angle=numpy.pi/2,  # 10.0*numpy.pi/180.,            # radians
+                                                       azimuthal_angle=0)  # radians                            # int
+
+                diffraction = Diffraction()
+
+                energy = energies[i]
+                deviation = 0.0  # angle_deviation_min + ia * angle_step
+                angle = deviation + numpy.pi/2 + bragg_angle
+
+                # calculate the components of the unitary vector of the incident photon scan
+                # Note that diffraction plane is YZ
+                yy = numpy.cos(angle)
+                zz = - numpy.abs(numpy.sin(angle))
+                photon = Photon(energy_in_ev=energy, direction_vector=Vector(0.0, yy, zz))
+
+                # perform the calculation
+                coeffs_r = diffraction.calculateDiffractedComplexAmplitudes(diffraction_setup_r, photon, calculation_method=calculation_method)
+                # note the power 2 to get intensity
+                r[i] += numpy.abs( coeffs_r['S'] ) ** 2
+                ri[i] = numpy.abs( coeffs_r['S'] ) ** 2
+            except:
+                print("Failed to calculate reflectivity at E=%g eV for %d%d%d reflection" % (energy,
+                                        harmonic*h_miller, harmonic*k_miller, harmonic*l_miller))
+        print("Max reflectivity: ", ri.max(), " at energy: ", energies[ri.argmax()])
+    print("\n\n\n")
+    return r
+
 class Monochromator(XoppyWidget):
     name = "Monochromator"
     id = "orange.widgets.dataxpower"
@@ -28,7 +212,8 @@ class Monochromator(XoppyWidget):
     inputs = [("ExchangeData", DataExchangeObject, "acceptExchangeData")]
 
     SOURCE = Setting(2)
-    TYPE = Setting(1)
+    TYPE = Setting(3)
+    N_REFLECTIONS = Setting(2)
     ENER_SELECTED = Setting(8000)
     H_MILLER = Setting (1)
     K_MILLER = Setting (1)
@@ -39,6 +224,7 @@ class Monochromator(XoppyWidget):
     ENER_N = Setting(2000)
     SOURCE_FILE = Setting("?")
     FILE_DUMP = Setting(0)
+    ML_H5_FILE = Setting("/home/srio/Oasys/multilayer.h5")
     METHOD = Setting(0)                # Zachariasen
 
     def build_gui(self):
@@ -102,8 +288,17 @@ class Monochromator(XoppyWidget):
         box1 = gui.widgetBox(box)
         self.box_source = gui.comboBox(box1, self, "TYPE",
                                        label=self.unitLabels()[idx], addSpace=False,
-                                       items=['Empty','Si Bragg (double reflection)','Si Laue (single reflection)','Multilayer (not implemented)'],
-                                       valueType=int, orientation="horizontal", labelWidth=250)
+                                       items=['Empty','Si Bragg','Si Laue',
+                                              'Multilayer'],
+                                       valueType=int, orientation="horizontal", labelWidth=200)
+        self.show_at(self.unitFlags()[idx], box1)
+
+        # widget index xx
+        idx += 1
+        box1 = gui.widgetBox(box)
+        oasysgui.lineEdit(box1, self, "N_REFLECTIONS",
+                          label=self.unitLabels()[idx], addSpace=False,
+                          valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
         # widget index 7
@@ -146,6 +341,24 @@ class Monochromator(XoppyWidget):
                                        valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
+        # widget index 13
+        idx += 1
+        box1 = gui.widgetBox(box)
+        gui.comboBox(box1, self, "METHOD",
+                     label=self.unitLabels()[idx], addSpace=True,
+                     items=["Zachariasen", "Guigay"],
+                     orientation="horizontal")
+        self.show_at(self.unitFlags()[idx], box1)
+
+        # widget index 10!!!!!!!!
+        idx += 1
+        box1 = gui.widgetBox(box)
+        oasysgui.lineEdit(box1, self, "ML_H5_FILE",
+                          label=self.unitLabels()[idx], addSpace=False,
+                          valueType=str, orientation="horizontal", labelWidth=200)
+        self.show_at(self.unitFlags()[idx], box1)
+
+
         #widget index 12
         idx += 1
         box1 = gui.widgetBox(box)
@@ -157,14 +370,7 @@ class Monochromator(XoppyWidget):
                     valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-        # widget index 13
-        idx += 1
-        box1 = gui.widgetBox(box)
-        gui.comboBox(box1, self, "METHOD",
-                     label=self.unitLabels()[idx], addSpace=True,
-                     items=["Zachariasen", "Guigay"],
-                     orientation="horizontal")
-        self.show_at(self.unitFlags()[idx], box1)
+
 
         self.input_spectrum = None
 
@@ -183,10 +389,13 @@ class Monochromator(XoppyWidget):
                  'Energy points:  ',
                  'File with input beam spectral power:',
                  'Type Monochromator',
+                 'Number of reflections',
                  'Energy Selected [eV]',
-                 'miller index h','miller index k','miller index l','Crystal thickness [microns]',
+                 'Miller index h','Miller index k','Miller index l','Crystal thickness [microns]',
+                 "Calculation method",
+                 "XOPPY/Multilayer h5 file",
                  "Dump file",
-                 "Calculation method"]
+                 ]
 
 
     def unitFlags(self):
@@ -196,10 +405,12 @@ class Monochromator(XoppyWidget):
                  'self.SOURCE  ==  1',
                  'self.SOURCE  ==  2',
                  'True',
-                 'self.TYPE  ==  1 or self.TYPE  ==  2 or self.TYPE  ==  3',
+                 'True',
+                 'self.TYPE  ==  1 or self.TYPE  ==  2',
                  'self.TYPE  ==  1 or self.TYPE  ==  2','self.TYPE  ==  1 or self.TYPE  ==  2','self.TYPE  ==  1 or self.TYPE  ==  2',
                  'self.TYPE  ==  2',
-                 'True',
+                 'self.TYPE  ==  1 or self.TYPE  ==  2',
+                 'self.TYPE  ==  3',
                  'True']
 
     def get_help_name(self):
@@ -308,7 +519,7 @@ class Monochromator(XoppyWidget):
             congruence.checkFile(self.SOURCE_FILE)
 
     def do_xoppy_calculation(self):
-        return self.xoppy_calc_mono()
+        return self.xoppy_calc_power_monochromator()
 
     def extract_data_from_xoppy_output(self, calculation_output):
         return calculation_output
@@ -333,135 +544,73 @@ class Monochromator(XoppyWidget):
         return [(False,False),(False, False),(False, False)]
 
 
-    def calculate_bragg_dcm(self, h_miller=1, k_miller=1, l_miller=1,
-                            energy_setup=8000.0, energies=numpy.linspace(7900, 8100, 200)):
-
-        energy_setup = self.ENER_SELECTED
-        r = numpy.zeros_like(energies)
-        harmonic = 1
-
-        diffraction_setup_r = DiffractionSetupXraylib(geometry_type=BraggDiffraction(),  # GeometryType object
-                                               crystal_name="Si",  # string
-                                               thickness=1,  # meters
-                                               miller_h=harmonic * h_miller,  # int
-                                               miller_k=harmonic * k_miller,  # int
-                                               miller_l=harmonic * l_miller,  # int
-                                               asymmetry_angle=0,  # 10.0*numpy.pi/180.,            # radians
-                                               azimuthal_angle=0.0)  # radians                            # int
-
-
-        bragg_angle = diffraction_setup_r.angleBragg(energy_setup)
-        print("Bragg angle for Si%d%d%d at E=%f eV is %f deg" % (
-            h_miller, k_miller, l_miller, energy_setup, bragg_angle * 180.0 / numpy.pi))
-        nharmonics = int( energies.max() / energy_setup)
-
-        if nharmonics < 1:
-            nharmonics = 1
-        print("Calculating %d harmonics" % nharmonics)
-
-        for harmonic in range(1,nharmonics+1,2): # calculate only odd harmonics
-            print("\nCalculating harmonic: ", harmonic)
-            ri = numpy.zeros_like(energies)
-            for i in range(energies.size):
-                try:
-                    diffraction_setup_r = DiffractionSetupXraylib(geometry_type=BraggDiffraction(),  # GeometryType object
-                                                           crystal_name="Si",  # string
-                                                           thickness=1,  # meters
-                                                           miller_h=harmonic * h_miller,  # int
-                                                           miller_k=harmonic * k_miller,  # int
-                                                           miller_l=harmonic * l_miller,  # int
-                                                           asymmetry_angle=0,  # 10.0*numpy.pi/180.,            # radians
-                                                           azimuthal_angle=0.0)  # radians                            # int
-
-                    diffraction = Diffraction()
-
-                    energy = energies[i]
-                    deviation = 0.0  # angle_deviation_min + ia * angle_step
-                    angle = deviation + bragg_angle
-
-                    # calculate the components of the unitary vector of the incident photon scan
-                    # Note that diffraction plane is YZ
-                    yy = numpy.cos(angle)
-                    zz = - numpy.abs(numpy.sin(angle))
-                    photon = Photon(energy_in_ev=energy, direction_vector=Vector(0.0, yy, zz))
-
-                    # perform the calculation
-                    coeffs_r = diffraction.calculateDiffractedComplexAmplitudes(diffraction_setup_r, photon, calculation_method=self.METHOD)
-                    # note the power 4 to get intensity (**2) for a double reflection (**2)
-
-                    r[i] += numpy.abs( coeffs_r['S'] ) ** 4
-                    ri[i] = numpy.abs( coeffs_r['S'] ) ** 4
-                except:
-                    print("Failed to calculate reflectivity at E=%g eV for %d%d%d reflection" % (energy,
-                                            harmonic*h_miller, harmonic*k_miller, harmonic*l_miller))
-            print("Max reflectivity: ", ri.max(), " at energy: ", energies[ri.argmax()])
-        print("\n\n\n")
-        return r
-
-    def calculate_laue_monochromator(self, h_miller=1, k_miller=1, l_miller=1,
-                            energy_setup=8000.0, energies=numpy.linspace(7900, 8100, 200)):
-
-        energy_setup = self.ENER_SELECTED
-        r = numpy.zeros_like(energies)
-        harmonic = 1
-        diffraction_setup_r = DiffractionSetupXraylib(geometry_type=LaueDiffraction(),  # GeometryType object
-                                               crystal_name="Si",  # string
-                                               thickness=self.THICK*1e-6,  # meters
-                                               miller_h=harmonic * h_miller,  # int
-                                               miller_k=harmonic * k_miller,  # int
-                                               miller_l=harmonic * l_miller,  # int
-                                               asymmetry_angle=numpy.pi/2,  # 10.0*numpy.pi/180.,            # radians
-                                               azimuthal_angle=0)  # radians                            # int
+    # def calculate_bragg_dcm(self, h_miller=1, k_miller=1, l_miller=1,
+    #                         energy_setup=8000.0, energies=numpy.linspace(7900, 8100, 200)):
+    #
+    #     energy_setup = self.ENER_SELECTED
+    #     r = numpy.zeros_like(energies)
+    #     harmonic = 1
+    #
+    #     diffraction_setup_r = DiffractionSetupXraylib(geometry_type=BraggDiffraction(),  # GeometryType object
+    #                                            crystal_name="Si",  # string
+    #                                            thickness=1,  # meters
+    #                                            miller_h=harmonic * h_miller,  # int
+    #                                            miller_k=harmonic * k_miller,  # int
+    #                                            miller_l=harmonic * l_miller,  # int
+    #                                            asymmetry_angle=0,  # 10.0*numpy.pi/180.,            # radians
+    #                                            azimuthal_angle=0.0)  # radians                            # int
+    #
+    #
+    #     bragg_angle = diffraction_setup_r.angleBragg(energy_setup)
+    #     print("Bragg angle for Si%d%d%d at E=%f eV is %f deg" % (
+    #         h_miller, k_miller, l_miller, energy_setup, bragg_angle * 180.0 / numpy.pi))
+    #     nharmonics = int( energies.max() / energy_setup)
+    #
+    #     if nharmonics < 1:
+    #         nharmonics = 1
+    #     print("Calculating %d harmonics" % nharmonics)
+    #
+    #     for harmonic in range(1,nharmonics+1,2): # calculate only odd harmonics
+    #         print("\nCalculating harmonic: ", harmonic)
+    #         ri = numpy.zeros_like(energies)
+    #         for i in range(energies.size):
+    #             try:
+    #                 diffraction_setup_r = DiffractionSetupXraylib(geometry_type=BraggDiffraction(),  # GeometryType object
+    #                                                        crystal_name="Si",  # string
+    #                                                        thickness=1,  # meters
+    #                                                        miller_h=harmonic * h_miller,  # int
+    #                                                        miller_k=harmonic * k_miller,  # int
+    #                                                        miller_l=harmonic * l_miller,  # int
+    #                                                        asymmetry_angle=0,  # 10.0*numpy.pi/180.,            # radians
+    #                                                        azimuthal_angle=0.0)  # radians                            # int
+    #
+    #                 diffraction = Diffraction()
+    #
+    #                 energy = energies[i]
+    #                 deviation = 0.0  # angle_deviation_min + ia * angle_step
+    #                 angle = deviation + bragg_angle
+    #
+    #                 # calculate the components of the unitary vector of the incident photon scan
+    #                 # Note that diffraction plane is YZ
+    #                 yy = numpy.cos(angle)
+    #                 zz = - numpy.abs(numpy.sin(angle))
+    #                 photon = Photon(energy_in_ev=energy, direction_vector=Vector(0.0, yy, zz))
+    #
+    #                 # perform the calculation
+    #                 coeffs_r = diffraction.calculateDiffractedComplexAmplitudes(diffraction_setup_r, photon, calculation_method=self.METHOD)
+    #                 # note the power 4 to get intensity (**2) for a double reflection (**2)
+    #
+    #                 r[i] += numpy.abs( coeffs_r['S'] ) ** 4
+    #                 ri[i] = numpy.abs( coeffs_r['S'] ) ** 4
+    #             except:
+    #                 print("Failed to calculate reflectivity at E=%g eV for %d%d%d reflection" % (energy,
+    #                                         harmonic*h_miller, harmonic*k_miller, harmonic*l_miller))
+    #         print("Max reflectivity: ", ri.max(), " at energy: ", energies[ri.argmax()])
+    #     print("\n\n\n")
+    #     return r
 
 
-        bragg_angle = diffraction_setup_r.angleBragg(energy_setup)
-        print("Bragg angle for Si%d%d%d at E=%f eV is %f deg" % (
-            h_miller, k_miller, l_miller, energy_setup, bragg_angle * 180.0 / numpy.pi))
-        nharmonics = int( energies.max() / energy_setup)
-
-        if nharmonics < 1:
-            nharmonics = 1
-        print("Calculating %d harmonics" % nharmonics)
-
-        for harmonic in range(1, nharmonics+1, 2): # calculate only odd harmonics
-            print("\nCalculating harmonic: ", harmonic)
-            ri = numpy.zeros_like(energies)
-            for i in range(energies.size):
-                try:
-                    diffraction_setup_r = DiffractionSetupXraylib(geometry_type=LaueDiffraction(),  # GeometryType object
-                                                           crystal_name="Si",  # string
-                                                           thickness=self.THICK*1e-6,  # meters
-                                                           miller_h=harmonic * h_miller,  # int
-                                                           miller_k=harmonic * k_miller,  # int
-                                                           miller_l=harmonic * l_miller,  # int
-                                                           asymmetry_angle=numpy.pi/2,  # 10.0*numpy.pi/180.,            # radians
-                                                           azimuthal_angle=0)  # radians                            # int
-
-                    diffraction = Diffraction()
-
-                    energy = energies[i]
-                    deviation = 0.0  # angle_deviation_min + ia * angle_step
-                    angle = deviation + numpy.pi/2 + bragg_angle
-
-                    # calculate the components of the unitary vector of the incident photon scan
-                    # Note that diffraction plane is YZ
-                    yy = numpy.cos(angle)
-                    zz = - numpy.abs(numpy.sin(angle))
-                    photon = Photon(energy_in_ev=energy, direction_vector=Vector(0.0, yy, zz))
-
-                    # perform the calculation
-                    coeffs_r = diffraction.calculateDiffractedComplexAmplitudes(diffraction_setup_r, photon, calculation_method=self.METHOD)
-                    # note the power 2 to get intensity
-                    r[i] += numpy.abs( coeffs_r['S'] ) ** 2
-                    ri[i] = numpy.abs( coeffs_r['S'] ) ** 2
-                except:
-                    print("Failed to calculate reflectivity at E=%g eV for %d%d%d reflection" % (energy,
-                                            harmonic*h_miller, harmonic*k_miller, harmonic*l_miller))
-            print("Max reflectivity: ", ri.max(), " at energy: ", energies[ri.argmax()])
-        print("\n\n\n")
-        return r
-
-    def xoppy_calc_mono(self):
+    def xoppy_calc_power_monochromator(self):
 
         if self.SOURCE == 0:
             if self.input_spectrum is None:
@@ -489,11 +638,17 @@ class Monochromator(XoppyWidget):
         if self.TYPE==0:
             Mono_Effect = [1] * len(energies)
         elif self.TYPE==1:
-            Mono_Effect = self.calculate_bragg_dcm(energies=energies)
+            # energy_setup = self.ENER_SELECTED
+            # calculation_method = self.METHOD
+            Mono_Effect = calculate_bragg_monochromator(energies=energies, energy_setup=self.ENER_SELECTED,
+                                                        calculation_method=self.METHOD)
         elif self.TYPE==2:
-            Mono_Effect = self.calculate_laue_monochromator(energies=energies)
-        else: #TODO:
-            Mono_Effect = [1] * len(energies)
+            Mono_Effect = calculate_laue_monochromator(energies=energies, energy_setup=self.ENER_SELECTED,
+                                                       calculation_method=self.METHOD, thickness=self.THICK*1e-6)
+        elif self.TYPE == 3:
+            Mono_Effect, _, _, _ = calculate_multilayer_monochromator(self.ML_H5_FILE, energies=energies)
+
+        Mono_Effect = Mono_Effect ** self.N_REFLECTIONS
 
 
         Final_Spectrum=List_Product([source,Mono_Effect])
