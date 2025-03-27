@@ -37,7 +37,7 @@ class Monochromator(XoppyWidget):
     ENER_N = Setting(2000)
     SOURCE_FILE = Setting("?")
     FILE_DUMP = Setting(0)
-    ML_H5_FILE = Setting("/home/srio/Oasys/multilayer.h5")
+    ML_H5_FILE = Setting("/users/srio/OASYS1.2/modelling_team_scripts_and_workspaces/id18n/SCRIPTS/multilayerTiC.h5")
     METHOD = Setting(0)                # Zachariasen
 
     input_spectrum = None
@@ -544,17 +544,6 @@ plot(out_dictionary["data"][0,:], out_dictionary["data"][1,:],
 
     def getLogPlot(self):
         return [(False,False),(False, False),(False, False)]
-
-
-# def List_Product(list):
-#     L = []
-#     l = 1
-#     for k in range(len(list[0])):
-#         for i in range(len(list)):
-#             l = l * list[i][k]
-#         L.append(l)
-#         l = 1
-#     return (L)
 
 if __name__ == "__main__":
 
