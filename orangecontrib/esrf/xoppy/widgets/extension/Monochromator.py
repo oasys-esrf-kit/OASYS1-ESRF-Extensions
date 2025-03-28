@@ -241,7 +241,7 @@ class Monochromator(XoppyWidget):
                  'True',
                  'True',
                  'self.TYPE == 1 or self.TYPE == 2',
-                 'self.TYPE == 1 or self.TYPE == 2','self.TYPE == 1 or self.TYPE == 2','self.TYPE == 1 or self.TYPE == 2',
+                 'self.TYPE == 1 or self.TYPE == 2','self.TYPE == 1 or self.TYPE == 2','self.TYPE  ==  1 or self.TYPE  ==  2',
                  'self.TYPE == 2',
                  'self.TYPE == 1 or self.TYPE == 2',
                  'self.TYPE == 3',
@@ -406,6 +406,22 @@ class Monochromator(XoppyWidget):
                 print("Error loading file %s "%(source_file))
                 raise
 
+        dict_parameters = {
+            "TYPE"                : self.TYPE,
+            "ENER_SELECTED"       : self.ENER_SELECTED,
+            "METHOD"              : self.METHOD,
+            "THICK"               : self.THICK,
+            "ML_H5_FILE"          : self.ML_H5_FILE,
+            "ML_GRAZING_ANGLE_DEG": self.ML_GRAZING_ANGLE_DEG,
+            "N_REFLECTIONS"       : self.N_REFLECTIONS,
+            "FILE_DUMP"           : self.FILE_DUMP,
+            "polarization"        : self.POLARIZATION,
+            "output_file"         : "monochromator.spec",
+        }
+        script_element = self.script_template().format_map(dict_parameters)
+        script = script_previous + script_element
+        self.xoppy_script.set_code(script)
+
         out_dictionary = xoppy_calc_power_monochromator(energies, source,
                                                         TYPE                 = self.TYPE,
                                                         ENER_SELECTED        = self.ENER_SELECTED,
@@ -420,25 +436,6 @@ class Monochromator(XoppyWidget):
                                                         )
 
         print(out_dictionary["info"])
-
-        dict_parameters = {
-            "TYPE"                : self.TYPE,
-            "ENER_SELECTED"       : self.ENER_SELECTED,
-            "METHOD"              : self.METHOD,
-            "THICK"               : self.THICK,
-            "ML_H5_FILE"          : self.ML_H5_FILE,
-            "ML_GRAZING_ANGLE_DEG": self.ML_GRAZING_ANGLE_DEG,
-            "N_REFLECTIONS"       : self.N_REFLECTIONS,
-            "FILE_DUMP"           : self.FILE_DUMP,
-            "polarization"        : self.POLARIZATION,
-            "output_file"         : "monochromator.spec",
-        }
-
-        script_element = self.script_template().format_map(dict_parameters)
-
-        script = script_previous + script_element
-
-        self.xoppy_script.set_code(script)
 
         return out_dictionary, script
 
