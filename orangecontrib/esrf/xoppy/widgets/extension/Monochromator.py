@@ -37,8 +37,9 @@ class Monochromator(XoppyWidget):
     ENER_N = Setting(2000)
     SOURCE_FILE = Setting("?")
     FILE_DUMP = Setting(0)
-    ML_H5_FILE = Setting("/users/srio/OASYS1.2/modelling_team_scripts_and_workspaces/id18n/SCRIPTS/multilayerTiC.h5")
-    METHOD = Setting(0)                # Zachariasen
+    ML_H5_FILE = Setting("<none>")
+    ML_GRAZING_ANGLE_DEG = Setting(0.2)
+    METHOD = Setting(0) # Zachariasen
 
     input_spectrum = None
     input_script = None
@@ -112,7 +113,7 @@ class Monochromator(XoppyWidget):
                                        valueType=int, orientation="horizontal", labelWidth=200)
         self.show_at(self.unitFlags()[idx], box1)
 
-        # widget index xx
+        # widget index 7
         idx += 1
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "N_REFLECTIONS",
@@ -120,7 +121,7 @@ class Monochromator(XoppyWidget):
                           valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-        # widget index xx
+        # widget index 8
         idx += 1
         box1 = gui.widgetBox(box)
         self.box_source = gui.comboBox(box1, self, "POLARIZATION",
@@ -130,7 +131,7 @@ class Monochromator(XoppyWidget):
         self.show_at(self.unitFlags()[idx], box1)
 
 
-        # widget index 7
+        # widget index 9
         idx += 1
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "ENER_SELECTED",
@@ -138,7 +139,7 @@ class Monochromator(XoppyWidget):
                           valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-        # widget index 8
+        # widget index 10
         idx += 1
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "H_MILLER",
@@ -146,7 +147,7 @@ class Monochromator(XoppyWidget):
                           valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-        # widget index 9
+        # widget index 11
         idx += 1
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "K_MILLER",
@@ -154,7 +155,7 @@ class Monochromator(XoppyWidget):
                           valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-        # widget index 10
+        # widget index 12
         idx += 1
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "L_MILLER",
@@ -162,7 +163,7 @@ class Monochromator(XoppyWidget):
                           valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-        # widget index 11
+        # widget index 13
         idx += 1
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "THICK",
@@ -170,7 +171,7 @@ class Monochromator(XoppyWidget):
                                        valueType=float, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-        # widget index 13
+        # widget index 14
         idx += 1
         box1 = gui.widgetBox(box)
         gui.comboBox(box1, self, "METHOD",
@@ -179,7 +180,7 @@ class Monochromator(XoppyWidget):
                      orientation="horizontal")
         self.show_at(self.unitFlags()[idx], box1)
 
-        # widget index 10!!!!!!!!
+        # widget index 15
         idx += 1
         box1 = gui.widgetBox(box)
         oasysgui.lineEdit(box1, self, "ML_H5_FILE",
@@ -187,8 +188,15 @@ class Monochromator(XoppyWidget):
                           valueType=str, orientation="horizontal", labelWidth=200)
         self.show_at(self.unitFlags()[idx], box1)
 
+        # widget index 16
+        idx += 1
+        box1 = gui.widgetBox(box)
+        oasysgui.lineEdit(box1, self, "ML_GRAZING_ANGLE_DEG",
+                          label=self.unitLabels()[idx], addSpace=False,
+                          valueType=float, orientation="horizontal", labelWidth=200)
+        self.show_at(self.unitFlags()[idx], box1)
 
-        #widget index 12
+        #widget index 17
         idx += 1
         box1 = gui.widgetBox(box)
         gui.separator(box1, height=7)
@@ -199,21 +207,16 @@ class Monochromator(XoppyWidget):
                     valueType=int, orientation="horizontal", labelWidth=250)
         self.show_at(self.unitFlags()[idx], box1)
 
-
-
         self.input_spectrum = None
-
 
     def select_input_file(self):
         self.file_id.setText(oasysgui.selectFileFromDialog(self, self.SOURCE_FILE,
                                     "Open 2-columns file with spectral power",
                                     file_extension_filter="ascii dat (*.dat *.txt *spec)"))
 
-
-
     def unitLabels(self):
          return ['Input beam:',
-                 'From energy [eV]:      ',
+                 'From energy [eV]:',
                  'To energy [eV]:',
                  'Energy points:  ',
                  'File with input beam spectral power:',
@@ -224,24 +227,25 @@ class Monochromator(XoppyWidget):
                  'Miller index h','Miller index k','Miller index l','Crystal thickness [microns]',
                  "Calculation method",
                  "XOPPY/Multilayer h5 file",
+                 "Grazing angle [deg]",
                  "Dump file",
                  ]
 
-
     def unitFlags(self):
          return ['True',
-                 'self.SOURCE  ==  1',
-                 'self.SOURCE  ==  1',
-                 'self.SOURCE  ==  1',
-                 'self.SOURCE  ==  2',
+                 'self.SOURCE == 1',
+                 'self.SOURCE == 1',
+                 'self.SOURCE == 1',
+                 'self.SOURCE == 2',
                  'True',
                  'True',
                  'True',
-                 'self.TYPE  ==  1 or self.TYPE  ==  2',
-                 'self.TYPE  ==  1 or self.TYPE  ==  2','self.TYPE  ==  1 or self.TYPE  ==  2','self.TYPE  ==  1 or self.TYPE  ==  2',
-                 'self.TYPE  ==  2',
-                 'self.TYPE  ==  1 or self.TYPE  ==  2',
-                 'self.TYPE  ==  3',
+                 'self.TYPE == 1 or self.TYPE == 2',
+                 'self.TYPE == 1 or self.TYPE == 2','self.TYPE == 1 or self.TYPE == 2','self.TYPE == 1 or self.TYPE == 2',
+                 'self.TYPE == 2',
+                 'self.TYPE == 1 or self.TYPE == 2',
+                 'self.TYPE == 3',
+                 'self.TYPE == 3',
                  'True']
 
     def get_help_name(self):
@@ -261,57 +265,44 @@ class Monochromator(XoppyWidget):
                 if exchangeData.get_program_name() == "XOPPY":
                     no_bandwidth = False
                     if exchangeData.get_widget_name() =="UNDULATOR_FLUX" :
-                        # self.SOURCE_FILE = "xoppy_undulator_flux"
                         no_bandwidth = True
                         index_flux = 2
                     elif exchangeData.get_widget_name() == "BM" :
                         if exchangeData.get_content("is_log_plot") == 1:
                             raise Exception("Logaritmic X scale of Xoppy Energy distribution not supported")
                         if exchangeData.get_content("calculation_type") == 0 and exchangeData.get_content("psi") in [0,2]:
-                            # self.SOURCE_FILE = "xoppy_bm_flux"
                             no_bandwidth = True
                             index_flux = 6
                         else:
                             raise Exception("Xoppy result is not a Flux vs Energy distribution integrated in Psi")
                     elif exchangeData.get_widget_name() =="XWIGGLER" :
-                        # self.SOURCE_FILE = "xoppy_xwiggler_flux"
                         no_bandwidth = True
                         index_flux = 2
                     elif exchangeData.get_widget_name() =="WS" :
-                        # self.SOURCE_FILE = "xoppy_xwiggler_flux"
                         no_bandwidth = True
                         index_flux = 2
                     elif exchangeData.get_widget_name() =="XTUBES" :
-                        # self.SOURCE_FILE = "xoppy_xtubes_flux"
                         index_flux = 1
                         no_bandwidth = True
                     elif exchangeData.get_widget_name() =="XTUBE_W" :
-                        # self.SOURCE_FILE = "xoppy_xtube_w_flux"
                         index_flux = 1
                         no_bandwidth = True
                     elif exchangeData.get_widget_name() =="BLACK_BODY" :
-                        # self.SOURCE_FILE = "xoppy_black_body_flux"
                         no_bandwidth = True
                         index_flux = 2
 
                     elif exchangeData.get_widget_name() =="UNDULATOR_RADIATION" :
-                        # self.SOURCE_FILE = "xoppy_undulator_radiation"
                         no_bandwidth = True
                         index_flux = 1
                     elif exchangeData.get_widget_name() =="POWER" :
-                        # self.SOURCE_FILE = "xoppy_undulator_power"
                         no_bandwidth = True
                         index_flux = -1
                     elif exchangeData.get_widget_name() =="POWER3D" :
-                        # self.SOURCE_FILE = "xoppy_power3d"
                         no_bandwidth = True
                         index_flux = 1
 
                     else:
                         raise Exception("Xoppy Source not recognized")
-
-                    # self.SOURCE_FILE += "_" + str(id(self)) + ".dat"
-
 
                     spectrum = exchangeData.get_content("xoppy_data")
 
@@ -416,29 +407,31 @@ class Monochromator(XoppyWidget):
                 raise
 
         out_dictionary = xoppy_calc_power_monochromator(energies, source,
-                                                        TYPE          = self.TYPE,
-                                                        ENER_SELECTED = self.ENER_SELECTED,
-                                                        METHOD        = self.METHOD,
-                                                        THICK         = self.THICK,
-                                                        ML_H5_FILE    = self.ML_H5_FILE,
-                                                        N_REFLECTIONS = self.N_REFLECTIONS,
-                                                        FILE_DUMP     = self.FILE_DUMP,
-                                                        polarization  = self.POLARIZATION,
-                                                        output_file   = "monochromator.spec",
+                                                        TYPE                 = self.TYPE,
+                                                        ENER_SELECTED        = self.ENER_SELECTED,
+                                                        METHOD               = self.METHOD,
+                                                        THICK                = self.THICK,
+                                                        ML_H5_FILE           = self.ML_H5_FILE,
+                                                        ML_GRAZING_ANGLE_DEG =self.ML_GRAZING_ANGLE_DEG,
+                                                        N_REFLECTIONS        = self.N_REFLECTIONS,
+                                                        FILE_DUMP            = self.FILE_DUMP,
+                                                        polarization         = self.POLARIZATION,
+                                                        output_file          = "monochromator.spec",
                                                         )
 
         print(out_dictionary["info"])
 
         dict_parameters = {
-            "TYPE"           : self.TYPE,
-            "ENER_SELECTED"  : self.ENER_SELECTED,
-            "METHOD"         : self.METHOD,
-            "THICK"          : self.THICK,
-            "ML_H5_FILE"     : self.ML_H5_FILE,
-            "N_REFLECTIONS"  : self.N_REFLECTIONS,
-            "FILE_DUMP"      : self.FILE_DUMP,
-            "polarization"   : self.POLARIZATION,
-            "output_file"    : "monochromator.spec",
+            "TYPE"                : self.TYPE,
+            "ENER_SELECTED"       : self.ENER_SELECTED,
+            "METHOD"              : self.METHOD,
+            "THICK"               : self.THICK,
+            "ML_H5_FILE"          : self.ML_H5_FILE,
+            "ML_GRAZING_ANGLE_DEG": self.ML_GRAZING_ANGLE_DEG,
+            "N_REFLECTIONS"       : self.N_REFLECTIONS,
+            "FILE_DUMP"           : self.FILE_DUMP,
+            "polarization"        : self.POLARIZATION,
+            "output_file"         : "monochromator.spec",
         }
 
         script_element = self.script_template().format_map(dict_parameters)
@@ -464,15 +457,16 @@ from dabax.dabax_xraylib import DabaxXraylib
 out_dictionary = xoppy_calc_power_monochromator(
         energy, # array with energies in eV
         spectral_power, # array with source spectral density
-        TYPE          = {TYPE}, # 0=None, 1=Crystal Bragg, 2=Crystal Laue, 3=Multilayer
-        ENER_SELECTED = {ENER_SELECTED}, # Energy to set crystal monochromator
-        METHOD        = {METHOD}, # For crystals, in crystalpy, 0=Zachariasem, 1=Guigay
-        THICK         = {THICK}, # crystal thicknes Laur crystal in um
-        ML_H5_FILE    = "{ML_H5_FILE}", # File with inputs from multilaters (from xoppy/Multilayer)
-        N_REFLECTIONS = {N_REFLECTIONS}, # number of reflections (crystals or multilayers)
-        FILE_DUMP     = "{FILE_DUMP}", # 0=No, 1=yes
-        polarization  = {polarization}, # 0=sigma, 1=pi, 2=unpolarized
-        output_file   = "{output_file}", # filename if FILE_DUMP=1
+        TYPE                 = {TYPE}, # 0=None, 1=Crystal Bragg, 2=Crystal Laue, 3=Multilayer
+        ENER_SELECTED        = {ENER_SELECTED}, # Energy to set crystal monochromator
+        METHOD               = {METHOD}, # For crystals, in crystalpy, 0=Zachariasem, 1=Guigay
+        THICK                = {THICK}, # crystal thicknes Laur crystal in um
+        ML_H5_FILE           = "{ML_H5_FILE}", # File with inputs from multilaters (from xoppy/Multilayer)
+        ML_GRAZING_ANGLE_DEG = {ML_GRAZING_ANGLE_DEG}, # for multilayers the grazing angle in degrees
+        N_REFLECTIONS        = {N_REFLECTIONS}, # number of reflections (crystals or multilayers)
+        FILE_DUMP            = {FILE_DUMP}, # 0=No, 1=yes
+        polarization         = {polarization}, # 0=sigma, 1=pi, 2=unpolarized
+        output_file          = "{output_file}", # filename if FILE_DUMP=1
         )
 
 
@@ -530,20 +524,20 @@ plot(out_dictionary["data"][0,:], out_dictionary["data"][1,:],
         return "POWER"
 
     def getTitles(self):
-        return ['Input Beam','Monochromator reflectivity','Transmitted intensity']
+        return ['Input Beam', 'Monochromator reflectivity', 'Spectral Power after Monochromator']
 
     def getXTitles(self):
-        return ["Energy [eV]","Energy [eV]","Energy [eV]"]
+        return ["Photon Energy [eV]", "Photon Energy [eV]", "Photon Energy [eV]"]
 
     def getYTitles(self):
-        return ["Source",'Reflectivity','Intensity']
+        return ['Spectral Power [W/eV]', 'Reflectivity', 'Spectral Power [W/eV]']
 
 
     def getVariablesToPlot(self):
-        return [(0, 1),(0, 2),(0, 3)]
+        return [(0, 1), (0, 2), (0, 3)]
 
     def getLogPlot(self):
-        return [(False,False),(False, False),(False, False)]
+        return [(False,False), (False, False), (False, False)]
 
 if __name__ == "__main__":
 
