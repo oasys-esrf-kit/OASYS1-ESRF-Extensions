@@ -134,6 +134,8 @@ class OWWOScanningScreen1D(OWWOOpticalElement1D):
 
     def propagate_wavefront(self):
 
+        current_index = self.tabs.currentIndex()
+
         qs = numpy.linspace(self.q_min, self.q_max, self.q_points)
 
         view_type_old = self.view_type
@@ -224,6 +226,8 @@ class OWWOScanningScreen1D(OWWOOpticalElement1D):
                              ytitle="Spatial Coordinate [$\mu$m]",
                              )
             self.progressBarFinished()
+
+        self.tabs.setCurrentIndex(current_index)
 
     def initializeTabs(self):
         super().initializeTabs()

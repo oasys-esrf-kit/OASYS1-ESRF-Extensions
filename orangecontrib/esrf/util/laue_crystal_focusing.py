@@ -14,6 +14,41 @@ import scipy.constants as codata
 from srxraylib.plot.gol import plot, set_qt, plot_show
 from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
 
+
+
+def hyp1f1_series_small(a, b, z, terms=20):
+    """Series expansion for small |z|"""
+    result = 1.0
+    term = 1.0
+    for k in range(1, terms):
+        term *= (a + k - 1) * z / ((b + k - 1) * k)
+        result += term
+        if abs(term) < 1e-15:
+            break
+    return result
+
+def fast_hyp1f1(kap, yprime):
+    """
+    Fast replacement for mpmath.hyp1f1(1j*kap, 1, 1j*yprime)
+    """
+    yp_abs = abs(yprime)
+
+    if yp_abs < 1e-8:
+        return 1.0 + 1j * (kap * yprime)
+
+    elif yp_abs < 5:
+        # Series expansion for small arguments
+        return hyp1f1_series_small(1j * kap, 1, 1j * yprime)
+
+    elif yp_abs > 100:
+        # Asymptotic expansion for large arguments
+        z = 1j * yprime
+        return mpmath.exp(z) * z ** (-1j * kap) * mpmath.gamma(1 - 1j * kap) / mpmath.gamma(1)
+
+    else:
+        # Original for medium range
+        return mpmath.hyp1f1(1j * kap, 1, 1j * yprime)
+
 class LaueCrystalFocusing():
     def __init__(self,
                  crystal_descriptor="Si",
@@ -25,6 +60,7 @@ class LaueCrystalFocusing():
                  p=29000.0,  # mm
                  alfa_deg=2.0,  # CAN BE POSITIVE OR NEGATIVE)
                  integration_points=500,
+                 use_fast_hyp1f1=0,
                  verbose=1,
                  ):
             self._crystal_descriptor = crystal_descriptor
@@ -36,6 +72,7 @@ class LaueCrystalFocusing():
             self._p = p # mm
             self._alfa_deg = alfa_deg  # CAN BE POSITIVE OR NEGATIVE
             self._integration_points = integration_points
+            self._use_fast_hyp1f1 = use_fast_hyp1f1
             self._verbose = verbose
 
     def get_crystal_data(self):
@@ -126,16 +163,17 @@ class LaueCrystalFocusing():
 
         if self._p == 0:
             if q == 0:
-                return self.xscan_at_q0_and_p0(npoints_x=npoints_x, a_factor=a_factor, a_center=a_center, filename=filename)
+                out = self.xscan_at_q0_and_p0(npoints_x=npoints_x, a_factor=a_factor, a_center=a_center, filename=filename)
             else:
-                return self.xscan_at_finite_q_and_p0(q, npoints_x=npoints_x, a_factor=a_factor, a_center=a_center, filename=filename)
+                out = self.xscan_at_finite_q_and_p0(q, npoints_x=npoints_x, a_factor=a_factor, a_center=a_center, filename=filename)
         else:
             if q == 0:
-                return self.xscan_at_q0(npoints_x=npoints_x, a_factor=a_factor, a_center=a_center, filename=filename)
+                out = self.xscan_at_q0(npoints_x=npoints_x, a_factor=a_factor, a_center=a_center, filename=filename)
             else:
-                return self.xscan_at_finite_q(q, npoints_x=npoints_x, a_factor=a_factor, a_center=a_center, filename=filename)
+                out = self.xscan_at_finite_q(q, npoints_x=npoints_x, a_factor=a_factor, a_center=a_center, filename=filename)
 
         print("Calculation time: ", time.time() - t0)
+        return out
 
     # x-scan at p=q=0 using Guigay % Ferrero 2016 eq 23
     def xscan_at_q0_and_p0(self, npoints_x=10, a_factor=1, a_center=0.0, filename=""):
@@ -170,7 +208,6 @@ class LaueCrystalFocusing():
         return xx, yy_amplitude, output_wavefront
 
     # x-scan at p=0, finite q, using Guigay % Ferrero 2016 eq 24
-    # sriosrio
     def xscan_at_finite_q_and_p0(self, q=1000.0, npoints_x=10, a_factor=1, a_center=0.0, filename=""):
 
         kwds = self._calculate_constats_for_equation23_2016() #?????????????
@@ -310,7 +347,10 @@ class LaueCrystalFocusing():
             Z = k * numpy.sqrt(chih2) / numpy.sin(2 * teta)
             kum = BesselJ(0, Z * numpy.sqrt(a ** 2 - x ** 2))
         else:
-            kum = mpmath.hyp1f1(1j * kap, 1, 1j * acmax * (1 - (x / a) ** 2))
+            if self._use_fast_hyp1f1:
+                kum = fast_hyp1f1(kap, acmax * (1 - (x / a) ** 2))
+            else:
+                kum = mpmath.hyp1f1(1j * kap, 1, 1j * acmax * (1 - (x / a) ** 2))
 
         return numpy.exp((1j * k * chizero.real - k * chizero.imag) * 0.25 * (t1 + t2)) * \
                kum * \
@@ -359,7 +399,10 @@ class LaueCrystalFocusing():
                 Z = k * numpy.sqrt(chih2) / numpy.sin(2 * teta)
                 kum = BesselJ(0, Z * numpy.sqrt(a ** 2 - v[i] ** 2))
             else:
-                kum = mpmath.hyp1f1(1j * kap, 1, 1j * acmax * (1 - (v[i] / a) ** 2))
+                if self._use_fast_hyp1f1:
+                    kum = fast_hyp1f1(kap, acmax * (1 - (v[i] / a) ** 2))
+                else:
+                    kum = mpmath.hyp1f1(1j * kap, 1, 1j * acmax * (1 - (v[i] / a) ** 2))
 
             Q1 = 1j * k * 0.5 * v[i] ** 2 * invle
             Q2 = k * v[i] * (x / q - 1j * kiny)
@@ -388,6 +431,7 @@ class LaueCrystalFocusing():
                         g       = None,
                         kap     = None,
                         k       = None,
+                        chih2   = None,
                       ):
 
         v = numpy.linspace(-a, a, self._integration_points)
@@ -413,7 +457,14 @@ class LaueCrystalFocusing():
 
 
             Q = Q1 + Q2 + Q3 + Q4
-            kum = mpmath.hyp1f1(1j * kap, 1, 1j * yprime)
+            if alfa == 0:
+                Z = k * numpy.sqrt(chih2) / numpy.sin(2 * teta)
+                kum = BesselJ(0, Z * numpy.sqrt(a ** 2 - v[i] ** 2))
+            else:
+                if self._use_fast_hyp1f1:
+                    kum = fast_hyp1f1(kap, yprime)
+                else:
+                    kum = mpmath.hyp1f1(1j * kap, 1, 1j * yprime)
 
             y[i] = mfac * kum * numpy.exp(1j * k * Q)
 
@@ -444,6 +495,7 @@ class LaueCrystalFocusing():
                         att     = None,
                         chizero = None,
                         t2      = None,
+                        chih2   = None,
                       ):
 
         v = numpy.linspace(-a, a, self._integration_points)
@@ -454,7 +506,15 @@ class LaueCrystalFocusing():
         s = 0
         for i in range(v.size):
             yprime = acmax * (1 - (v[i] / a) ** 2)
-            kum = mpmath.hyp1f1(1j * kap, 1, 1j * yprime)  # kum = 1.0
+
+            if alfa == 0:
+                Z = k * numpy.sqrt(chih2) / numpy.sin(2 * teta)
+                kum = BesselJ(0, Z * numpy.sqrt(a ** 2 - v[i] ** 2))
+            else:
+                if self._use_fast_hyp1f1:
+                    kum = fast_hyp1f1(kap, yprime)
+                else:
+                    kum = mpmath.hyp1f1(1j * kap, 1, 1j * yprime)
 
             Q1 = 1j * k * 0.5 * v[i] ** 2 * invle
             Q2 = - k * v[i] * kiny
@@ -723,6 +783,7 @@ class LaueCrystalFocusing():
             "g"       : g,
             "kap"     : kap,
             "k"       : k,
+            "chih2"   : chih2,
             }
 
 
@@ -850,6 +911,7 @@ class LaueCrystalFocusing():
             "att"     : att,          # used in eq 31
             "chizero" : chizero,      # used in eq 31
             "t2"      : t2,           # used in eq 31
+            "chih2"   : chih2,        # used in eq 31
             }
 
     #
@@ -901,7 +963,7 @@ class LaueCrystalFocusing():
 if __name__ == "__main__":
 
     # Fig 5
-    if 0:
+    if 1:
         a = LaueCrystalFocusing(
             R = 2000,
             poisson_ratio = 0.2201,
@@ -909,6 +971,7 @@ if __name__ == "__main__":
             thickness = 0.250,  # mm
             p = 29000.0,  # mm
             alfa_deg = 2.0,  # CAN BE POSITIVE OR NEGATIVE)
+            use_fast_hyp1f1=0,
             verbose=0,
             )
 
@@ -930,14 +993,15 @@ if __name__ == "__main__":
     #
     # fig 2
     #
-    if 1:
+    if 0:
         a = LaueCrystalFocusing(
             R = 2000,
             poisson_ratio = 0.2201,
             photon_energy_in_keV = 80.0,
             thickness = 1.0,  # mm
             p = 0.0,  # mm
-            alfa_deg = 0, # -0.05,  # CAN BE POSITIVE OR NEGATIVE)
+            alfa_deg = -0.05,  # CAN BE POSITIVE OR NEGATIVE)
+            use_fast_hyp1f1=0,
             verbose=0,
             )
 
