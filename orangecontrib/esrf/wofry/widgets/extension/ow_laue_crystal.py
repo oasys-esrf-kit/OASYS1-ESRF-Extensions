@@ -61,6 +61,7 @@ class WOLaueCrystal1D(Crystal, OpticalElementDecorator):
                  npoints_x=100,
                  a_factor=1.0,
                  use_fast_hyp1f1=0,
+                 source_flag=1,
                  verbose=1,
                  ):
         Crystal.__init__(self, name)
@@ -82,19 +83,34 @@ class WOLaueCrystal1D(Crystal, OpticalElementDecorator):
         self._q = q*1e3 # mm
         self._npoints_x = npoints_x
         self._a_factor  = a_factor
+        self._source_flag  = source_flag
 
     def applyOpticalElement(self, wavefront_in, parameters=None, element_index=None):
-        print(">>>>>>> in applyOpticalElement")
-        # print(">>>>>>> wavefront in: dim:  ", wavefront_in.get_dimension(), wavefront_in)
-        xx, yy_amplitude, wavefront = self._LaueCrystalFocusing.xscan(self._q,
-                                                                      npoints_x=self._npoints_x,
-                                                                      a_factor=self._a_factor,
-                                                                      a_center=0.0,
-                                                                      filename="")
+        print(">>>>>>> in applyOpticalElement, source_flag = ", self._source_flag)
+        print(">>>>>>> wavefront_in = ", wavefront_in)
+        if self._source_flag == 0: # external wavefront
+            # print(">>>>>>> wavefront in: dim:  ", wavefront_in.get_dimension(), wavefront_in)
+            xx, yy_amplitude, wavefront = self._LaueCrystalFocusing.xscan_for_external_wavefront(
+                                                                            Phi=wavefront_in.get_complex_amplitude(),
+                                                                            Phi_tau=wavefront_in.get_abscissas(),
+                                                                            npoints_x=self._npoints_x,
+                                                                            a_factor=self._a_factor,
+                                                                            a_center=0.0,
+                                                                            filename="")
+        elif self._source_flag == 1: # point source
+            xx, yy_amplitude, wavefront = self._LaueCrystalFocusing.xscan(self._q,
+                                                                          npoints_x=self._npoints_x,
+                                                                          a_factor=self._a_factor,
+                                                                          a_center=0.0,
+                                                                          filename="")
+
+
+
         return wavefront
 
     def qscan(self, qmin=0.0, qmax=10.0, qpoints=100):
-        return self._LaueCrystalFocusing.qscan(qmin=qmin, qmax=qmax, npoints=qpoints)
+        print(">>>>>>> in qscan", qmin, qmax, qpoints, self.info())
+        return self._LaueCrystalFocusing.qscan(qmin=qmin*1e3, qmax=qmax*1e3, npoints=qpoints)
 
     def to_python_code(self, do_plot=False, add_import_section=False):
         txt  = ""
@@ -261,6 +277,7 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
                                a_factor=self.a_factor,
                                q=self.q,
                                use_fast_hyp1f1=self.use_fast_hyp1f1,
+                               source_flag=self.source_flag,
                                verbose=1,
                                )
         print(oe.info())
@@ -271,9 +288,6 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
 
         # congruence.checkStrictlyPositiveNumber(numpy.abs(self.focal_x), "Horizontal Focal Length")
         congruence.checkStrictlyPositiveNumber(self.thickness_um, "Crystal thickness [um]")
-
-        if self.source_flag == 0:
-            raise NotImplementedError("Source fom Oasys wire: Not yet implemented")
 
 
     def receive_specific_syned_data(self, optical_element):
@@ -313,6 +327,9 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
         super().do_plot_results(progressBarValue, closeProgressBar=False)
 
         if self.qscan_flag:
+            print("\n########################################################")
+            print("\n                        Q-scan                          ")
+            print("\n########################################################")
             self.progressBarSet(progressBarValue + 5)
 
             optical_element = self.get_optical_element()
@@ -463,7 +480,11 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
             # output_wavefront = propagator.do_propagation(propagation_parameters=propagation_parameters,
             #                                              handler_name=self.get_handler_name())
 
-            output_wavefront = optical_element.applyOpticalElement(None)
+            if self.source_flag == 0:
+                input_wavefront  = self.input_data.get_wavefront()
+                output_wavefront = optical_element.applyOpticalElement(input_wavefront)
+            else:
+                output_wavefront = optical_element.applyOpticalElement(None)
 
             self.setStatusMessage("Propagation Completed")
 
@@ -515,7 +536,7 @@ if __name__ == "__main__":
 
     a = QApplication(sys.argv)
     ow = OWWOLaueCrystal1D()
-    # ow.set_input(get_example_wofry_data())
+    ow.set_input(get_example_wofry_data())
     ow.p = 29.0
 
     ow.show()

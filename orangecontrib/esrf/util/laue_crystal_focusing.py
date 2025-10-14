@@ -309,12 +309,48 @@ class LaueCrystalFocusing():
 
         return xx, yy_amplitude, output_wavefront
 
+####################################
+    # x-scan at p=q=0 using Guigay % Ferrero 2016 eq 23
+    def xscan_for_external_wavefront(self, Phi=None, Phi_tau=None, npoints_x=10, a_factor=1, a_center=0.0, filename=""):
 
+        kwds = self._calculate_constats_for_equation31_2016()
+        a = kwds['a']
+
+        # x-scan at q=0
+        print("a=%.3f mm..." % (a))
+
+        xx = numpy.linspace(-a * a_factor, a * a_factor, npoints_x) - a_center
+        yy_amplitude = numpy.zeros_like(xx, dtype=complex)
+
+        ##
+        if Phi is None: Phi = numpy.ones_like(xx, dtype=complex)
+        if Phi_tau is None: Phi_tau = xx
+        ##
+        print(f"Progress: 0%")
+        for j in range(xx.size):
+            progress = (j + 1) / xx.size * 100
+            if progress % 10 == 0:  print(f"Progress: {progress:.0f}%")
+            amplitude = self._equation28_2016(xx[j], Phi, Phi_tau, **kwds)
+            yy_amplitude[j] = amplitude
+        print(f"Progress: 100%")
+
+        # create and write wofry wavefront
+        output_wavefront = GenericWavefront1D.initialize_wavefront_from_arrays(
+            1e-3 * xx, yy_amplitude, y_array_pi=None, wavelength=1e-10)
+        output_wavefront.set_photon_energy(1e3 * self._photon_energy_in_keV)
+        if filename != "":
+            output_wavefront.save_h5_file(filename,
+                                          subgroupname="wfr", intensity=True, phase=False, overwrite=True,
+                                          verbose=False)
+            print("File %s written to disk" % filename)
+
+        return xx, yy_amplitude, output_wavefront
+####################################
     #
     # private methods
     #
 
-    # Guigay&Ferrero 2016: calculate equation 23
+    # Guigay&Ferrero 2016: calculate equation 23, p=q=0
     def _equation23_2016(self, x,
                          a=None,
                          mu1=None,
@@ -359,7 +395,8 @@ class LaueCrystalFocusing():
                numpy.exp(- x * k * omega.imag)
 
 
-    # Guigay&Ferrero 2016: calculate equation 24
+
+    # Guigay&Ferrero 2016: calculate equation 24, p=0, finite q
     def _equation24_2016(self, x, q,
                          a=None,
                          mu1=None,
@@ -413,7 +450,63 @@ class LaueCrystalFocusing():
 
         return 2 * numpy.trapz(y, x=v) * numpy.sqrt(att / numpy.abs(lambda1 * q))
 
-    # Guigay&Ferrero 2016: calculate integral with limits -a,a in equation 30
+########################################
+    # Guigay&Ferrero 2016: calculate integral in equation 28 for q=0 with a given wavefront amplitude defined at p=0
+    # note that the integral limits are gamma (u+-a) and the integrand is Phi(tau) P(u,tau) with Phi() the complex amplitude
+    def _equation28_2016(self, x, Phi, Phi_tau,
+                        a       = None,
+                        mu1     = None,
+                        mu2     = None,
+                        teta    = None,
+                        teta1   = None,
+                        teta2   = None,
+                        alfa    = None,
+                        acrist  = None,
+                        gamma   = None,
+                        lambda1 = None,
+                        omega   = None,
+                        t1      = None,
+                        a2      = None,
+                        g       = None,
+                        kap     = None,
+                        k       = None,
+                        pe      = None,
+                        acmax   = None,
+                        kiny    = None,
+                        att     = None,
+                        chizero = None,
+                        t2      = None,
+                        chih2   = None,
+                      ):
+
+        tau = numpy.linspace(gamma * (x - a), gamma * (x + a), self._integration_points)
+        y = numpy.zeros_like(tau, dtype=complex)
+
+        for i in range(tau.size):
+            nu = x - tau[i] / gamma
+            yprime = acmax * (1 - (nu / a) ** 2)
+
+
+            if alfa == 0:
+                Z = k * numpy.sqrt(chih2) / numpy.sin(2 * teta)
+                kum = BesselJ(0, Z * numpy.sqrt(a ** 2 - v[i] ** 2))
+            else:
+                if self._use_fast_hyp1f1:
+                    kum = fast_hyp1f1(kap, yprime)
+                else:
+                    kum = mpmath.hyp1f1(1j * kap, 1, 1j * yprime)
+
+            Q1 = 1j * k * nu * omega
+            Q2 = -1j * k * (mu1 * x**2 + x * t1 * numpy.sin(teta1)) / (2 * self._R)
+            Q3 = -1j * k * (mu2 * (nu - x)**2 - a2 * gamma * (nu - x)) / (2 * self._R)
+            Q4 = 1j * k * (g / self._R) * (a + x) * (nu - x)
+            y[i] = kum * numpy.exp(Q1 + Q2 + Q3 + Q4)
+
+        amplitude = numpy.trapz(y, x=tau)
+        return amplitude
+
+########################################
+    # Guigay&Ferrero 2016: calculate integral with limits -a,a in equation 30, finite p, q=0
     def _equation30_2016(self, x,
                         a       = None,
                         mu1     = None,
@@ -470,7 +563,7 @@ class LaueCrystalFocusing():
 
         return numpy.trapz(y, x=v)
 
-    # Guigay&Ferrero 2016: calculate integral in equation 31 and add the corresponding phases
+    # Guigay&Ferrero 2016: calculate integral in equation 31 and add the corresponding phases, finite p, finite q
     # note that the x argument here is in fact (x - xc) in eq. 31
     def _equation31_2016(self, x, q,
                         a       = None,
@@ -963,7 +1056,7 @@ class LaueCrystalFocusing():
 if __name__ == "__main__":
 
     # Fig 5
-    if 1:
+    if 0:
         a = LaueCrystalFocusing(
             R = 2000,
             poisson_ratio = 0.2201,
@@ -976,18 +1069,18 @@ if __name__ == "__main__":
             )
 
         # xx, yy_amplitude, _ = a.xscan_at_q0(npoints_x=200, a_factor=2, a_center=0.01511, filename="tmp2016_q0.h5")
-        xx, yy_amplitude, _ = a.xscan(q=0, npoints_x=200, a_factor=2, a_center=0.01511, filename="tmp2016_q0.h5") # same as before
+        # xx, yy_amplitude, _ = a.xscan(q=0, npoints_x=200, a_factor=2, a_center=0.01511, filename="tmp2016_q0.h5") # same as before
 
         # xx, yy_amplitude, _ = a.xscan_at_q0(npoints_x=1000, a_factor=3, a_center=0.0, filename="tmp2016_q0.h5")
 
-        print(a.info())
+        # print(a.info())
         # xx, yy_amplitude, _ = a.xscan_at_finite_q(q=437.275, npoints_x=200, a_factor=3, a_center=0.0, filename="tmp2016.h5")
         #
-        plot(xx, numpy.abs(yy_amplitude) ** 2, xtitle='x [mm]', ytitle="Intensity", title="", grid=1, show=1)
+        # plot(xx, numpy.abs(yy_amplitude) ** 2, xtitle='x [mm]', ytitle="Intensity", title="", grid=1, show=1)
 
 
-        # qq, yy_amplitude = a.qscan(qmin=0.0, qmax=10000.0, npoints=200)
-        # plot(qq, numpy.abs(yy_amplitude) ** 2, xtitle='q [mm]', ytitle="Intensity", title="", grid=1, show=1)
+        qq, yy_amplitude = a.qscan(qmin=0.0, qmax=10000.0, npoints=200)
+        plot(qq, numpy.abs(yy_amplitude) ** 2, xtitle='q [mm]', ytitle="Intensity", title="", grid=1, show=1)
 
 
     #
@@ -1013,4 +1106,27 @@ if __name__ == "__main__":
         print(a.info())
         # xx, yy_amplitude, _ = a.xscan_at_finite_q(q=437.275, npoints_x=200, a_factor=3, a_center=0.0, filename="tmp2016.h5")
         #
+        plot(xx, numpy.abs(yy_amplitude) ** 2, xtitle='x [mm]', ytitle="Intensity", title="", grid=1, show=1)
+
+
+    # external wavefront
+    #
+    # fig 2
+    #
+    if 1:
+        a = LaueCrystalFocusing(
+            R = 2000,
+            poisson_ratio = 0.2201,
+            photon_energy_in_keV = 80.0,
+            thickness = 1.0,  # mm
+            p = 0.0,  # mm
+            alfa_deg = -0.05,  # CAN BE POSITIVE OR NEGATIVE)
+            use_fast_hyp1f1=0,
+            verbose=0,
+            )
+
+        print(a.info())
+
+        xx, yy_amplitude, _ = a.xscan_for_external_wavefront(npoints_x=500, a_factor=1.0, a_center=0.0, filename="")  # same as before
+
         plot(xx, numpy.abs(yy_amplitude) ** 2, xtitle='x [mm]', ytitle="Intensity", title="", grid=1, show=1)
