@@ -302,14 +302,20 @@ class OWEBS(OWWidget):
                      sendSelectedValue=False, orientation="horizontal")
 
         self.left_box_2_1 = oasysgui.widgetBox(self.electron_beam_box, "", addSpace=False, orientation="vertical", height=150)
+        tmp0 = oasysgui.widgetBox(self.left_box_2_1, "", addSpace=False, orientation="horizontal")
+        tmp1 = oasysgui.widgetBox(tmp0, "", addSpace=False, orientation="vertical")
+        tmp2 = oasysgui.widgetBox(tmp0, "", addSpace=False, orientation="vertical")
 
-        oasysgui.lineEdit(self.left_box_2_1, self, "moment_xx",   "<x x>   [m^2]",   labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
-        oasysgui.lineEdit(self.left_box_2_1, self, "moment_xxp",  "<x x'>  [m.rad]", labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
-        oasysgui.lineEdit(self.left_box_2_1, self, "moment_xpxp", "<x' x'> [rad^2]", labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
-        oasysgui.lineEdit(self.left_box_2_1, self, "moment_yy",   "<y y>   [m^2]",   labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
-        oasysgui.lineEdit(self.left_box_2_1, self, "moment_yyp",  "<y y'>  [m.rad]", labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
-        oasysgui.lineEdit(self.left_box_2_1, self, "moment_ypyp", "<y' y'> [rad^2]", labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
 
+        oasysgui.lineEdit(tmp1, self, "moment_xx",   "<x x>   [m^2]",   labelWidth=100, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(tmp1, self, "moment_xxp",  "<x x'>  [m.rad]", labelWidth=100, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(tmp1, self, "moment_xpxp", "<x' x'> [rad^2]", labelWidth=100, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(tmp2, self, "moment_yy",   "<y y>   [m^2]",   labelWidth=100, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(tmp2, self, "moment_yyp",  "<y y'>  [m.rad]", labelWidth=100, valueType=float, orientation="horizontal",  callback=self.update)
+        oasysgui.lineEdit(tmp2, self, "moment_ypyp", "<y' y'> [rad^2]", labelWidth=100, valueType=float, orientation="horizontal",  callback=self.update)
+        gui.separator(self.left_box_2_1)
+        lbl = oasysgui.widgetLabel(self.left_box_2_1, "Note: 2nd Moments do not include dispersion")
+        lbl.setStyleSheet("color: darkblue; font-weight: bold;")
 
         self.left_box_2_2 = oasysgui.widgetBox(self.electron_beam_box, "", addSpace=False, orientation="vertical", height=150)
 
@@ -317,6 +323,9 @@ class OWEBS(OWWidget):
         oasysgui.lineEdit(self.left_box_2_2, self, "electron_beam_size_v",       "Vertical Beam Size \u03c3y [m]",            labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
         oasysgui.lineEdit(self.left_box_2_2, self, "electron_beam_divergence_h", "Horizontal Beam Divergence \u03c3'x [rad]", labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
         oasysgui.lineEdit(self.left_box_2_2, self, "electron_beam_divergence_v", "Vertical Beam Divergence \u03c3'y [rad]",   labelWidth=260, valueType=float, orientation="horizontal",  callback=self.update)
+        gui.separator(self.left_box_2_2)
+        lbl = oasysgui.widgetLabel(self.left_box_2_2, "Note: Size/Divergence do not include dispersion")
+        lbl.setStyleSheet("color: darkblue; font-weight: bold;")
 
         self.left_box_2_3 = oasysgui.widgetBox(self.electron_beam_box, "", addSpace=False, orientation="horizontal",height=150)
         self.left_box_2_3_l = oasysgui.widgetBox(self.left_box_2_3, "", addSpace=False, orientation="vertical")
@@ -1244,7 +1253,7 @@ plot(gap_mm, p_dens_peak, title="Power density peak at screen vs Gap", xtitle="G
                                      number_of_bunches=self.number_of_bunches)
 
         if self.type_of_properties == 0:
-            electron_beam.set_moments_horizontal(self.moment_xx,self.moment_xxp,self.moment_xpxp)
+            electron_beam.set_moments_horizontal(self.moment_xx, self.moment_xxp, self.moment_xpxp)
             electron_beam.set_moments_vertical(self.moment_yy, self.moment_yyp, self.moment_ypyp)
 
         elif self.type_of_properties == 1:
@@ -1254,15 +1263,22 @@ plot(gap_mm, p_dens_peak, title="Power density peak at screen vs Gap", xtitle="G
                                          sigma_yp=self.electron_beam_divergence_v)
 
         elif self.type_of_properties == 2:
-            electron_beam.set_twiss_horizontal(self.electron_beam_emittance_h,
-                                             self.electron_beam_alpha_h,
-                                             self.electron_beam_beta_h,
-                                             self.electron_beam_eta_h,
+            if self.electron_beam_emittance_h == 0: # TODO, remove when fixing syned electron_beam
+                electron_beam.set_moments_horizontal(0, 0, 0)
+            else:
+                electron_beam.set_twiss_horizontal(self.electron_beam_emittance_h,
+                                                 self.electron_beam_alpha_h,
+                                                 self.electron_beam_beta_h)
+            electron_beam.set_dispersion_horizontal(self.electron_beam_eta_h,
                                              self.electron_beam_etap_h)
-            electron_beam.set_twiss_vertical(self.electron_beam_emittance_v,
-                                             self.electron_beam_alpha_v,
-                                             self.electron_beam_beta_v,
-                                             self.electron_beam_eta_v,
+
+            if self.electron_beam_emittance_v == 0: # TODO, remove when fixing syned electron_beam
+                electron_beam.set_moments_vertical(0, 0, 0)
+            else:
+                electron_beam.set_twiss_vertical(self.electron_beam_emittance_v,
+                                                 self.electron_beam_alpha_v,
+                                                 self.electron_beam_beta_v)
+            electron_beam.set_dispersion_vertical(self.electron_beam_eta_v,
                                              self.electron_beam_etap_v)
 
         elif self.type_of_properties == 3:
