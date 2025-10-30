@@ -10,6 +10,7 @@ import time
 
 from scipy.special import jv as BesselJ
 import scipy.constants as codata
+from scipy import interpolate
 
 from srxraylib.plot.gol import plot, set_qt, plot_show
 from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
@@ -313,6 +314,12 @@ class LaueCrystalFocusing():
     # x-scan at p=q=0 using Guigay % Ferrero 2016 eq 23
     def xscan_for_external_wavefront(self, Phi=None, Phi_tau=None, npoints_x=10, a_factor=1, a_center=0.0, filename=""):
 
+        ##################################
+        # from srxraylib.plot.gol import plot
+        # plot(Phi_tau, numpy.abs(Phi)**2)
+        ##################################
+
+
         kwds = self._calculate_constats_for_equation31_2016()
         a = kwds['a']
 
@@ -326,11 +333,18 @@ class LaueCrystalFocusing():
         if Phi is None: Phi = numpy.ones_like(xx, dtype=complex)
         if Phi_tau is None: Phi_tau = xx
         ##
+
+
+        # interpolator
+        f_mag = interpolate.interp1d(Phi_tau, numpy.abs(Phi), kind='linear', bounds_error=False, fill_value=0)
+        f_phase = interpolate.interp1d(Phi_tau, numpy.angle(Phi), kind='linear', bounds_error=False, fill_value=0)
+
         print(f"Progress: 0%")
         for j in range(xx.size):
             progress = (j + 1) / xx.size * 100
             if progress % 10 == 0:  print(f"Progress: {progress:.0f}%")
-            amplitude = self._equation28_2016(xx[j], Phi, Phi_tau, **kwds)
+            # amplitude = self._equation28_2016(xx[j], Phi, Phi_tau, **kwds)
+            amplitude = self._equation28_2016(xx[j], f_mag, f_phase, **kwds)
             yy_amplitude[j] = amplitude
         print(f"Progress: 100%")
 
@@ -453,7 +467,8 @@ class LaueCrystalFocusing():
 ########################################
     # Guigay&Ferrero 2016: calculate integral in equation 28 for q=0 with a given wavefront amplitude defined at p=0
     # note that the integral limits are gamma (u+-a) and the integrand is Phi(tau) P(u,tau) with Phi() the complex amplitude
-    def _equation28_2016(self, x, Phi, Phi_tau,
+    def _equation28_2016(self, x,
+                        f_mag, f_phase, # interpolator
                         a       = None,
                         mu1     = None,
                         mu2     = None,
@@ -500,7 +515,8 @@ class LaueCrystalFocusing():
             Q2 = -1j * k * (mu1 * x**2 + x * t1 * numpy.sin(teta1)) / (2 * self._R)
             Q3 = -1j * k * (mu2 * (nu - x)**2 - a2 * gamma * (nu - x)) / (2 * self._R)
             Q4 = 1j * k * (g / self._R) * (a + x) * (nu - x)
-            y[i] = kum * numpy.exp(Q1 + Q2 + Q3 + Q4)
+            A = f_mag(tau[i]) * numpy.exp(1j * f_phase(tau[i]))
+            y[i] = A * kum * numpy.exp(Q1 + Q2 + Q3 + Q4)
 
         amplitude = numpy.trapz(y, x=tau)
         return amplitude
@@ -1011,6 +1027,7 @@ class LaueCrystalFocusing():
     # q-scan % Guigay&Ferrero 2016 eq 31
     #
     def qscan(self, qmin=0.0, qmax=10000.0, npoints=10):
+
         qq = numpy.linspace(qmin, qmax, npoints)
         yy_amplitude = numpy.zeros_like(qq, dtype=complex)
 
@@ -1026,11 +1043,17 @@ class LaueCrystalFocusing():
             if progress % 10 < (1 / qq.size * 100):  print(f"Progress: {progress:.0f}%")
 
             if qq[j] == 0:
-                xcenter = 0.0 # TODO calculate the x value that corresponds to the symmetry center
-                amplitude = self._equation30_2016(xcenter, **kwds_eq30)
+                if self._p == 0.0:
+                    amplitude = self._equation23_2016(qq[j], **kwds_eq31)
+                else:
+                    xcenter = 0.0 # TODO calculate the x value that corresponds to the symmetry center
+                    amplitude = self._equation30_2016(xcenter, **kwds_eq30)
                 yy_amplitude[j] = amplitude
             else:
-                amplitude = self._equation31_2016(0, qq[j], **kwds_eq31)
+                if self._p == 0.0:
+                    amplitude = self._equation24_2016(0, qq[j], **kwds_eq31)
+                else:
+                    amplitude = self._equation31_2016(0, qq[j], **kwds_eq31)
                 yy_amplitude[j] = amplitude
         print(f"Progress: 100%")
         print("Calculation time: ", time.time() - t0)

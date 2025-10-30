@@ -5,6 +5,7 @@ from orangewidget import gui
 
 from oasys.widgets import gui as oasysgui
 from oasys.widgets import congruence
+from oasys.widgets.gui import ConfirmDialog
 
 from syned.beamline.optical_elements.ideal_elements.ideal_lens import IdealLens
 from syned.beamline.optical_elements.crystals.crystal import Crystal
@@ -86,13 +87,10 @@ class WOLaueCrystal1D(Crystal, OpticalElementDecorator):
         self._source_flag  = source_flag
 
     def applyOpticalElement(self, wavefront_in, parameters=None, element_index=None):
-        print(">>>>>>> in applyOpticalElement, source_flag = ", self._source_flag)
-        print(">>>>>>> wavefront_in = ", wavefront_in)
         if self._source_flag == 0: # external wavefront
-            # print(">>>>>>> wavefront in: dim:  ", wavefront_in.get_dimension(), wavefront_in)
             xx, yy_amplitude, wavefront = self._LaueCrystalFocusing.xscan_for_external_wavefront(
                                                                             Phi=wavefront_in.get_complex_amplitude(),
-                                                                            Phi_tau=wavefront_in.get_abscissas(),
+                                                                            Phi_tau=wavefront_in.get_abscissas() * 1e3,
                                                                             npoints_x=self._npoints_x,
                                                                             a_factor=self._a_factor,
                                                                             a_center=0.0,
@@ -103,20 +101,42 @@ class WOLaueCrystal1D(Crystal, OpticalElementDecorator):
                                                                           a_factor=self._a_factor,
                                                                           a_center=0.0,
                                                                           filename="")
-
-
-
         return wavefront
 
     def qscan(self, qmin=0.0, qmax=10.0, qpoints=100):
-        print(">>>>>>> in qscan", qmin, qmax, qpoints, self.info())
-        return self._LaueCrystalFocusing.qscan(qmin=qmin*1e3, qmax=qmax*1e3, npoints=qpoints)
+        qq, amplitude = self._LaueCrystalFocusing.qscan(qmin=qmin*1e3, qmax=qmax*1e3, npoints=qpoints)
+        return qq * 1e-3, amplitude
 
     def to_python_code(self, do_plot=False, add_import_section=False):
+
         txt  = ""
-        txt += "\nfrom orangecontrib.esrf.wofry.widgets.extension.ow_laue_crystal import WOLaueCrystal"
+        txt += "\nfrom orangecontrib.esrf.wofry.widgets.extension.ow_laue_crystal import WOLaueCrystal1D"
         txt += "\n"
-        txt += "\noptical_element = WOLaueCrystal(name='%s')"%(self.get_name())
+        txt += "\noptical_element = WOLaueCrystal1D(name='%s',"         % self.get_name()
+        txt += "\n    crystal_descriptor = '%s',"                     % self._LaueCrystalFocusing._crystal_descriptor
+        txt += "\n    hkl = %s,"                                      % self._LaueCrystalFocusing._hkl
+        txt += "\n    R = %f, # m"                                    % (self._LaueCrystalFocusing._R * 1e-3)
+        txt += "\n    poisson_ratio = %f,"                            % self._LaueCrystalFocusing._poisson_ratio
+        txt += "\n    photon_energy = %f,"                            % (self._LaueCrystalFocusing._photon_energy_in_keV * 1e3)
+        txt += "\n    thickness = %g,  # m,"                          % (self._LaueCrystalFocusing._thickness * 1e-3)
+        txt += "\n    p = %f,  # m"                                   % (self._LaueCrystalFocusing._p * 1e-3)
+        txt += "\n    q = %f,  # m"                                   % (self._q * 1e-3)
+        txt += "\n    alfa_deg = %f,  # CAN BE POSITIVE OR NEGATIVE)" % self._LaueCrystalFocusing._alfa_deg
+        txt += "\n    integration_points = %d,"                       % self._LaueCrystalFocusing._integration_points
+        txt += "\n    npoints_x = %d,"                                % self._npoints_x
+        txt += "\n    a_factor = %f,"                                 % self._a_factor
+        txt += "\n    use_fast_hyp1f1 = %d,"                          % self._LaueCrystalFocusing._use_fast_hyp1f1
+        txt += "\n    source_flag = %d,"                              % self._source_flag
+        txt += "\n    verbose = %d)"                                  % self._LaueCrystalFocusing._verbose
+
+        txt += "\n"
+        if self._source_flag == 1:
+            txt += "\ninput_wavefront = None"
+            txt += "\noutput_wavefront = optical_element.applyOpticalElement(input_wavefront)"
+
+        txt += "\n\n# qq, amplitude = optical_element.qscan(qmin=0.01, qmax=5, qpoints=500)"
+        txt += "\n# plot(qq, numpy.abs(amplitude) ** 2, title='q [m]')"
+
         txt += "\n"
         return txt
 
@@ -160,6 +180,9 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
     qmin = Setting(0.0)
     qmax = Setting(10.0)
     qpoints = Setting(100)
+    # to save q-scan
+    qq = None
+    qq_amplitude = None
 
     def __init__(self):
         super().__init__()
@@ -240,7 +263,7 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
                      )
 
         self.q_box = oasysgui.widgetBox(q_box0, "", addSpace=False, orientation="vertical")
-        oasysgui.lineEdit(self.q_box, self, "qmin", "q minimum [m]",
+        oasysgui.lineEdit(self.q_box, self, "qmin", "q minimum [m] (recommended > 0)",
                           tooltip="qmin", labelWidth=260, valueType=float, orientation="horizontal")
         oasysgui.lineEdit(self.q_box, self, "qmax", "q maximum [m]",
                           tooltip="qmax", labelWidth=260, valueType=float, orientation="horizontal")
@@ -253,7 +276,7 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
         self.source_items.setVisible(False)
         self.q_box.setVisible(False)
         #
-        self.source_items.setVisible(self.source_flag in [1, 2])
+        self.source_items.setVisible(self.source_flag == 1)
         self.q_box.setVisible(self.qscan_flag == 1)
 
 
@@ -263,17 +286,25 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
         cleaned = self.hkl.strip('[]')
         actual_list_hkl = [int(item.strip()) for item in cleaned.split(',')]
 
+        if self.source_flag == 0:
+            wf = self.input_data.get_wavefront()
+            photon_energy = wf.get_photon_energy()
+            npoints_x = wf.size()
+        else:
+            photon_energy = self.photon_energy
+            npoints_x = self.npoints_x
+
         oe = WOLaueCrystal1D(name=self.oe_name,
                                crystal_descriptor=self.crystal_descriptor,
                                hkl=actual_list_hkl,
                                R=self.R,  # m
                                poisson_ratio=self.poisson_ratio,
-                               photon_energy=self.photon_energy,
+                               photon_energy=photon_energy,
                                thickness=self.thickness_um*1e-6,  # m
                                p=self.p,  # m
                                alfa_deg=self.alfa_deg,  # CAN BE POSITIVE OR NEGATIVE)
                                integration_points=self.integration_points,
-                               npoints_x=self.npoints_x,
+                               npoints_x=npoints_x,
                                a_factor=self.a_factor,
                                q=self.q,
                                use_fast_hyp1f1=self.use_fast_hyp1f1,
@@ -288,6 +319,19 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
 
         # congruence.checkStrictlyPositiveNumber(numpy.abs(self.focal_x), "Horizontal Focal Length")
         congruence.checkStrictlyPositiveNumber(self.thickness_um, "Crystal thickness [um]")
+        congruence.checkNumber(self.p, "p [m]")
+        congruence.checkNumber(self.q, "q [m]")
+
+        if self.source_flag == 0:
+            if (self.p != 0) or (self.q != 0):
+                if ConfirmDialog.confirmed(parent=self,
+                                           message="Wavefront from Oasys wire cannot be propagated externally to the crystal. Set p=q=0.",
+                                           title="Confirm Modification",
+                                           width=600):
+                    self.p = 0.0
+                    self.q = 0.0
+                else:
+                    print(">> **NOT CHANGED** p,q: ", self.p, self.q)
 
 
     def receive_specific_syned_data(self, optical_element):
@@ -322,65 +366,20 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
 
     def do_plot_results(self, progressBarValue=80): # OVERWRITTEN
 
-
-
         super().do_plot_results(progressBarValue, closeProgressBar=False)
 
         if self.qscan_flag:
-            print("\n########################################################")
-            print("\n                        Q-scan                          ")
-            print("\n########################################################")
-            self.progressBarSet(progressBarValue + 5)
-
-            optical_element = self.get_optical_element()
-            qq, amplitude = optical_element.qscan(qmin=self.qmin, qmax=self.qmax, qpoints=self.qpoints)
-
-            self.plot_data1D(x=qq,
-                             y=numpy.abs(amplitude) ** 2,
-                             progressBarValue=progressBarValue + 10,
-                             tabs_canvas_index=4,
-                             plot_canvas_index=4,
-                             calculate_fwhm=False,
-                             title=self.get_titles()[4],
-                             xtitle="q (distance from crystal) [m]",
-                             ytitle="Intensity [a.u.]")
-        else:
-            # clean
-            pass
-
-
-
-        # if not self.view_type == 0:
-        #     if not self.wavefront_to_plot is None:
-        #
-        #         self.progressBarSet(progressBarValue)
-        #
-        #         x, y = self.get_optical_element().get_height_profile(self.input_data.get_wavefront())
-        #         self.plot_data1D(x=x,
-        #                          y=1e6*y,
-        #                          progressBarValue=progressBarValue + 10,
-        #                          tabs_canvas_index=4,
-        #                          plot_canvas_index=4,
-        #                          calculate_fwhm=False,
-        #                          title=self.get_titles()[4],
-        #                          xtitle="Spatial Coordinate along o.e. [m]",
-        #                          ytitle="Profile Height [$\mu$m]")
-        #
-        #
-        #         x, y, amplitude = self.get_optical_element().get_footprint(self.input_data.get_wavefront())
-        #         self.plot_data1D(x=x,
-        #                          y=numpy.abs(amplitude)**2,
-        #                          progressBarValue=progressBarValue + 10,
-        #                          tabs_canvas_index=5,
-        #                          plot_canvas_index=5,
-        #                          calculate_fwhm=False,
-        #                          title=self.get_titles()[5],
-        #                          xtitle="Spatial Coordinate along o.e. [m]",
-        #                          ytitle="Intensity")
-        #
-        #
-        #
-        #         self.plot_canvas[0].resetZoom()
+            if (self.qq is not None) and (self.qq_amplitude is not None):
+                self.progressBarSet(progressBarValue + 5)
+                self.plot_data1D(x=self.qq,
+                                 y=numpy.abs(self.qq_amplitude) ** 2,
+                                 progressBarValue=progressBarValue + 10,
+                                 tabs_canvas_index=4,
+                                 plot_canvas_index=4,
+                                 calculate_fwhm=False,
+                                 title=self.get_titles()[4],
+                                 xtitle="q (distance from crystal) [m]",
+                                 ytitle="Intensity [a.u.]")
 
 
         self.progressBarFinished()
@@ -411,19 +410,19 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
             optical_element = self.get_optical_element()
             optical_element.name = self.oe_name if not self.oe_name is None else self.windowTitle()
 
-            try:
-                beamline = self.input_data.get_beamline().duplicate()
-            except:
-                beamline = WOBeamline(light_source=optical_element)
-
-            print("beamline: ", beamline)
-
-
             beamline_element = BeamlineElement(optical_element=optical_element,
                                                coordinates=ElementCoordinates(p=self.p,
                                                                               q=self.q,
                                                                               angle_radial=numpy.radians(self.angle_radial),
                                                                               angle_azimuthal=numpy.radians(self.angle_azimuthal)))
+
+            if self.source_flag == 0:
+                beamline = self.input_data.get_beamline().duplicate()
+                beamline.append_beamline_element(beamline_element, {})
+            elif self.source_flag == 1:
+                beamline = WOBeamline(light_source=optical_element)
+
+            self.wofry_python_script.set_code(beamline.to_python_code())
 
 
             # if self.propagator == 0:
@@ -490,7 +489,25 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
 
             self.wavefront_to_plot = output_wavefront
 
+            #
+            # qscan
+            #
+            if self.qscan_flag:
+                print("\n########################################################")
+                print("\n                        Q-scan                          ")
+                print("\n########################################################")
+                # self.progressBarSet(progressBarValue + 5)
 
+                optical_element = self.get_optical_element()
+                qq, amplitude = optical_element.qscan(qmin=self.qmin, qmax=self.qmax, qpoints=self.qpoints)
+                self.qq = qq
+                self.qq_amplitude = amplitude
+            else:
+                pass
+
+            #
+            # plots
+            #
             if self.view_type > 0:
                 self.initializeTabs()
                 self.do_plot_results()
@@ -500,18 +517,22 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
             self.send("WofryData", WofryData(beamline=beamline, wavefront=output_wavefront))
             self.send("Trigger", TriggerIn(new_object=True))
 
-            self.wofry_python_script.set_code(beamline.to_python_code())
-
             self.setStatusMessage("")
 
             try:    self.print_intensities()
             except: pass
+
+
         else: # except Exception as exception:
             QMessageBox.critical(self, "Error", str(exception), QMessageBox.Ok)
 
             if self.IS_DEVELOP: raise exception
 
         self.tabs.setCurrentIndex(current_index)
+
+    def set_input(self, wofry_data): # OVERWRITTEN
+        self.source_flag = 0
+        super().set_input(wofry_data=wofry_data)
 
 
 if __name__ == "__main__":
@@ -536,8 +557,8 @@ if __name__ == "__main__":
 
     a = QApplication(sys.argv)
     ow = OWWOLaueCrystal1D()
-    ow.set_input(get_example_wofry_data())
-    ow.p = 29.0
+    # ow.set_input(get_example_wofry_data())
+    # ow.p = 29.0
 
     ow.show()
     a.exec_()
