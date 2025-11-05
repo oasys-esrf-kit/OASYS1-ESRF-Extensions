@@ -504,7 +504,9 @@ class LaueCrystalFocusing():
 
             if alfa == 0:
                 Z = k * numpy.sqrt(chih2) / numpy.sin(2 * teta)
-                kum = BesselJ(0, Z * numpy.sqrt(a ** 2 - v[i] ** 2))
+                arg1 = a ** 2 - nu ** 2
+                if arg1 < 0: arg1 = 0
+                kum = BesselJ(0, Z * numpy.sqrt(arg1))
             else:
                 if self._use_fast_hyp1f1:
                     kum = fast_hyp1f1(kap, yprime)

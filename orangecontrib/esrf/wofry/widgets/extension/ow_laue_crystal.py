@@ -207,8 +207,8 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
                           tooltip="photon_energy", labelWidth=260, valueType=float, orientation="horizontal")
         oasysgui.lineEdit(self.source_items, self, "npoints_x", "Points in spatial coordinate",
                           tooltip="npoints_x", labelWidth=260, valueType=int, orientation="horizontal")
-        oasysgui.lineEdit(self.source_items, self, "a_factor", "Window width factor (in units of 'a', default=1)",
-                          tooltip="a_factor", labelWidth=260, valueType=float, orientation="horizontal")
+        oasysgui.lineEdit(self.source_box, self, "a_factor", "Window width factor (in units of 'a', default=1)",
+                          tooltip="a_factor", labelWidth=330, valueType=float, orientation="horizontal")
 
         #
         # crystal
@@ -248,10 +248,10 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
         self.adv_box = oasysgui.widgetBox(self.tab_adv, "Calculation parameters", addSpace=False, orientation="vertical")
 
         oasysgui.lineEdit(self.adv_box, self, "integration_points", "Number of points for calculating integrals",
-                          tooltip="integration_points", labelWidth=260, valueType=float, orientation="horizontal")
+                          tooltip="integration_points", labelWidth=300, valueType=float, orientation="horizontal")
 
-        gui.comboBox(self.adv_box, self, "use_fast_hyp1f1", label="Use asymptotic values for hyp1f1", labelWidth=350,
-                     items=["No (exact)","Yes (approximated)",],
+        gui.comboBox(self.adv_box, self, "use_fast_hyp1f1", label="Use asymptotic values for hyp1f1", labelWidth=380,
+                     items=["No (exact)","Yes (approx)",],
                      sendSelectedValue=False, orientation="horizontal",
                      )
 
