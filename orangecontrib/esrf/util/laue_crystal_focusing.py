@@ -16,7 +16,6 @@ from srxraylib.plot.gol import plot, set_qt, plot_show
 from wofry.propagator.wavefront1D.generic_wavefront import GenericWavefront1D
 
 
-
 def hyp1f1_series_small(a, b, z, terms=20):
     """Series expansion for small |z|"""
     result = 1.0
@@ -113,8 +112,10 @@ class LaueCrystalFocusing():
         #
         f0 = xraylib.Crystal_F_H_StructureFactor(cryst, ener, 0, 0, 0, debyeWaller, 1.0)
         fH = xraylib.Crystal_F_H_StructureFactor(cryst, ener, hh, kk, ll, debyeWaller, 1.0)
+        fHbar = xraylib.Crystal_F_H_StructureFactor(cryst, ener, -hh, -kk, -ll, debyeWaller, 1.0)
         if self._verbose: print("f0: (%f , %f)" % (f0.real, f0.imag))
         if self._verbose: print("fH: (%f , %f)" % (fH.real, fH.imag))
+        if self._verbose: print("fHbar: (%f , %f)" % (fHbar.real, fHbar.imag))
 
         #
         # convert structure factor in chi (or psi) = - classical_e_radius wavelength^2 fH /(pi volume)
@@ -135,11 +136,13 @@ class LaueCrystalFocusing():
 
         chi0 = cte * f0
         chiH = cte * fH
+        chiHbar = cte * fHbar
 
         if self._verbose: print("chi0: (%e , %e)" % (chi0.real, chi0.imag))
         if self._verbose: print("chiH: (%e , %e)" % (chiH.real, chiH.imag))
+        if self._verbose: print("chiHbar: (%e , %e)" % (chiHbar.real, chiHbar.imag))
 
-        return braggAngle, numpy.conjugate(chi0), numpy.conjugate(chiH)
+        return braggAngle, numpy.conjugate(chi0), numpy.conjugate(chiH),  numpy.conjugate(chiHbar)
 
     #
     # interface for q=0 or finite q
@@ -179,7 +182,7 @@ class LaueCrystalFocusing():
     # x-scan at p=q=0 using Guigay % Ferrero 2016 eq 23
     def xscan_at_q0_and_p0(self, npoints_x=10, a_factor=1, a_center=0.0, filename=""):
 
-        kwds = self._calculate_constats_for_equation23_2016()
+        kwds = self._calculate_constats_for_equation31_2016()
         a = kwds['a']
 
         # x-scan at q=0
@@ -211,7 +214,7 @@ class LaueCrystalFocusing():
     # x-scan at p=0, finite q, using Guigay % Ferrero 2016 eq 24
     def xscan_at_finite_q_and_p0(self, q=1000.0, npoints_x=10, a_factor=1, a_center=0.0, filename=""):
 
-        kwds = self._calculate_constats_for_equation23_2016() #?????????????
+        kwds = self._calculate_constats_for_equation31_2016() #?????????????
         a = kwds['a']
 
         print("a=%.3f mm..." % (a))
@@ -246,7 +249,7 @@ class LaueCrystalFocusing():
         if self._p == 0:
             raise Exception("For p=0 please use xscan_at_q0_and_p0()")
 
-        kwds = self._calculate_constats_for_equation30_2016()
+        kwds = self._calculate_constats_for_equation31_2016()
         a = kwds['a']
 
         # x-scan at q=0
@@ -311,8 +314,14 @@ class LaueCrystalFocusing():
         return xx, yy_amplitude, output_wavefront
 
 ####################################
-    # x-scan at p=q=0 using Guigay % Ferrero 2016 eq 23
-    def xscan_for_external_wavefront(self, Phi=None, Phi_tau=None, npoints_x=10, a_factor=1, a_center=0.0, filename=""):
+    # x-scan at p=q=0 using Guigay % Ferrero 2016 eq 28
+    def xscan_for_external_wavefront(self,
+                                     Phi=None,
+                                     Phi_tau=None, # in mm !!!!!!!!!!!!
+                                     npoints_x=10,
+                                     a_factor=1,
+                                     a_center=0.0,
+                                     filename=""):
 
         ##################################
         # from srxraylib.plot.gol import plot
@@ -324,6 +333,7 @@ class LaueCrystalFocusing():
         a = kwds['a']
 
         # x-scan at q=0
+        print("xscan_for_external_wavefront() (Guigay & Ferrero 2016 eq 28 http://dx.doi.org/10.1107/S2053273316006549)")
         print("a=%.3f mm..." % (a))
 
         xx = numpy.linspace(-a * a_factor, a * a_factor, npoints_x) - a_center
@@ -343,7 +353,6 @@ class LaueCrystalFocusing():
         for j in range(xx.size):
             progress = (j + 1) / xx.size * 100
             if progress % 10 == 0:  print(f"Progress: {progress:.0f}%")
-            # amplitude = self._equation28_2016(xx[j], Phi, Phi_tau, **kwds)
             amplitude = self._equation28_2016(xx[j], f_mag, f_phase, **kwds)
             yy_amplitude[j] = amplitude
         print(f"Progress: 100%")
@@ -359,6 +368,40 @@ class LaueCrystalFocusing():
             print("File %s written to disk" % filename)
 
         return xx, yy_amplitude, output_wavefront
+
+
+    ###################################
+    def diffraction_profile_angle_scan(self, THETA):
+
+        print("diffraction_profile_angle_scan() (Guigay & Ferrero 2016 eq XX http://dx.doi.org/10.1107/S2053273316006549)")
+
+        AMPL = numpy.zeros_like(THETA, dtype=complex)
+
+        kwds = self._calculate_constats_for_equation31_2016()
+        print("a=%.3f mm..." % (kwds['a']))
+        print("k=%.3g mm..." % (kwds['k']))
+
+        ##
+        # Phi = output_wavefront.get_complex_amplitude()
+        # Phi_x = output_wavefront.get_abscissas() * 1e3
+        ##
+        # # interpolator
+        # f_mag = interpolate.interp1d(Phi_x, numpy.abs(Phi), kind='linear', bounds_error=False, fill_value=0)
+        # f_phase = interpolate.interp1d(Phi_x, numpy.angle(Phi), kind='linear', bounds_error=False, fill_value=0)
+
+        if 0: # not vectorized
+            print(f"Progress: 0%")
+            for i, inclination in enumerate(THETA):
+                progress = (i + 1) / THETA.size
+                if (progress * 100) % 10 <= (100 / THETA.size):
+                    print(f"Progress: {100 * progress:.0f}%")
+                amplitude = self._equationXX_2016(inclination, **kwds)
+                AMPL[i] = amplitude
+            print(f"Progress: 100%")
+        else: # vectorized
+            AMPL = self._equationXX_2016_vectorized(THETA, **kwds)
+
+        return AMPL
 ####################################
     #
     # private methods
@@ -390,6 +433,7 @@ class LaueCrystalFocusing():
                          t2=None,
                          chih2=None,
                          ):
+
 
         if numpy.abs(x) > a: return 0
 
@@ -523,9 +567,9 @@ class LaueCrystalFocusing():
         amplitude = numpy.trapz(y, x=tau)
         return amplitude
 
-########################################
-    # Guigay&Ferrero 2016: calculate integral with limits -a,a in equation 30, finite p, q=0
-    def _equation30_2016(self, x,
+    # for rocking curve...
+    def _equationXX_2016(self, inclination,
+                        # f_mag, f_phase, # interpolator
                         a       = None,
                         mu1     = None,
                         mu2     = None,
@@ -542,7 +586,146 @@ class LaueCrystalFocusing():
                         g       = None,
                         kap     = None,
                         k       = None,
+                        pe      = None,
+                        acmax   = None,
+                        kiny    = None,
+                        att     = None,
+                        chizero = None,
+                        t2      = None,
                         chih2   = None,
+                      ):
+
+        X = numpy.linspace(-a, a, self._integration_points)
+        amplitude = numpy.zeros_like(X, dtype=complex)
+
+        for i, x in enumerate(X):
+
+            arg1 = a ** 2 - x ** 2
+            if arg1 < 0: arg1 = 0
+
+            if alfa == 0:
+                Z = k * numpy.sqrt(chih2) / numpy.sin(2 * teta)
+                kum = BesselJ(0, Z * numpy.sqrt(arg1))
+                Q1 = - 1j * k * x * (x + a) / (2 * self._R * numpy.cos(teta))
+                Q2 = 0
+            else:
+                yprime = acrist * gamma *  arg1 / (numpy.sin(2 * teta))**2
+
+                if self._use_fast_hyp1f1:
+                    kum = fast_hyp1f1(kap, yprime)
+                else:
+                    kum = mpmath.hyp1f1(1j * kap, 1, 1j * yprime)
+                Q1 = 1j * k * x * omega
+                Q2 = -1j * k * (mu1 * x**2 + x * t1 * numpy.sin(teta1)) / (2 * self._R)
+
+            A = numpy.exp(Q1 + Q2)
+            amplitude[i] = A * kum * numpy.exp(1j * k * x * inclination)
+
+        amplitude = numpy.trapz(amplitude, x=X)
+        return amplitude
+
+    def _equationXX_2016_vectorized(self, THETA,
+                        # f_mag, f_phase, # interpolator
+                        a       = None,
+                        mu1     = None,
+                        mu2     = None,
+                        teta    = None,
+                        teta1   = None,
+                        teta2   = None,
+                        alfa    = None,
+                        acrist  = None,
+                        gamma   = None,
+                        lambda1 = None,
+                        omega   = None,
+                        t1      = None,
+                        a2      = None,
+                        g       = None,
+                        kap     = None,
+                        k       = None,
+                        pe      = None,
+                        acmax   = None,
+                        kiny    = None,
+                        att     = None,
+                        chizero = None,
+                        t2      = None,
+                        chih2   = None,
+                      ):
+
+        X = numpy.linspace(-a, a, self._integration_points)
+        amplitude = numpy.zeros_like(X, dtype=complex)
+
+        for i, x in enumerate(X):
+
+            arg1 = a ** 2 - x ** 2
+            if arg1 < 0: arg1 = 0
+
+            if alfa == 0:
+                Z = k * numpy.sqrt(chih2) / numpy.sin(2 * teta)
+                kum = BesselJ(0, Z * numpy.sqrt(arg1))
+                Q1 = - 1j * k * x * (x + a) / (2 * self._R * numpy.cos(teta))
+                Q2 = 0
+            else:
+                yprime = acrist * gamma *  arg1 / (numpy.sin(2 * teta))**2
+
+                if self._use_fast_hyp1f1:
+                    kum = fast_hyp1f1(kap, yprime)
+                else:
+                    kum = mpmath.hyp1f1(1j * kap, 1, 1j * yprime)
+                Q1 = 1j * k * x * omega
+                Q2 = -1j * k * (mu1 * x**2 + x * t1 * numpy.sin(teta1)) / (2 * self._R)
+
+            A = numpy.exp(Q1 + Q2)
+            amplitude[i] = A * kum # * numpy.exp(1j * k * x * inclination)
+
+        AMPLITUDE_INTEGRATED = numpy.zeros_like(THETA, dtype=complex)
+        for i, inclination in enumerate(THETA):
+            AMPLITUDE_INTEGRATED[i] = numpy.trapz(amplitude * numpy.exp(1j * k * X * inclination), x=X)
+        return AMPLITUDE_INTEGRATED
+        # amplitude_integrated = numpy.trapz(amplitude, x=X)
+        # return amplitude_integrated
+########################################
+    # Guigay&Ferrero 2016: calculate integral with limits -a,a in equation 30, finite p, q=0
+    def _equation30_2016(self, x,
+                         a=None,
+                         mu1=None,
+                         mu2=None,
+                         teta=None,
+                         teta1=None,
+                         teta2=None,
+                         alfa=None,
+                         acrist=None,
+                         gamma=None,
+                         lambda1=None,
+                         omega=None,
+                         t1=None,
+                         a2=None,
+                         g=None,
+                         kap=None,
+                         k=None,
+                         pe=None,
+                         acmax=None,
+                         kiny=None,
+                         att=None,
+                         chizero=None,
+                         t2=None,
+                         chih2=None,
+                        # a       = None,
+                        # mu1     = None,
+                        # mu2     = None,
+                        # teta    = None,
+                        # teta1   = None,
+                        # teta2   = None,
+                        # alfa    = None,
+                        # acrist  = None,
+                        # gamma   = None,
+                        # lambda1 = None,
+                        # omega   = None,
+                        # t1      = None,
+                        # a2      = None,
+                        # g       = None,
+                        # kap     = None,
+                        # k       = None,
+                        # chih2   = None,
                       ):
 
         v = numpy.linspace(-a, a, self._integration_points)
@@ -649,255 +832,261 @@ class LaueCrystalFocusing():
     # pack constants
     #
 
-    def _calculate_constats_for_equation23_2016(self):
-        photon_energy_in_keV = self._photon_energy_in_keV
-        p = self._p
-        alfa = self._alfa_deg * numpy.pi / 180
-        R = self._R
-        poisson_ratio = self._poisson_ratio
-        thickness = self._thickness
+    # def _calculate_constats_for_equation23_2016(self):
+    #     photon_energy_in_keV = self._photon_energy_in_keV
+    #     p = self._p
+    #     alfa = self._alfa_deg * numpy.pi / 180
+    #     R = self._R
+    #     poisson_ratio = self._poisson_ratio
+    #     thickness = self._thickness
+    #
+    #     teta, chizero, chih, chimh = self.get_crystal_data()
+    #
+    #     lambda1 = codata.h * codata.c / codata.e / (photon_energy_in_keV * 1e3) * 1e3  # in mm
+    #     # chimh = -1j * chih
+    #     # chih2 = chih * chimh
+    #
+    #     chih2 = chih * chimh
+    #
+    #     if self._verbose:
+    #         print("photon_energy_in_keV:", photon_energy_in_keV)
+    #         print("lambda1 in mm:", lambda1)
+    #         print("lambda1 in m, A:", lambda1 * 1e-3, lambda1 * 1e-3 * 1e10)
+    #         print("Crystal: ", self._crystal_descriptor, self._hkl)
+    #         print("teta_deg:", teta * 180 / numpy.pi)
+    #         print("p:", p)
+    #         print("R:", R)
+    #         print("chizero:", chizero)
+    #         print("chih:", chih)
+    #         print("chimh:", chimh)
+    #         print("chih*chimh:", chih2)
+    #         print("sqrt(chih*chimh):", numpy.sqrt(chih2))
+    #
+    #
+    #
+    #     k = 2 * numpy.pi / lambda1
+    #     h = 2 * k * numpy.sin(teta)
+    #
+    #
+    #     u2 = 0.25 * chih2 * k ** 2
+    #     raygam = R * numpy.cos(teta)
+    #     kp = k * numpy.sin(2 * teta)
+    #     kp2 = kp * numpy.sin(2 * teta)
+    #
+    #     #
+    #     # TODO: Not working for alfa_deg=0
+    #     #
+    #
+    #
+    #     teta1 = alfa + teta
+    #     teta2 = alfa - teta
+    #     SG = None
+    #     fam1 = numpy.sin(teta1)
+    #     fam2 = numpy.sin(teta2)
+    #     gam1 = numpy.cos(teta1)
+    #     gam2 = numpy.cos(teta2)
+    #
+    #
+    #     t1 = thickness / gam1
+    #     t2 = thickness / gam2
+    #     qpoly = p * R * gam2 / (2 * p + R * gam1)
+    #     att = numpy.exp(-k * 0.5 * (t1 + t2) * numpy.imag(chizero))
+    #     s2max = 0.25 * t1 * t2
+    #     u2max = u2 * s2max  # Omega = k**2 chi_h chi_hbar / 4 ? (end of pag 490)
+    #     gamma = t2 / t1
+    #     a = numpy.sin(2 * teta) * t1 * 0.5
+    #     kin = 0.25 * (t1 - t2) * chizero / a
+    #     kinx = numpy.real(kin)
+    #     kiny = numpy.imag(kin)
+    #     com = numpy.sin(alfa) * (1 + gam1 * gam2 * (1 + poisson_ratio))
+    #     kp3 = 0.5 * k * (gamma * a) ** 2
+    #     mu1 = (numpy.cos(alfa) * 2 * fam1 * gam1 + numpy.sin(alfa) * (fam1 ** 2 + poisson_ratio * gam1 ** 2)) / (
+    #                 numpy.sin(2 * teta) * numpy.cos(teta))
+    #     mu2 = (numpy.cos(alfa) * 2 * fam2 * gam2 + numpy.sin(alfa) * (fam2 ** 2 + poisson_ratio * gam2 ** 2)) / (
+    #                 numpy.sin(2 * teta) * numpy.cos(teta))
+    #     a1 = (thickness / numpy.cos(teta)) * (
+    #                 numpy.cos(alfa) * numpy.sin(teta1) + poisson_ratio * numpy.sin(alfa) * numpy.cos(teta1))
+    #     a2 = (thickness / numpy.cos(teta)) * (
+    #                 numpy.cos(alfa) * numpy.sin(teta2) + poisson_ratio * numpy.sin(alfa) * numpy.cos(teta2))
+    #     acrist = -h * com / R  # A in Eq 17
+    #
+    #
+    #     acmax = acrist * s2max
+    #     g = gamma * acrist * R / kp2
+    #     kap = u2max / acmax  # beta = Omega / A TODO acmax is zero when alfa is zero!!!!!!!!!!!!!!!!!!
+    #
+    #     pe = p * R / (gamma ** 2 * (R - p * mu2) - g * p)
+    #
+    #     # WARNING DIFFERNT FROM Fig 2 (+p)
+    #
+    #     # pe = p * R / (gamma**2 * (R + p * mu2) - g * p)
+    #     if self._verbose:
+    #         print("alfa:", alfa)
+    #         print("teta1, teta2, teta:", teta1, teta2, teta)
+    #         print("t1, t2, t/cos(teta):", t1, t2, thickness / numpy.cos(teta))
+    #         print("a1, a2:", a1, a2, +thickness * numpy.tan(teta), -thickness * numpy.tan(teta))
+    #         print("mu1, mu2:", mu1, mu2, +1 / numpy.cos(teta), -1 / numpy.cos(teta))
+    #         print("acrist, com:", acrist, 0)
+    #         print("pe:", pe)
+    #         print("a: ", a, thickness * numpy.sin(teta))
+    #         print("pe:", pe)
+    #
+    #     omega = 0.25 * (t1 - t2) * chizero / a  # omega following the definition found after eq 22
+    #     omega_real = numpy.real(omega)
+    #     omega_imag = numpy.imag(omega)
+    #     xc_over_q = omega_real - t1 * numpy.sin(alfa + teta) / (2 * R)
+    #
+    #     return {
+    #         "a"       : a,
+    #         "mu1"     : mu1,
+    #         "mu2"     : mu2,
+    #         "teta"    : teta,
+    #         "teta1"   : teta1,
+    #         "teta2"   : teta2,
+    #         "alfa"    : alfa,
+    #         "acrist"  : acrist,
+    #         "gamma"   : gamma,
+    #         "lambda1" : lambda1,
+    #         "omega"   : omega,
+    #         "t1"      : t1,
+    #         "a2"      : a2,
+    #         "g"       : g,
+    #         "kap"     : kap,
+    #         "k"       : k,
+    #         "pe"      : pe,
+    #         "acmax"   : acmax,
+    #         "kiny"    : kiny,
+    #         "att"     : att,
+    #         "chizero" : chizero,
+    #         "t2"      : t2,
+    #         "chih2"   : chih2,
+    #         }
 
-        teta, chizero, chih = self.get_crystal_data()
+    #
+    # this is valid for equation 23 **ONLY**
+    #
+    #
+    # def _calculate_constats_for_equation30_2016(self):
+    #     photon_energy_in_keV = self._photon_energy_in_keV
+    #     p = self._p
+    #     alfa = self._alfa_deg * numpy.pi / 180
+    #     R = self._R
+    #     poisson_ratio = self._poisson_ratio
+    #     thickness = self._thickness
+    #
+    #     teta, chizero, chih, chimh = self.get_crystal_data()
+    #
+    #     lambda1 = codata.h * codata.c / codata.e / (photon_energy_in_keV * 1e3) * 1e3  # in mm
+    #     # chimh = -1j * chih
+    #     # chih2 = chih * chimh
+    #
+    #     chih2 = chih * chimh
+    #
+    #     if self._verbose:
+    #         print("photon_energy_in_keV:", photon_energy_in_keV)
+    #         print("lambda1 in mm:", lambda1)
+    #         print("lambda1 in m, A:", lambda1 * 1e-3, lambda1 * 1e-3 * 1e10)
+    #         print("Crystal: ", self._crystal_descriptor, self._hkl)
+    #         print("teta_deg:", teta * 180 / numpy.pi)
+    #         print("p:", p)
+    #         print("R:", R)
+    #         print("chizero:", chizero)
+    #         print("chih:", chih)
+    #         print("chimh:", chimh)
+    #         print("chih*chimh:", chih2)
+    #         print("sqrt(chih*chimh):", numpy.sqrt(chih2))
+    #
+    #     k = 2 * numpy.pi / lambda1
+    #     h = 2 * k * numpy.sin(teta)
+    #
+    #     u2 = 0.25 * chih2 * k ** 2
+    #     raygam = R * numpy.cos(teta)
+    #     kp = k * numpy.sin(2 * teta)
+    #     kp2 = kp * numpy.sin(2 * teta)
+    #
+    #     #
+    #     # TODO: Not working for alfa_deg=0
+    #     #
+    #     teta1 = alfa + teta
+    #     teta2 = alfa - teta
+    #     SG = None
+    #     fam1 = numpy.sin(teta1)
+    #     fam2 = numpy.sin(teta2)
+    #     gam1 = numpy.cos(teta1)
+    #     gam2 = numpy.cos(teta2)
+    #
+    #
+    #     t1 = thickness / gam1
+    #     t2 = thickness / gam2
+    #     qpoly = p * R * gam2 / (2 * p + R * gam1)
+    #     att = numpy.exp(-k * 0.5 * (t1 + t2) * numpy.imag(chizero))
+    #     s2max = 0.25 * t1 * t2
+    #     u2max = u2 * s2max  # Omega = k**2 chi_h chi_hbar / 4 ? (end of pag 490)
+    #     gamma = t2 / t1
+    #     a = numpy.sin(2 * teta) * t1 * 0.5
+    #     kin = 0.25 * (t1 - t2) * chizero / a
+    #     kinx = numpy.real(kin)
+    #     kiny = numpy.imag(kin)
+    #     com = numpy.sin(alfa) * (1 + gam1 * gam2 * (1 + poisson_ratio))
+    #     kp3 = 0.5 * k * (gamma * a) ** 2
+    #     mu1 = (numpy.cos(alfa) * 2 * fam1 * gam1 + numpy.sin(alfa) * (fam1 ** 2 + poisson_ratio * gam1 ** 2)) / (
+    #                 numpy.sin(2 * teta) * numpy.cos(teta))
+    #     mu2 = (numpy.cos(alfa) * 2 * fam2 * gam2 + numpy.sin(alfa) * (fam2 ** 2 + poisson_ratio * gam2 ** 2)) / (
+    #                 numpy.sin(2 * teta) * numpy.cos(teta))
+    #     a1 = (thickness / numpy.cos(teta)) * (
+    #                 numpy.cos(alfa) * numpy.sin(teta1) + poisson_ratio * numpy.sin(alfa) * numpy.cos(teta1))
+    #     a2 = (thickness / numpy.cos(teta)) * (
+    #                 numpy.cos(alfa) * numpy.sin(teta2) + poisson_ratio * numpy.sin(alfa) * numpy.cos(teta2))
+    #     acrist = -h * com / R  # A in Eq 17
+    #
+    #
+    #     acmax = acrist * s2max
+    #     g = gamma * acrist * R / kp2
+    #     kap = u2max / acmax  # beta = Omega / A TODO acmax is zero when alfa is zero!!!!!!!!!!!!!!!!!!
+    #
+    #     pe = p * R / (gamma ** 2 * (R - p * mu2) - g * p)
+    #
+    #     # WARNING DIFFERNT FROM Fig 2 (+p)
+    #
+    #     # pe = p * R / (gamma**2 * (R + p * mu2) - g * p)
+    #     if self._verbose:
+    #         print("alfa:", alfa)
+    #         print("teta1, teta2, teta:", teta1, teta2, teta)
+    #         print("t1, t2, t/cos(teta):", t1, t2, thickness / numpy.cos(teta))
+    #         print("a1, a2:", a1, a2, +thickness * numpy.tan(teta), -thickness * numpy.tan(teta))
+    #         print("mu1, mu2:", mu1, mu2, +1 / numpy.cos(teta), -1 / numpy.cos(teta))
+    #         print("acrist, com:", acrist, 0)
+    #         print("pe:", pe)
+    #         print("a: ", a, thickness * numpy.sin(teta))
+    #
+    #     omega = 0.25 * (t1 - t2) * chizero / a  # omega following the definition found after eq 22
+    #     omega_real = numpy.real(omega)
+    #     omega_imag = numpy.imag(omega)
+    #     xc_over_q = omega_real - t1 * numpy.sin(alfa + teta) / (2 * R)
+    #
+    #     return {
+    #         "a"       : a,
+    #         "mu1"     : mu1,
+    #         "mu2"     : mu2,
+    #         "teta"    : teta,
+    #         "teta1"   : teta1,
+    #         "teta2"   : teta2,
+    #         "alfa"    : alfa,
+    #         "acrist"  : acrist,
+    #         "gamma"   : gamma,
+    #         "lambda1" : lambda1,
+    #         "omega"   : omega,
+    #         "t1"      : t1,
+    #         "a2"      : a2,
+    #         "g"       : g,
+    #         "kap"     : kap,
+    #         "k"       : k,
+    #         "chih2"   : chih2,
+    #         }
 
-        lambda1 = codata.h * codata.c / codata.e / (photon_energy_in_keV * 1e3) * 1e3  # in mm
-        chimh = -1j * chih
-        chih2 = chih * chimh
-
-        if self._verbose:
-            print("photon_energy_in_keV:", photon_energy_in_keV)
-            print("lambda1 in mm:", lambda1)
-            print("lambda1 in m, A:", lambda1 * 1e-3, lambda1 * 1e-3 * 1e10)
-            print("CrystalSi 111")
-            print("teta_deg:", teta * 180 / numpy.pi)
-            print("p:", p)
-            print("R:", R)
-            print("chizero:", chizero)
-            print("chih:", chih)
-            print("chimh:", chimh)
-            print("chih*chihbar:", chih2)
-
-
-
-        k = 2 * numpy.pi / lambda1
-        h = 2 * k * numpy.sin(teta)
-
-
-        u2 = 0.25 * chih2 * k ** 2
-        raygam = R * numpy.cos(teta)
-        kp = k * numpy.sin(2 * teta)
-        kp2 = kp * numpy.sin(2 * teta)
-
-        #
-        # TODO: Not working for alfa_deg=0
-        #
-
-
-        teta1 = alfa + teta
-        teta2 = alfa - teta
-        SG = None
-        fam1 = numpy.sin(teta1)
-        fam2 = numpy.sin(teta2)
-        gam1 = numpy.cos(teta1)
-        gam2 = numpy.cos(teta2)
-
-
-        t1 = thickness / gam1
-        t2 = thickness / gam2
-        qpoly = p * R * gam2 / (2 * p + R * gam1)
-        att = numpy.exp(-k * 0.5 * (t1 + t2) * numpy.imag(chizero))
-        s2max = 0.25 * t1 * t2
-        u2max = u2 * s2max  # Omega = k**2 chi_h chi_hbar / 4 ? (end of pag 490)
-        gamma = t2 / t1
-        a = numpy.sin(2 * teta) * t1 * 0.5
-        kin = 0.25 * (t1 - t2) * chizero / a
-        kinx = numpy.real(kin)
-        kiny = numpy.imag(kin)
-        com = numpy.sin(alfa) * (1 + gam1 * gam2 * (1 + poisson_ratio))
-        kp3 = 0.5 * k * (gamma * a) ** 2
-        mu1 = (numpy.cos(alfa) * 2 * fam1 * gam1 + numpy.sin(alfa) * (fam1 ** 2 + poisson_ratio * gam1 ** 2)) / (
-                    numpy.sin(2 * teta) * numpy.cos(teta))
-        mu2 = (numpy.cos(alfa) * 2 * fam2 * gam2 + numpy.sin(alfa) * (fam2 ** 2 + poisson_ratio * gam2 ** 2)) / (
-                    numpy.sin(2 * teta) * numpy.cos(teta))
-        a1 = (thickness / numpy.cos(teta)) * (
-                    numpy.cos(alfa) * numpy.sin(teta1) + poisson_ratio * numpy.sin(alfa) * numpy.cos(teta1))
-        a2 = (thickness / numpy.cos(teta)) * (
-                    numpy.cos(alfa) * numpy.sin(teta2) + poisson_ratio * numpy.sin(alfa) * numpy.cos(teta2))
-        acrist = -h * com / R  # A in Eq 17
-
-
-        acmax = acrist * s2max
-        g = gamma * acrist * R / kp2
-        kap = u2max / acmax  # beta = Omega / A TODO acmax is zero when alfa is zero!!!!!!!!!!!!!!!!!!
-
-        pe = p * R / (gamma ** 2 * (R - p * mu2) - g * p)
-
-        # WARNING DIFFERNT FROM Fig 2 (+p)
-
-        # pe = p * R / (gamma**2 * (R + p * mu2) - g * p)
-        if self._verbose:
-            print("alfa:", alfa)
-            print("teta1, teta2, teta:", teta1, teta2, teta)
-            print("t1, t2, t/cos(teta):", t1, t2, thickness / numpy.cos(teta))
-            print("a1, a2:", a1, a2, +thickness * numpy.tan(teta), -thickness * numpy.tan(teta))
-            print("mu1, mu2:", mu1, mu2, +1 / numpy.cos(teta), -1 / numpy.cos(teta))
-            print("acrist, com:", acrist, 0)
-            print("pe:", pe)
-            print("a: ", a, thickness * numpy.sin(teta))
-            print("pe:", pe)
-
-        omega = 0.25 * (t1 - t2) * chizero / a  # omega following the definition found after eq 22
-        omega_real = numpy.real(omega)
-        omega_imag = numpy.imag(omega)
-        xc_over_q = omega_real - t1 * numpy.sin(alfa + teta) / (2 * R)
-
-        return {
-            "a"       : a,
-            "mu1"     : mu1,
-            "mu2"     : mu2,
-            "teta"    : teta,
-            "teta1"   : teta1,
-            "teta2"   : teta2,
-            "alfa"    : alfa,
-            "acrist"  : acrist,
-            "gamma"   : gamma,
-            "lambda1" : lambda1,
-            "omega"   : omega,
-            "t1"      : t1,
-            "a2"      : a2,
-            "g"       : g,
-            "kap"     : kap,
-            "k"       : k,
-            "pe"      : pe,
-            "acmax"   : acmax,
-            "kiny"    : kiny,
-            "att"     : att,
-            "chizero" : chizero,
-            "t2"      : t2,
-            "chih2"   : chih2,
-            }
-
-
-    def _calculate_constats_for_equation30_2016(self):
-        photon_energy_in_keV = self._photon_energy_in_keV
-        p = self._p
-        alfa = self._alfa_deg * numpy.pi / 180
-        R = self._R
-        poisson_ratio = self._poisson_ratio
-        thickness = self._thickness
-
-        teta, chizero, chih = self.get_crystal_data()
-
-        lambda1 = codata.h * codata.c / codata.e / (photon_energy_in_keV * 1e3) * 1e3  # in mm
-        chimh = -1j * chih
-        chih2 = chih * chimh
-
-        if self._verbose:
-            print("photon_energy_in_keV:", photon_energy_in_keV)
-            print("lambda1 in mm:", lambda1)
-            print("lambda1 in m, A:", lambda1 * 1e-3, lambda1 * 1e-3 * 1e10)
-            print("CrystalSi 111")
-            print("teta_deg:", teta * 180 / numpy.pi)
-            print("p:", p)
-            print("R:", R)
-            print("chizero:", chizero)
-            print("chih:", chih)
-            print("chimh:", chimh)
-            print("chih*chihbar:", chih2)
-
-
-
-        k = 2 * numpy.pi / lambda1
-        h = 2 * k * numpy.sin(teta)
-
-
-        u2 = 0.25 * chih2 * k ** 2
-        raygam = R * numpy.cos(teta)
-        kp = k * numpy.sin(2 * teta)
-        kp2 = kp * numpy.sin(2 * teta)
-
-        #
-        # TODO: Not working for alfa_deg=0
-        #
-
-
-        teta1 = alfa + teta
-        teta2 = alfa - teta
-        SG = None
-        fam1 = numpy.sin(teta1)
-        fam2 = numpy.sin(teta2)
-        gam1 = numpy.cos(teta1)
-        gam2 = numpy.cos(teta2)
-
-
-        t1 = thickness / gam1
-        t2 = thickness / gam2
-        qpoly = p * R * gam2 / (2 * p + R * gam1)
-        att = numpy.exp(-k * 0.5 * (t1 + t2) * numpy.imag(chizero))
-        s2max = 0.25 * t1 * t2
-        u2max = u2 * s2max  # Omega = k**2 chi_h chi_hbar / 4 ? (end of pag 490)
-        gamma = t2 / t1
-        a = numpy.sin(2 * teta) * t1 * 0.5
-        kin = 0.25 * (t1 - t2) * chizero / a
-        kinx = numpy.real(kin)
-        kiny = numpy.imag(kin)
-        com = numpy.sin(alfa) * (1 + gam1 * gam2 * (1 + poisson_ratio))
-        kp3 = 0.5 * k * (gamma * a) ** 2
-        mu1 = (numpy.cos(alfa) * 2 * fam1 * gam1 + numpy.sin(alfa) * (fam1 ** 2 + poisson_ratio * gam1 ** 2)) / (
-                    numpy.sin(2 * teta) * numpy.cos(teta))
-        mu2 = (numpy.cos(alfa) * 2 * fam2 * gam2 + numpy.sin(alfa) * (fam2 ** 2 + poisson_ratio * gam2 ** 2)) / (
-                    numpy.sin(2 * teta) * numpy.cos(teta))
-        a1 = (thickness / numpy.cos(teta)) * (
-                    numpy.cos(alfa) * numpy.sin(teta1) + poisson_ratio * numpy.sin(alfa) * numpy.cos(teta1))
-        a2 = (thickness / numpy.cos(teta)) * (
-                    numpy.cos(alfa) * numpy.sin(teta2) + poisson_ratio * numpy.sin(alfa) * numpy.cos(teta2))
-        acrist = -h * com / R  # A in Eq 17
-
-
-        acmax = acrist * s2max
-        g = gamma * acrist * R / kp2
-        kap = u2max / acmax  # beta = Omega / A TODO acmax is zero when alfa is zero!!!!!!!!!!!!!!!!!!
-
-        pe = p * R / (gamma ** 2 * (R - p * mu2) - g * p)
-
-        # WARNING DIFFERNT FROM Fig 2 (+p)
-
-        # pe = p * R / (gamma**2 * (R + p * mu2) - g * p)
-        if self._verbose:
-            print("alfa:", alfa)
-            print("teta1, teta2, teta:", teta1, teta2, teta)
-            print("t1, t2, t/cos(teta):", t1, t2, thickness / numpy.cos(teta))
-            print("a1, a2:", a1, a2, +thickness * numpy.tan(teta), -thickness * numpy.tan(teta))
-            print("mu1, mu2:", mu1, mu2, +1 / numpy.cos(teta), -1 / numpy.cos(teta))
-            print("acrist, com:", acrist, 0)
-            print("pe:", pe)
-            print("a: ", a, thickness * numpy.sin(teta))
-
-        omega = 0.25 * (t1 - t2) * chizero / a  # omega following the definition found after eq 22
-        omega_real = numpy.real(omega)
-        omega_imag = numpy.imag(omega)
-        xc_over_q = omega_real - t1 * numpy.sin(alfa + teta) / (2 * R)
-
-        return {
-            "a"       : a,
-            "mu1"     : mu1,
-            "mu2"     : mu2,
-            "teta"    : teta,
-            "teta1"   : teta1,
-            "teta2"   : teta2,
-            "alfa"    : alfa,
-            "acrist"  : acrist,
-            "gamma"   : gamma,
-            "lambda1" : lambda1,
-            "omega"   : omega,
-            "t1"      : t1,
-            "a2"      : a2,
-            "g"       : g,
-            "kap"     : kap,
-            "k"       : k,
-            "chih2"   : chih2,
-            }
-
-
+    #
+    # this is valid for equations 23,24, 28, XX and 31
+    #
     def _calculate_constats_for_equation31_2016(self):
         photon_energy_in_keV = self._photon_energy_in_keV
         p = self._p
@@ -906,30 +1095,29 @@ class LaueCrystalFocusing():
         poisson_ratio = self._poisson_ratio
         thickness = self._thickness
 
-        teta, chizero, chih = self.get_crystal_data()
+        teta, chizero, chih, chimh = self.get_crystal_data()
 
         lambda1 = codata.h * codata.c / codata.e / (photon_energy_in_keV * 1e3) * 1e3  # in mm
-        chimh = -1j * chih
-        chih2 = chih * chimh
+        # chimh = -1j * chih
+        # chih2 = chih * chimh
 
+        chih2 = chih * chimh
         if self._verbose:
             print("photon_energy_in_keV:", photon_energy_in_keV)
             print("lambda1 in mm:", lambda1)
             print("lambda1 in m, A:", lambda1 * 1e-3, lambda1 * 1e-3 * 1e10)
-            print("CrystalSi 111")
+            print("Crystal: ", self._crystal_descriptor, self._hkl)
             print("teta_deg:", teta * 180 / numpy.pi)
             print("p:", p)
             print("R:", R)
             print("chizero:", chizero)
             print("chih:", chih)
             print("chimh:", chimh)
-            print("chih*chihbar:", chih2)
-
-
+            print("chih*chimh:", chih2)
+            print("sqrt(chih*chimh):", numpy.sqrt(chih2))
 
         k = 2 * numpy.pi / lambda1
         h = 2 * k * numpy.sin(teta)
-
 
         u2 = 0.25 * chih2 * k ** 2
         raygam = R * numpy.cos(teta)
@@ -939,8 +1127,6 @@ class LaueCrystalFocusing():
         #
         # TODO: Not working for alfa_deg=0
         #
-
-
         teta1 = alfa + teta
         teta2 = alfa - teta
         SG = None
@@ -1016,13 +1202,13 @@ class LaueCrystalFocusing():
             "g"       : g,
             "kap"     : kap,
             "k"       : k,
-            "pe"      : pe,           # used in eq 31
-            "acmax"   : acmax,        # used in eq 31
-            "kiny"    : kiny,         # used in eq 31
-            "att"     : att,          # used in eq 31
-            "chizero" : chizero,      # used in eq 31
-            "t2"      : t2,           # used in eq 31
-            "chih2"   : chih2,        # used in eq 31
+            "pe"      : pe,           # used in eq 31, 23, 24, XX; not used in equation 30
+            "acmax"   : acmax,        # used in eq 31, 23, 24, XX; not used in equation 30
+            "kiny"    : kiny,         # used in eq 31, 23, 24, XX; not used in equation 30
+            "att"     : att,          # used in eq 31, 23, 24, XX; not used in equation 30
+            "chizero" : chizero,      # used in eq 31, 23, 24, XX; not used in equation 30
+            "t2"      : t2,           # used in eq 31, 23, 24, XX; not used in equation 30
+            "chih2"   : chih2,
             }
 
     #
@@ -1033,7 +1219,7 @@ class LaueCrystalFocusing():
         qq = numpy.linspace(qmin, qmax, npoints)
         yy_amplitude = numpy.zeros_like(qq, dtype=complex)
 
-        kwds_eq30 = self._calculate_constats_for_equation30_2016()
+        kwds_eq30 = self._calculate_constats_for_equation31_2016()
         kwds_eq31 = self._calculate_constats_for_equation31_2016()
         a = kwds_eq31['a']
 
@@ -1093,17 +1279,6 @@ if __name__ == "__main__":
             verbose=0,
             )
 
-        # xx, yy_amplitude, _ = a.xscan_at_q0(npoints_x=200, a_factor=2, a_center=0.01511, filename="tmp2016_q0.h5")
-        # xx, yy_amplitude, _ = a.xscan(q=0, npoints_x=200, a_factor=2, a_center=0.01511, filename="tmp2016_q0.h5") # same as before
-
-        # xx, yy_amplitude, _ = a.xscan_at_q0(npoints_x=1000, a_factor=3, a_center=0.0, filename="tmp2016_q0.h5")
-
-        # print(a.info())
-        # xx, yy_amplitude, _ = a.xscan_at_finite_q(q=437.275, npoints_x=200, a_factor=3, a_center=0.0, filename="tmp2016.h5")
-        #
-        # plot(xx, numpy.abs(yy_amplitude) ** 2, xtitle='x [mm]', ytitle="Intensity", title="", grid=1, show=1)
-
-
         qq, yy_amplitude = a.qscan(qmin=0.0, qmax=10000.0, npoints=200)
         plot(qq, numpy.abs(yy_amplitude) ** 2, xtitle='q [mm]', ytitle="Intensity", title="", grid=1, show=1)
 
@@ -1123,14 +1298,10 @@ if __name__ == "__main__":
             verbose=0,
             )
 
-        # xx, yy_amplitude, _ = a.xscan_at_q0(npoints_x=500, a_factor=2, a_center=0.01511, filename="tmp2016_q0.h5")
-        xx, yy_amplitude, _ = a.xscan(q=1671.1, npoints_x=500, a_factor=1.0, a_center=0.0, filename="tmp2016_q0.h5")  # same as before
-
-        # xx, yy_amplitude, _ = a.xscan_at_q0(npoints_x=1000, a_factor=3, a_center=0.0, filename="tmp2016_q0.h5")
+        xx, yy_amplitude, _ = a.xscan(q=1671.1, npoints_x=500, a_factor=1.0, a_center=0.0, filename="tmp2016_q0.h5")
 
         print(a.info())
-        # xx, yy_amplitude, _ = a.xscan_at_finite_q(q=437.275, npoints_x=200, a_factor=3, a_center=0.0, filename="tmp2016.h5")
-        #
+
         plot(xx, numpy.abs(yy_amplitude) ** 2, xtitle='x [mm]', ytitle="Intensity", title="", grid=1, show=1)
 
 
@@ -1138,7 +1309,7 @@ if __name__ == "__main__":
     #
     # fig 2
     #
-    if 1:
+    if 0:
         a = LaueCrystalFocusing(
             R = 2000,
             poisson_ratio = 0.2201,
@@ -1155,3 +1326,25 @@ if __name__ == "__main__":
         xx, yy_amplitude, _ = a.xscan_for_external_wavefront(npoints_x=500, a_factor=1.0, a_center=0.0, filename="")  # same as before
 
         plot(xx, numpy.abs(yy_amplitude) ** 2, xtitle='x [mm]', ytitle="Intensity", title="", grid=1, show=1)
+
+    # rocking curve
+    #
+    if 1:
+        a = LaueCrystalFocusing(
+            crystal_descriptor='Diamond',
+            hkl=[1, 1, 1],
+            R = -1e3, #mm
+            poisson_ratio = 0.2201,
+            photon_energy_in_keV = 17.0,
+            thickness = 155e-3,  # mm
+            p = 0.0,  # mm
+            alfa_deg = 5,  # CAN BE POSITIVE OR NEGATIVE)
+            use_fast_hyp1f1=0,
+            verbose=1,
+            )
+
+        print(a.info())
+
+        THETA = numpy.linspace(-0.0001, 0.0001, 1000)
+        AMPL = a.diffraction_profile_angle_scan(THETA)
+        plot(THETA, numpy.abs(AMPL) ** 2, title="Diffraction Profile", grid=1, show=1)

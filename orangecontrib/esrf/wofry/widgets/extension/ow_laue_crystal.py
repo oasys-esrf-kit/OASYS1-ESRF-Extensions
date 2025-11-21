@@ -8,7 +8,7 @@ from oasys.widgets import congruence
 from oasys.widgets.gui import ConfirmDialog
 
 from syned.beamline.optical_elements.ideal_elements.ideal_lens import IdealLens
-from syned.beamline.optical_elements.crystals.crystal import Crystal
+from syned.beamline.optical_elements.crystals.crystal import Crystal, DiffractionGeometry
 from wofry.beamline.decorators import OpticalElementDecorator
 
 from wofryimpl.beamline.optical_elements.ideal_elements.ideal_lens import WOIdealLens1D
@@ -17,35 +17,12 @@ from orangecontrib.wofry.widgets.gui.ow_optical_element_1d import OWWOOpticalEle
 from orangecontrib.esrf.util.laue_crystal_focusing import LaueCrystalFocusing
 from wofryimpl.beamline.beamline import WOBeamline
 #
-#
-#
-# from PyQt5.QtGui import QPalette, QColor, QFont
-# from PyQt5.QtWidgets import QMessageBox
-#
-# from orangewidget import gui
-# from orangewidget import widget
-# from orangewidget.settings import Setting
-# from oasys.widgets import gui as oasysgui
-# from oasys.widgets import congruence
-# from oasys.widgets.gui import ConfirmDialog
 from oasys.util.oasys_util import EmittingStream, TriggerIn
 #
-# from syned.widget.widget_decorator import WidgetDecorator
 from syned.beamline.element_coordinates import ElementCoordinates
 from syned.beamline.beamline_element import BeamlineElement
-# from syned.beamline.shape import *
-#
-# from wofry.propagator.propagator import PropagationManager, PropagationElements, PropagationParameters
-# from wofryimpl.propagator.propagators1D import initialize_default_propagator_1D
-# from wofryimpl.propagator.propagators1D.fresnel import Fresnel1D
-# from wofryimpl.propagator.propagators1D.fresnel_convolution import FresnelConvolution1D
-# from wofryimpl.propagator.propagators1D.fraunhofer import Fraunhofer1D
-# from wofryimpl.propagator.propagators1D.integral import Integral1D
-# from wofryimpl.propagator.propagators1D.fresnel_zoom import FresnelZoom1D
-# from wofryimpl.propagator.propagators1D.fresnel_zoom_scaling_theorem import FresnelZoomScaling1D
-#
+
 from orangecontrib.wofry.util.wofry_objects import WofryData
-# from orangecontrib.wofry.widgets.gui.ow_wofry_widget import WofryWidget
 
 class WOLaueCrystal1D(Crystal, OpticalElementDecorator):
     def __init__(self, name="",
@@ -65,7 +42,16 @@ class WOLaueCrystal1D(Crystal, OpticalElementDecorator):
                  source_flag=1,
                  verbose=1,
                  ):
-        Crystal.__init__(self, name)
+        Crystal.__init__(self,
+                         name,
+                         material=crystal_descriptor,
+                         diffraction_geometry=DiffractionGeometry.LAUE,
+                         miller_index_h=int(hkl[0]),
+                         miller_index_k=int(hkl[1]),
+                         miller_index_l=int(hkl[2]),
+                         asymmetry_angle=numpy.radians(90 - alfa_deg),
+                         thickness=thickness,
+                         )
         self._LaueCrystalFocusing = LaueCrystalFocusing(
             crystal_descriptor=crystal_descriptor,
             hkl=hkl,
@@ -107,8 +93,12 @@ class WOLaueCrystal1D(Crystal, OpticalElementDecorator):
         qq, amplitude = self._LaueCrystalFocusing.qscan(qmin=qmin*1e3, qmax=qmax*1e3, npoints=qpoints)
         return qq * 1e-3, amplitude
 
-    def to_python_code(self, do_plot=False, add_import_section=False):
+    def diffraction_profile_angle_scan(self, angle_min=0.0, angle_max=10.0, angle_points=100):
+        THETA = numpy.linspace(angle_min, angle_max, angle_points)
+        AMPLITUDE = self._LaueCrystalFocusing.diffraction_profile_angle_scan(THETA)
+        return THETA, AMPLITUDE
 
+    def to_python_code(self, do_plot=False, add_import_section=False):
         txt  = ""
         txt += "\nfrom orangecontrib.esrf.wofry.widgets.extension.ow_laue_crystal import WOLaueCrystal1D"
         txt += "\n"
@@ -137,6 +127,9 @@ class WOLaueCrystal1D(Crystal, OpticalElementDecorator):
         txt += "\n\n# qq, amplitude = optical_element.qscan(qmin=0.01, qmax=5, qpoints=500)"
         txt += "\n# plot(qq, numpy.abs(amplitude) ** 2, title='q [m]')"
 
+        txt += "\n\n# angle, angle_amplitude = optical_element.diffraction_profile_angle_scan(angle_min=-50e-6, angle_max=50e-6, angle_points=1000)"
+        txt += "\n# plot(angle, numpy.abs(angle_amplitude) ** 2, title='Diffraction Profile', xtitle='angle [rad]', ytitle='Intensity [a.u.]')"
+
         txt += "\n"
         return txt
 
@@ -163,8 +156,6 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
     R = Setting(2.0)
 
     # positioning
-    # p = Setting(29.0)
-    # p = Setting(30.0)
     photon_energy = Setting(20000.0)
     npoints_x = Setting(100)
     a_factor = Setting(3.0)
@@ -183,6 +174,15 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
     # to save q-scan
     qq = None
     qq_amplitude = None
+
+    # angle-scan (rocking curve)
+    angle_scan_flag = Setting(0)
+    angle_min = Setting(-50)
+    angle_max = Setting(50)
+    angle_points = Setting(100)
+    # to save q-scan
+    angle = None
+    angle_amplitude = None
 
     def __init__(self):
         super().__init__()
@@ -239,22 +239,20 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
 
     # overwrite this method to be used for advanced settings
     def create_propagation_setting_tab(self):
-        # self.tab_pro = oasysgui.createTabPage(self.tabs_setting, "Propagation Setting")
-        # self.zoom_box = oasysgui.widgetBox(self.tab_pro, "", addSpace=False, orientation="vertical", height=90)
-        # oasysgui.lineEdit(self.zoom_box, self, "magnification_x", "Magnification Factor for interval",
-        #                   labelWidth=260, valueType=float, orientation="horizontal")
+
         self.tab_adv = oasysgui.createTabPage(self.tabs_setting, "Additional Setting")
 
         self.adv_box = oasysgui.widgetBox(self.tab_adv, "Calculation parameters", addSpace=False, orientation="vertical")
 
         oasysgui.lineEdit(self.adv_box, self, "integration_points", "Number of points for calculating integrals",
-                          tooltip="integration_points", labelWidth=300, valueType=float, orientation="horizontal")
+                          tooltip="integration_points", labelWidth=300, valueType=int, orientation="horizontal")
 
         gui.comboBox(self.adv_box, self, "use_fast_hyp1f1", label="Use asymptotic values for hyp1f1", labelWidth=380,
                      items=["No (exact)","Yes (approx)",],
                      sendSelectedValue=False, orientation="horizontal",
                      )
 
+        ## q-scan
         q_box0 = oasysgui.widgetBox(self.tab_adv, "q-scan", addSpace=False, orientation="vertical")
         gui.comboBox(q_box0, self, "qscan_flag", label="Plot q-scan (slow)", labelWidth=350,
                      items=["No","Yes",],
@@ -270,19 +268,35 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
         oasysgui.lineEdit(self.q_box, self, "qpoints", "Number of points for q",
                           tooltip="qpoints", labelWidth=260, valueType=int, orientation="horizontal")
 
+        ## angle-scan
+        angle_box0 = oasysgui.widgetBox(self.tab_adv, "angle-scan (diffraction profile)", addSpace=False, orientation="vertical")
+        gui.comboBox(angle_box0, self, "angle_scan_flag", label="Plot angle-scan", labelWidth=350,
+                     items=["No","Yes",],
+                     sendSelectedValue=False, orientation="horizontal",
+                     callback=self.set_visible,
+                     )
+
+        self.angle_box = oasysgui.widgetBox(angle_box0, "", addSpace=False, orientation="vertical")
+        oasysgui.lineEdit(self.angle_box, self, "angle_min", "angle min [urad]",
+                          tooltip="angle_min", labelWidth=260, valueType=float, orientation="horizontal")
+        oasysgui.lineEdit(self.angle_box, self, "angle_max", "angle max [urad]",
+                          tooltip="angle_max", labelWidth=260, valueType=float, orientation="horizontal")
+        oasysgui.lineEdit(self.angle_box, self, "angle_points", "Number of points for angle",
+                          tooltip="angle_points", labelWidth=260, valueType=int, orientation="horizontal")
+
+
         self.set_visible()
 
     def set_visible(self):
         self.source_items.setVisible(False)
         self.q_box.setVisible(False)
+        self.angle_box.setVisible(False)
         #
         self.source_items.setVisible(self.source_flag == 1)
         self.q_box.setVisible(self.qscan_flag == 1)
-
+        self.angle_box.setVisible(self.angle_scan_flag == 1)
 
     def get_optical_element(self):
-
-
         cleaned = self.hkl.strip('[]')
         actual_list_hkl = [int(item.strip()) for item in cleaned.split(',')]
 
@@ -317,7 +331,6 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
     def check_data(self):
         super().check_data()
 
-        # congruence.checkStrictlyPositiveNumber(numpy.abs(self.focal_x), "Horizontal Focal Length")
         congruence.checkStrictlyPositiveNumber(self.thickness_um, "Crystal thickness [um]")
         congruence.checkNumber(self.p, "p [m]")
         congruence.checkNumber(self.q, "q [m]")
@@ -336,7 +349,7 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
 
     def receive_specific_syned_data(self, optical_element):
         if not optical_element is None:
-            if isinstance(optical_element, Crystal):
+            if isinstance(optical_element, Crystal): # TODO
                 pass
                 # self.focal_x = optical_element._focal_x
             else:
@@ -348,24 +361,14 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
     # overwritten methods
     #
 
-    # overwritten method for specific built-in propagator
-    # def create_propagation_setting_tab(self):
-    #     # self.tab_pro = oasysgui.createTabPage(self.tabs_setting, "Propagation Setting")
-    #     # self.zoom_box = oasysgui.widgetBox(self.tab_pro, "", addSpace=False, orientation="vertical", height=90)
-    #     # oasysgui.lineEdit(self.zoom_box, self, "magnification_x", "Magnification Factor for interval",
-    #     #                   labelWidth=260, valueType=float, orientation="horizontal")
-    #     self.tab_adv = oasysgui.createTabPage(self.tabs_setting, "Additional Setting")
-    #     self.adv_box = oasysgui.widgetBox(self.tab_adv, "", addSpace=False, orientation="vertical", height=90)
-
-
     # overwritten methods to append profile plot
     def get_titles(self):
         titles = super().get_titles()
         titles.append("q-scan")
+        titles.append("angle-scan")
         return titles
 
     def do_plot_results(self, progressBarValue=80): # OVERWRITTEN
-
         super().do_plot_results(progressBarValue, closeProgressBar=False)
 
         if self.qscan_flag:
@@ -381,6 +384,18 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
                                  xtitle="q (distance from crystal) [m]",
                                  ytitle="Intensity [a.u.]")
 
+        if self.angle_scan_flag:
+            if (self.angle is not None) and (self.angle_amplitude is not None):
+                self.progressBarSet(progressBarValue + 5)
+                self.plot_data1D(x=self.angle * 1e6,
+                                 y=numpy.abs(self.angle_amplitude) ** 2,
+                                 progressBarValue=progressBarValue + 10,
+                                 tabs_canvas_index=5,
+                                 plot_canvas_index=5,
+                                 calculate_fwhm=True,
+                                 title=self.get_titles()[5],
+                                 xtitle="angle [urad]",
+                                 ytitle="Intensity [a.u.]")
 
         self.progressBarFinished()
 
@@ -394,18 +409,8 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
 
         current_index = self.tabs.currentIndex()
 
-
-        if 1: # try:
-            # if self.input_data is None: raise Exception("No Input Data")
-
+        try:
             self.check_data()
-
-            # propagation to o.e.
-
-            # input_wavefront  = self.input_data.get_wavefront()
-
-
-
 
             optical_element = self.get_optical_element()
             optical_element.name = self.oe_name if not self.oe_name is None else self.windowTitle()
@@ -424,60 +429,7 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
 
             self.wofry_python_script.set_code(beamline.to_python_code())
 
-
-            # if self.propagator == 0:
-            #     propagator_info = {
-            #         "propagator_class_name": "Fresnel",
-            #         "propagator_handler_name": self.get_handler_name(),
-            #         "propagator_additional_parameters_names": [],
-            #         "propagator_additional_parameters_values": []}
-            # elif self.propagator == 1:
-            #     propagator_info = {
-            #         "propagator_class_name": "FresnelConvolution1D",
-            #         "propagator_handler_name": self.get_handler_name(),
-            #         "propagator_additional_parameters_names": [],
-            #         "propagator_additional_parameters_values": []}
-            # elif self.propagator == 2:
-            #     propagator_info = {
-            #         "propagator_class_name": "Fraunhofer1D",
-            #         "propagator_handler_name": self.get_handler_name(),
-            #         "propagator_additional_parameters_names": [],
-            #         "propagator_additional_parameters_values": []}
-            # elif self.propagator == 3:
-            #     propagator_info = {
-            #         "propagator_class_name": "Integral1D",
-            #         "propagator_handler_name": self.get_handler_name(),
-            #         "propagator_additional_parameters_names": ['magnification_x', 'magnification_N'],
-            #         "propagator_additional_parameters_values": [self.magnification_x, self.magnification_N]}
-            # elif self.propagator == 4:
-            #     propagator_info = {
-            #         "propagator_class_name": "FresnelZoom1D",
-            #         "propagator_handler_name": self.get_handler_name(),
-            #         "propagator_additional_parameters_names": ['magnification_x'],
-            #         "propagator_additional_parameters_values": [self.magnification_x]}
-            # elif self.propagator == 5:
-            #     propagator_info = {
-            #         "propagator_class_name": "FresnelZoomScaling1D",
-            #         "propagator_handler_name": self.get_handler_name(),
-            #         "propagator_additional_parameters_names": ['magnification_x','radius'],
-            #         "propagator_additional_parameters_values": [self.magnification_x, self.wavefront_radius]}
-            #
-            # beamline.append_beamline_element(beamline_element, propagator_info)
-            #
-            # propagation_elements = PropagationElements()
-            # propagation_elements.add_beamline_element(beamline_element)
-            #
-            # propagation_parameters = PropagationParameters(wavefront=input_wavefront.duplicate(),
-            #                                                propagation_elements=propagation_elements)
-            #
-            # self.set_additional_parameters(propagation_parameters)
-
             self.setStatusMessage("Begin Propagation")
-
-            # propagator = PropagationManager.Instance()
-
-            # output_wavefront = propagator.do_propagation(propagation_parameters=propagation_parameters,
-            #                                              handler_name=self.get_handler_name())
 
             if self.source_flag == 0:
                 input_wavefront  = self.input_data.get_wavefront()
@@ -506,6 +458,23 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
                 pass
 
             #
+            # qscan
+            #
+            if self.angle_scan_flag:
+                print("\n########################################################")
+                print("\n                    angle-scan                          ")
+                print("\n########################################################")
+                # self.progressBarSet(progressBarValue + 5)
+
+                optical_element = self.get_optical_element()
+                angle, amplitude = optical_element.diffraction_profile_angle_scan(angle_min=self.angle_min * 1e-6,
+                                                                                  angle_max=self.angle_max * 1e-6,
+                                                                                  angle_points=self.angle_points)
+                self.angle = angle
+                self.angle_amplitude = amplitude
+            else:
+                pass
+            #
             # plots
             #
             if self.view_type > 0:
@@ -523,7 +492,7 @@ class OWWOLaueCrystal1D(OWWOOpticalElement1D):
             except: pass
 
 
-        else: # except Exception as exception:
+        except: # except Exception as exception:
             QMessageBox.critical(self, "Error", str(exception), QMessageBox.Ok)
 
             if self.IS_DEVELOP: raise exception
