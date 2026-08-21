@@ -238,6 +238,11 @@ class OWEBS(OWWidget):
 
         self.get_data_dictionary_csv()
 
+        # workspaces created with a previous version of the widget may have stored
+        # ebs_id_index pointing to an entry that no longer exists in the current jsrund.csv
+        if self.ebs_id_index >= len(self.get_id_list()):
+            self.ebs_id_index = 0
+
         # OLD FORMAT
         # self.data_url = "https://raw.githubusercontent.com/srio/shadow3-scripts/master/ESRF-LIGHTSOURCES-EBS/ebs_ids.json"
         # self.get_data_dictionary()
