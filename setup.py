@@ -31,7 +31,7 @@ except AttributeError:
     from setuptools import find_packages, setup
 
 NAME = 'OASYS1-ESRF-Extensions'
-VERSION = '0.0.95'
+VERSION = '0.0.96'
 ISRELEASED = True
 
 DESCRIPTION = 'OASYS extension for the ESRF'
@@ -70,7 +70,7 @@ INSTALL_REQUIRES = (
     'shadow4>=0.1.66',
     'xoppylib>=1.0.30',
     'crystalpy>=0.0.25',
-    'accelerator-toolbox==0.6.1',
+    'accelerator-toolbox==0.5.0',
 )
 
 PACKAGES = find_packages(exclude=('*.tests', '*.tests.*', 'tests.*', 'tests'))
